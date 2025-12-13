@@ -33,3 +33,41 @@ exports.postAddProduct = async (req, res) => {
         res.status(500).send("Erro ao salvar produto");
     }
 };
+
+// 3. LISTAR TODOS OS PEDIDOS (Painel Admin)
+exports.getOrders = async (req, res) => {
+    try {
+        // Busca TODOS os pedidos ordenados por data (mais recentes primeiro)
+        const snapshot = await db.collection('orders').orderBy('date', 'desc').get();
+        
+        const orders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        res.render('admin/orders', {
+            pageTitle: 'Gerenciar Vendas',
+            path: '/admin/pedidos',
+            orders: orders
+        });
+    } catch (error) {
+        console.log("Erro ao buscar pedidos:", error);
+        res.redirect('/admin/dashboard');
+    }
+};
+
+// 4. ATUALIZAR STATUS DO PEDIDO (Ex: Pendente -> Enviado)
+exports.postUpdateStatus = async (req, res) => {
+    const { orderId, status } = req.body;
+
+    try {
+        await db.collection('orders').doc(orderId).update({
+            status: status
+        });
+        console.log(`Pedido ${orderId} atualizado para ${status}`);
+        res.redirect('/admin/pedidos');
+    } catch (error) {
+        console.log(error);
+        res.redirect('/admin/pedidos');
+    }
+};

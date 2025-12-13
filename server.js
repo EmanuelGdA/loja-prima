@@ -53,16 +53,20 @@ app.use(flash());
 // 7. Variáveis Globais para as Views
 app.use((req, res, next) => {
     res.locals.isAuthenticated = req.session.isLoggedIn;
+    
+    // NOVO: Verifica se é admin e manda para o HTML
+    res.locals.isAdmin = req.session.user ? req.session.user.isAdmin : false;
+    
     res.locals.csrfToken = req.csrfToken();
     res.locals.errorMessage = req.flash('error');
     res.locals.successMessage = req.flash('success');
     
-    // NOVO: Calcula total de itens no carrinho
+    // Carrinho (mantenha o código do carrinho aqui...)
     let cartCount = 0;
     if (req.session.cart) {
         cartCount = req.session.cart.totalQty;
     }
-    res.locals.cartCount = cartCount; // Disponível em todos os EJS
+    res.locals.cartCount = cartCount;
 
     next();
 });

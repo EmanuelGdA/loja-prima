@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .admin-container { max-width: 1200px; margin: 40px auto; padding: 20px; }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .admin-table th, .admin-table td { padding: 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        .admin-table th { background-color: #333; color: white; }
+        .admin-table tr:hover { background-color: #f5f5f5; }
+        
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .status-badge.Pendente { background: #ffeeba; color: #856404; }
+        .status-badge.Enviado { background: #d4edda; color: #155724; }
+        .status-badge.Cancelado { background: #f8d7da; color: #721c24; }
+
+        .btn-update { background: black; color: white; border: none; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+        
+        .address-box { font-size: 12px; color: #555; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="admin-container">
+        <h1>Painel de Vendas</h1>
+        <p>Gerencie os pedidos da loja aqui.</p>
+
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Data/ID</th>
+                    <th>Cliente</th>
+                    <th>Itens</th>
+                    <th>Endereço</th>
+                    <th>Total</th>
+                    <th>Status / Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% if (orders.length > 0) { %>
+                    <% orders.forEach(order => { %>
+                        <tr>
+                            <td>
+                                <strong><%= new Date(order.date).toLocaleDateString('pt-BR') %></strong><br>
+                                <small style="color:#999">#<%= order.id.slice(0,5) %>...</small>
+                            </td>
+                            <td>
+                                <%= order.user.name %><br>
+                                <small><%= order.user.email %></small>
+                            </td>
+                            <td>
+                                <% order.items.forEach(item => { %>
+                                    <div><%= item.qty %>x <%= item.title %> (<%= item.size %>)</div>
+                                <% }) %>
+                            </td>
+                            <td class="address-box">
+                                <%= order.address.rua %>, <%= order.address.numero %><br>
+                                <%= order.address.bairro %> - <%= order.address.cidade %>/<%= order.address.estado %><br>
+                                CEP: <%= order.address.cep %>
+                            </td>
+                            <td><strong>R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %></strong></td>
+                            <td>
+                                <form action="/admin/atualizar-status" method="POST">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <input type="hidden" name="orderId" value="<%= order.id %>">
+                                    
+                                    <select name="status" onchange="this.form.submit()" style="padding: 5px; border-radius: 4px;">
+                                        <option value="Pendente Pagamento" <%= order.status === 'Pendente Pagamento' ? 'selected' : '' %>>Pendente</option>
+                                        <option value="Pago / Preparando" <%= order.status === 'Pago / Preparando' ? 'selected' : '' %>>Pago</option>
+                                        <option value="Enviado" <%= order.status === 'Enviado' ? 'selected' : '' %>>Enviado</option>
+                                        <option value="Entregue" <%= order.status === 'Entregue' ? 'selected' : '' %>>Entregue</option>
+                                        <option value="Cancelado" <%= order.status === 'Cancelado' ? 'selected' : '' %>>Cancelado</option>
+                                    </select>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }) %>
+                <% } else { %>
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 50px;">Nenhuma venda realizada ainda.</td>
+                    </tr>
+                <% } %>
+            </tbody>
+        </table>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

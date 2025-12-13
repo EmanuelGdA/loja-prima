@@ -14,6 +14,17 @@
                 <li><a href="/colecao/lancamentos">Lançamentos</a></li>
                 <li><a href="/colecao/vestidos">Vestidos</a></li>
                 <li><a href="/colecao/promocao" class="promo-link">Sale</a></li>
+
+                <!-- ÁREA RESTRITA DO ADMIN -->
+                <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+                    <!-- Adicionei uma margem e uma borda para separar visualmente -->
+                    <li style="margin-left: 15px; border-left: 1px solid #ccc; padding-left: 15px;">
+                        <a href="/admin/pedidos" style="color: #c4a47c; font-weight: bold;">VENDAS</a>
+                    </li>
+                    <li>
+                        <a href="/admin/adicionar-produto" style="color: #c4a47c; font-weight: bold;">+ ROUPA</a>
+                    </li>
+                <% } %>
             </ul>
         </nav>
 

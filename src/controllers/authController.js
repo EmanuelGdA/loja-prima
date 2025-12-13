@@ -80,11 +80,17 @@ exports.postLogin = async (req, res) => {
         const doMatch = await bcrypt.compare(password, user.password);
 
         if (doMatch) {
-            // SUCESSO! Salva na sessão
-            req.session.isLoggedIn = true;
-            req.session.user = { id: userDoc.id, name: user.name, email: user.email };
             
-            // Salva sessão antes de redirecionar para garantir
+            req.session.isLoggedIn = true;
+            
+            // ATUALIZADO: Salvamos também se ele é admin (padrão false se não existir)
+            req.session.user = { 
+                id: userDoc.id, 
+                name: user.name, 
+                email: user.email,
+                isAdmin: user.isAdmin || false 
+            };
+            
             return req.session.save(err => {
                 res.redirect('/');
             });
