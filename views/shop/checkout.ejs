@@ -3,6 +3,20 @@
 <head>
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/checkout.css">
+    <style>
+        /* Estilos adicionais para os métodos de pagamento */
+        .payment-methods { display: flex; gap: 10px; margin-bottom: 15px; }
+        .method-option { 
+            flex: 1; border: 1px solid #ccc; padding: 15px; border-radius: 4px; 
+            cursor: pointer; background: white; text-align: center; display: block;
+        }
+        /* Estilo para quando o input radio estiver marcado */
+        .method-option:has(input:checked) { 
+            border-color: black; background: #f0f0f0; font-weight: bold; 
+        }
+        /* Fallback para navegadores antigos que não suportam :has */
+        .method-option input:checked + span { font-weight: bold; }
+    </style>
 </head>
 <body>
     <header class="simple-header">
@@ -13,12 +27,15 @@
     </header>
 
     <main class="checkout-container">
-        <form action="/criar-pedido" method="POST" class="checkout-form">
+        
+        <form action="/criar-pedido" method="POST" class="checkout-form" id="paymentForm">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-            <!-- Coluna 1: Endereço -->
+            <!-- COLUNA 1: DADOS E PAGAMENTO -->
             <div class="column">
-                <h2>Endereço de Entrega</h2>
+                
+                <!-- 1. Endereço -->
+                <h2>1. Entrega</h2>
                 
                 <div class="form-group">
                     <label>CEP</label>
@@ -51,29 +68,81 @@
                         <input type="text" name="estado" id="estado" required>
                     </div>
                 </div>
+
+                <!-- 2. Pagamento (NOVA SEÇÃO) -->
+                <h2 style="margin-top: 30px;">2. Pagamento</h2>
+                
+                <div class="payment-methods">
+                    <label class="method-option">
+                        <input type="radio" name="paymentMethod" value="pix" checked onclick="togglePayment('pix')">
+                        <span><i class="fab fa-pix"></i> PIX (Aprovação Imediata)</span>
+                    </label>
+                    <label class="method-option">
+                        <input type="radio" name="paymentMethod" value="credit_card" onclick="togglePayment('card')">
+                        <span><i class="far fa-credit-card"></i> Cartão de Crédito</span>
+                    </label>
+                </div>
+
+                <!-- Formulário do Cartão (Escondido inicialmente) -->
+                <div id="card-form" style="display: none; background: white; padding: 20px; border-radius: 4px; margin-top: 15px; border: 1px solid #eee;">
+                    <div class="form-group">
+                        <label>Número do Cartão</label>
+                        <input type="text" name="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Nome no Cartão (Como está impresso)</label>
+                        <input type="text" name="cardHolder">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Validade (MM/AA)</label>
+                            <input type="text" name="cardExpiration" placeholder="MM/AA" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label>CVV</label>
+                            <input type="text" name="cardCvv" placeholder="123" maxlength="4">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Parcelamento</label>
+                        <select name="installments" style="width: 100%; padding: 10px;">
+                            <option value="1">À vista</option>
+                            <option value="2">2x sem juros</option>
+                            <option value="3">3x sem juros</option>
+                            <option value="4">4x (com juros)</option>
+                            <option value="5">5x (com juros)</option>
+                            <option value="6">6x (com juros)</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <!-- Coluna 2: Resumo -->
+            <!-- COLUNA 2: RESUMO DO PEDIDO (ESSENCIAL) -->
             <div class="column summary-col">
                 <div class="order-summary-box">
                     <h3>Resumo do Pedido</h3>
                     
-                    <% cart.items.forEach(item => { %>
-                        <div class="summary-item">
-                            <img src="<%= item.imageUrl %>">
-                            <div>
-                                <p><%= item.title %> x <%= item.qty %></p>
-                                <small>Tam: <%= item.size %></small>
+                    <% if (cart.items.length > 0) { %>
+                        <% cart.items.forEach(item => { %>
+                            <div class="summary-item">
+                                <img src="<%= item.imageUrl %>" alt="<%= item.title %>">
+                                <div>
+                                    <p><%= item.title %> x <%= item.qty %></p>
+                                    <small>Tam: <%= item.size %></small>
+                                </div>
+                                <span>R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %></span>
                             </div>
-                            <span>R$ <%= (item.price * item.qty).toFixed(2) %></span>
-                        </div>
-                    <% }) %>
+                        <% }) %>
+                    <% } %>
 
                     <hr>
                     <div class="totals">
-                        <div class="row"><span>Subtotal</span> <span>R$ <%= cart.totalPrice.toFixed(2) %></span></div>
+                        <div class="row"><span>Subtotal</span> <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span></div>
                         <div class="row"><span>Frete</span> <span>Grátis</span></div>
-                        <div class="row total"><span>Total</span> <span>R$ <%= cart.totalPrice.toFixed(2) %></span></div>
+                        <div class="row total"><span>Total</span> <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span></div>
                     </div>
 
                     <button type="submit" class="btn-finish">Finalizar Pedido</button>
@@ -83,7 +152,7 @@
         </form>
     </main>
 
-    <!-- Script Profissional de CEP -->
+    <!-- Script de Busca de CEP -->
     <script>
         function buscarCep() {
             const cep = document.getElementById('cep').value.replace(/\D/g, '');
@@ -100,6 +169,28 @@
                             alert("CEP não encontrado.");
                         }
                     });
+            }
+        }
+    </script>
+
+    <!-- Script de Troca de Abas (Pix/Cartão) -->
+    <script>
+        function togglePayment(method) {
+            const cardForm = document.getElementById('card-form');
+            // Pega todos os inputs dentro do formulário de cartão
+            const inputs = cardForm.querySelectorAll('input, select');
+
+            if (method === 'card') {
+                // Se for cartão, mostra e torna OBRIGATÓRIO
+                cardForm.style.display = 'block';
+                inputs.forEach(i => i.setAttribute('required', 'true'));
+            } else {
+                // Se for PIX, esconde e tira o OBRIGATÓRIO
+                cardForm.style.display = 'none';
+                inputs.forEach(i => i.removeAttribute('required'));
+                
+                // Limpa os campos para não enviar lixo
+                inputs.forEach(i => i.value = '');
             }
         }
     </script>

@@ -168,43 +168,76 @@ exports.postOrder = async (req, res) => {
     try {
         const user = req.session.user;
         const cart = req.session.cart;
-        
-        // Dados do formulário de endereço
-        const address = {
-            cep: req.body.cep,
-            rua: req.body.rua,
-            numero: req.body.numero,
-            bairro: req.body.bairro,
-            cidade: req.body.cidade,
-            estado: req.body.estado
-        };
+        const paymentMethod = req.body.paymentMethod;
+        const cpf = req.body.cpf; // PEGAMOS O CPF AQUI
 
-        // Cria o objeto do Pedido
-        const order = {
-            user: { id: user.id, email: user.email, name: user.name },
+        if (!cart || cart.items.length === 0) return res.redirect('/carrinho');
+
+        // 1. Cria Pedido no Banco
+        const orderData = {
+            user: { id: user.id, email: user.email, name: user.name, cpf: cpf },
             items: cart.items,
             totalPrice: cart.totalPrice,
-            address: address,
+            address: {
+                cep: req.body.cep,
+                rua: req.body.rua,
+                numero: req.body.numero,
+                bairro: req.body.bairro,
+                cidade: req.body.cidade,
+                estado: req.body.estado
+            },
             date: new Date().toISOString(),
-            status: 'Pendente Pagamento' // Começa assim
+            status: 'Aguardando Pagamento',
+            paymentMethod: 'PIX (Mercado Pago)'
         };
 
-        // Salva na coleção 'orders' do Firebase
-        await db.collection('orders').add(order);
+        const orderRef = await db.collection('orders').add(orderData);
+        const orderId = orderRef.id;
 
-        // Limpa o carrinho
-        req.session.cart = null;
+        // 2. Processa Pagamento (Apenas PIX por enquanto)
+        if (paymentMethod === 'pix') {
+            
+            const pixData = await paymentService.gerarPixMercadoPago(
+                { id: orderId, totalPrice: cart.totalPrice }, 
+                user, 
+                cpf
+            );
 
-        // Redireciona para página de sucesso (faremos depois)
-        res.render('shop/success', { pageTitle: 'Pedido Recebido', path: '' });
+            // Monta a imagem para o HTML (o MP já manda em base64)
+            const qrCodeImage = `data:image/png;base64,${pixData.qrCodeBase64}`;
+
+            // Atualiza pedido com dados do Pix
+            await orderRef.update({
+                mpTransactionId: pixData.id,
+                pixCode: pixData.qrCode,
+                status: 'Aguardando Pagamento'
+            });
+
+            req.session.cart = null; // Limpa carrinho
+            
+            return res.render('shop/success-pix', { 
+                pageTitle: 'Pagar com PIX', 
+                path: '', 
+                qrCodeImage: qrCodeImage, 
+                pixCode: pixData.qrCode, 
+                total: cart.totalPrice
+            });
+
+        } else {
+            // Se escolher cartão, avisamos que só Pix está ativo no momento
+            // (Para cartão no MP precisaríamos de mais configurações de frontend)
+            req.flash('error', 'No momento, escolha a opção PIX para aprovação imediata.');
+            return res.redirect('/checkout');
+        }
 
     } catch (error) {
         console.log(error);
+        req.flash('error', 'Erro ao processar. Verifique se o CPF está correto.');
         res.redirect('/checkout');
     }
 }
 
-// ... (código anterior)
+
 
 // 3. LISTAR MEUS PEDIDOS (GET)
 exports.getOrders = async (req, res) => {
