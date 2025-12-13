@@ -11,6 +11,10 @@ const flash = require('connect-flash');
 // Inicializa o App
 const app = express();
 
+// Isso diz ao Express para confiar que o Render está usando HTTPS
+app.set('trust proxy', 1); 
+
+
 // 1. Importar Rotas
 const shopRoutes = require('./src/routes/shopRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
