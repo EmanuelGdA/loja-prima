@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <!-- Inclui o Head (Meta tags, CSS, Fontes) -->
+    <%- include('../partials/head.ejs') %>
+</head>
+<body>
+    
+    <!-- Inclui o Header (Menu, Logo) -->
+    <%- include('../partials/header.ejs') %>
+
+    <main>
+        <!-- Conteúdo específico da Home -->
+        <section class="products-section">
+            <h2 class="section-title">Destaques</h2>
+            
+            <div class="product-grid">
+                <% if (products.length > 0) { %>
+                    <!-- Loop: Para cada produto 'p' na lista... -->
+                    <% products.forEach(p => { %>
+    <article class="product-card">
+        <!-- O Link leva para /produto/ID_DO_FIREBASE -->
+        <a href="/produto/<%= p.id %>">
+            <div class="card-image">
+                <img src="<%= p.imageUrl %>" alt="<%= p.title %>">
+                <button class="btn-quick-view">Ver Detalhes</button>
+            </div>
+            <div class="card-info">
+                <h3><%= p.title %></h3>
+                <p class="category"><%= p.category %></p>
+                <div class="price">R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %></div>
+            </div>
+        </a>
+    </article>
+<% }) %>
+                <% } else { %>
+                    <div class="no-products">
+                        <p>Nenhum produto cadastrado ainda.</p>
+                        <a href="/admin/adicionar-produto" class="btn-cta">Cadastrar Primeiro Produto</a>
+                    </div>
+                <% } %>
+            </div>
+        </section>
+    </main>
+
+    <!-- Inclui o Footer -->
+    <%- include('../partials/footer.ejs') %>
+
+</body>
+</html>

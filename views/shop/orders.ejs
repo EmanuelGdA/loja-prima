@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .orders-container { max-width: 800px; margin: 50px auto; padding: 0 20px; }
+        .orders-container h1 { font-family: 'Playfair Display'; text-align: center; margin-bottom: 40px; }
+        
+        .order-card { 
+            background: white; border: 1px solid #eee; border-radius: 8px; 
+            padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .order-header { 
+            display: flex; justify-content: space-between; border-bottom: 1px solid #eee; 
+            padding-bottom: 10px; margin-bottom: 15px; font-size: 14px; color: #555;
+        }
+        
+        .status { 
+            font-weight: bold; text-transform: uppercase; font-size: 12px; 
+            padding: 5px 10px; border-radius: 20px; background: #eee;
+        }
+        .status.pendente { background: #fff3cd; color: #856404; }
+        .status.pago { background: #d4edda; color: #155724; }
+
+        .order-items ul { padding-left: 20px; }
+        .order-items li { margin-bottom: 5px; font-size: 14px; }
+        .order-total { text-align: right; font-weight: bold; font-size: 18px; margin-top: 10px; }
+
+        .no-orders { text-align: center; color: #888; margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="orders-container">
+        <h1>Meus Pedidos</h1>
+
+        <% if (orders.length > 0) { %>
+            <% orders.forEach(order => { %>
+                <div class="order-card">
+                    <div class="order-header">
+                        <span>Pedido #<%= order.id %></span>
+                        <span><%= new Date(order.date).toLocaleDateString('pt-BR') %></span>
+                        <span class="status pendente"><%= order.status %></span>
+                    </div>
+
+                    <div class="order-items">
+                        <ul>
+                            <% order.items.forEach(item => { %>
+                                <li><%= item.qty %>x <%= item.title %> (Tam: <%= item.size %>)</li>
+                            <% }) %>
+                        </ul>
+                    </div>
+
+                    <div class="order-total">
+                        Total: R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %>
+                    </div>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <div class="no-orders">
+                <i class="fas fa-box-open" style="font-size: 50px; margin-bottom: 10px;"></i>
+                <p>Você ainda não fez nenhum pedido.</p>
+                <a href="/" style="text-decoration: underline;">Ir às compras</a>
+            </div>
+        <% } %>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

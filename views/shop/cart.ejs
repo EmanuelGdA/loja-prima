@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <link rel="stylesheet" href="/css/cart.css"> <!-- CSS novo -->
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="cart-container">
+        <h1>Sua Sacola de Compras</h1>
+
+        <% if (cart.items.length > 0) { %>
+            <div class="cart-content">
+                <!-- Lista de Produtos -->
+                <div class="cart-items">
+                    <table class="cart-table">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Preço</th>
+                                <th>Qtd</th>
+                                <th>Total</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% cart.items.forEach(item => { %>
+                                <tr>
+                                    <td class="product-col">
+                                        <img src="<%= item.imageUrl %>" alt="<%= item.title %>">
+                                        <div>
+                                            <strong><%= item.title %></strong>
+                                            <p>Tamanho: <%= item.size %></p>
+                                        </div>
+                                    </td>
+                                    <td>R$ <%= item.price.toFixed(2).replace('.', ',') %></td>
+                                    <td><%= item.qty %></td>
+                                    <td>R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %></td>
+                                    <td>
+                                        <!-- Botão Remover -->
+                                        <form action="/carrinho-delete" method="POST">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="productId" value="<%= item.productId %>">
+                                            <input type="hidden" name="size" value="<%= item.size %>">
+                                            <button type="submit" class="btn-remove"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Resumo do Pedido -->
+                <div class="cart-summary">
+                    <h3>Resumo do Pedido</h3>
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Frete</span>
+                        <span>Calculado no Checkout</span>
+                    </div>
+                    <hr>
+                    <div class="summary-row total">
+                        <span>Total</span>
+                        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
+                    </div>
+                    
+                    <a href="/checkout" class="btn-checkout">Finalizar Compra</a>
+                    <a href="/" class="btn-continue">Continuar Comprando</a>
+                </div>
+            </div>
+        <% } else { %>
+            <div class="empty-cart">
+                <i class="fas fa-shopping-basket"></i>
+                <h2>Sua sacola está vazia</h2>
+                <p>Navegue pela loja e descubra nossas novidades.</p>
+                <a href="/" class="btn-cta">Ver Coleção</a>
+            </div>
+        <% } %>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

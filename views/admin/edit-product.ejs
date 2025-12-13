@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .form-control { margin-bottom: 1rem; }
+        .form-control label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        .form-control input, .form-control textarea, .form-control select {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;
+        }
+        .btn-save {
+            background-color: black; color: white; padding: 10px 20px; 
+            border: none; cursor: pointer; text-transform: uppercase; width: 100%;
+        }
+        .container { max-width: 600px; margin: 50px auto; padding: 20px; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="container">
+        <h1 style="text-align: center; margin-bottom: 30px;">Cadastrar Novo Produto</h1>
+
+        <form action="/admin/adicionar-produto" method="POST">
+            <!-- Token de Segurança Obrigatório -->
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <div class="form-control">
+                <label for="title">Nome da Peça</label>
+                <input type="text" name="title" id="title" placeholder="Ex: Vestido Floral Midi" required>
+            </div>
+
+            <div class="form-control">
+                <label for="imageUrl">URL da Imagem</label>
+                <input type="text" name="imageUrl" id="imageUrl" placeholder="Cole o link da foto aqui (ex: https://...)" required>
+                <small style="color: #666;">Dica: Pegue um link do Pinterest ou Google Imagens para testar.</small>
+            </div>
+
+            <div class="form-control">
+                <label for="category">Categoria</label>
+                <select name="category" id="category">
+                    <option value="vestidos">Vestidos</option>
+                    <option value="blusas">Blusas</option>
+                    <option value="calcas">Calças</option>
+                    <option value="acessorios">Acessórios</option>
+                </select>
+            </div>
+
+            <div class="form-control">
+                <label for="price">Preço (R$)</label>
+                <input type="number" name="price" id="price" step="0.01" placeholder="199.90" required>
+            </div>
+
+            <div class="form-control">
+                <label for="description">Descrição Detalhada</label>
+                <textarea name="description" id="description" rows="5" required></textarea>
+            </div>
+
+            <button type="submit" class="btn-save">Salvar Produto</button>
+        </form>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <link rel="stylesheet" href="/css/auth.css"> <!-- CSS novo para login -->
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="auth-container">
+        <div class="auth-box">
+            <h1>Bem-vindo de volta</h1>
+            
+            <!-- Mensagens de Erro/Sucesso (Flash) -->
+            <% if (errorMessage.length > 0) { %>
+                <div class="alert error"><%= errorMessage %></div>
+            <% } %>
+            <% if (successMessage.length > 0) { %>
+                <div class="alert success"><%= successMessage %></div>
+            <% } %>
+
+            <form action="/login" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" name="password" required>
+                </div>
+
+                <button type="submit" class="btn-auth">Entrar</button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="/cadastro">Não tem conta? Cadastre-se</a>
+                <a href="#">Esqueci minha senha</a>
+            </div>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

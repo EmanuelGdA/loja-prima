@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="auth-container">
+        <div class="auth-box">
+            <h1>Criar Conta</h1>
+            <p>Junte-se a nós para ter acesso a promoções exclusivas.</p>
+            
+            <% if (errorMessage.length > 0) { %>
+                <div class="alert error"><%= errorMessage %></div>
+            <% } %>
+
+            <form action="/cadastro" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                
+                <div class="form-group">
+                    <label>Nome Completo</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" name="password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Senha</label>
+                    <input type="password" name="confirmPassword" required minlength="6">
+                </div>
+
+                <button type="submit" class="btn-auth">Criar Conta</button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="/login">Já tem conta? Faça login</a>
+            </div>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

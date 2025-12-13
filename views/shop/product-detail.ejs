@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <link rel="stylesheet" href="/css/product.css"> <!-- Vamos criar esse CSS logo abaixo -->
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="product-container">
+        
+        <!-- Coluna da Esquerda: Imagem -->
+        <div class="product-image">
+            <img src="<%= product.imageUrl %>" alt="<%= product.title %>" id="mainImg">
+        </div>
+
+        <!-- Coluna da Direita: Informações -->
+        <div class="product-info">
+            <p class="breadcrumbs">Home / <%= product.category %> / <%= product.title %></p>
+            
+            <h1><%= product.title %></h1>
+            
+            <div class="price-box">
+                <span class="price">R$ <%= parseFloat(product.price).toFixed(2).replace('.', ',') %></span>
+                <span class="installment">em até 3x de R$ <%= (product.price / 3).toFixed(2).replace('.', ',') %> sem juros</span>
+            </div>
+
+            <!-- Formulário de Compra -->
+            <form action="/carrinho" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="productId" value="<%= product.id %>">
+                
+                <!-- Seletor de Tamanho -->
+                <div class="size-selector">
+                    <p>Tamanho:</p>
+                    <div class="sizes">
+                        <input type="radio" name="size" id="size-p" value="P" required>
+                        <label for="size-p">P</label>
+
+                        <input type="radio" name="size" id="size-m" value="M">
+                        <label for="size-m">M</label>
+
+                        <input type="radio" name="size" id="size-g" value="G">
+                        <label for="size-g">G</label>
+                    </div>
+                    <a href="#" class="size-guide"><i class="fas fa-ruler"></i> Guia de Medidas</a>
+                </div>
+
+                <button type="submit" class="btn-add-cart">
+                    Adicionar à Sacola
+                </button>
+            </form>
+
+            <div class="description-box">
+                <h3>Detalhes do Produto</h3>
+                <p><%= product.description %></p>
+            </div>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

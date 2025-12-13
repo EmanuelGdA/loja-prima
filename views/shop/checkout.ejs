@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <link rel="stylesheet" href="/css/checkout.css">
+</head>
+<body>
+    <header class="simple-header">
+        <div class="logo">
+            <a href="/">Loja da Prima<span>.</span></a>
+        </div>
+        <div class="secure-badge"><i class="fas fa-lock"></i> Checkout Seguro</div>
+    </header>
+
+    <main class="checkout-container">
+        <form action="/criar-pedido" method="POST" class="checkout-form">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <!-- Coluna 1: Endereço -->
+            <div class="column">
+                <h2>Endereço de Entrega</h2>
+                
+                <div class="form-group">
+                    <label>CEP</label>
+                    <input type="text" name="cep" id="cep" placeholder="00000-000" maxlength="9" required onblur="buscarCep()">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group main">
+                        <label>Rua / Avenida</label>
+                        <input type="text" name="rua" id="rua" required>
+                    </div>
+                    <div class="form-group small">
+                        <label>Número</label>
+                        <input type="text" name="numero" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Bairro</label>
+                    <input type="text" name="bairro" id="bairro" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cidade</label>
+                        <input type="text" name="cidade" id="cidade" required>
+                    </div>
+                    <div class="form-group small">
+                        <label>Estado</label>
+                        <input type="text" name="estado" id="estado" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna 2: Resumo -->
+            <div class="column summary-col">
+                <div class="order-summary-box">
+                    <h3>Resumo do Pedido</h3>
+                    
+                    <% cart.items.forEach(item => { %>
+                        <div class="summary-item">
+                            <img src="<%= item.imageUrl %>">
+                            <div>
+                                <p><%= item.title %> x <%= item.qty %></p>
+                                <small>Tam: <%= item.size %></small>
+                            </div>
+                            <span>R$ <%= (item.price * item.qty).toFixed(2) %></span>
+                        </div>
+                    <% }) %>
+
+                    <hr>
+                    <div class="totals">
+                        <div class="row"><span>Subtotal</span> <span>R$ <%= cart.totalPrice.toFixed(2) %></span></div>
+                        <div class="row"><span>Frete</span> <span>Grátis</span></div>
+                        <div class="row total"><span>Total</span> <span>R$ <%= cart.totalPrice.toFixed(2) %></span></div>
+                    </div>
+
+                    <button type="submit" class="btn-finish">Finalizar Pedido</button>
+                    <p class="secure-info"><i class="fas fa-shield-alt"></i> Seus dados estão protegidos.</p>
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <!-- Script Profissional de CEP -->
+    <script>
+        function buscarCep() {
+            const cep = document.getElementById('cep').value.replace(/\D/g, '');
+            if (cep.length === 8) {
+                fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.erro) {
+                            document.getElementById('rua').value = data.logradouro;
+                            document.getElementById('bairro').value = data.bairro;
+                            document.getElementById('cidade').value = data.localidade;
+                            document.getElementById('estado').value = data.uf;
+                        } else {
+                            alert("CEP não encontrado.");
+                        }
+                    });
+            }
+        }
+    </script>
+</body>
+</html>

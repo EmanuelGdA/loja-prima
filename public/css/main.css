@@ -1,0 +1,158 @@
+/* public/css/main.css */
+
+/* --- Variáveis (Cores da Marca) --- */
+:root {
+    --primary-color: #000000;
+    --secondary-color: #333333;
+    --accent-color: #c4a47c; /* Um tom dourado/bege chique */
+    --light-bg: #f9f9f9;
+    --white: #ffffff;
+    --font-main: 'Montserrat', sans-serif;
+    --font-title: 'Playfair Display', serif;
+}
+
+/* --- Reset Básico --- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: var(--font-main);
+    color: var(--secondary-color);
+    background-color: var(--white);
+    line-height: 1.6;
+}
+
+a { text-decoration: none; color: inherit; transition: 0.3s; }
+ul { list-style: none; }
+
+/* --- Header --- */
+.top-bar {
+    background-color: var(--primary-color);
+    color: var(--white);
+    text-align: center;
+    font-size: 12px;
+    padding: 8px 0;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 5%;
+    border-bottom: 1px solid #eee;
+}
+
+.logo a {
+    font-family: var(--font-title);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -1px;
+}
+
+.logo span { color: var(--accent-color); }
+
+.main-nav ul { display: flex; gap: 30px; }
+.main-nav a { font-size: 14px; text-transform: uppercase; font-weight: 500; }
+.main-nav a:hover { color: var(--accent-color); }
+.promo-link { color: #d9534f !important; }
+
+.user-actions { display: flex; gap: 20px; font-size: 18px; }
+.cart-icon { position: relative; }
+.badge {
+    position: absolute;
+    top: -8px; right: -8px;
+    background: var(--primary-color);
+    color: white;
+    font-size: 10px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* --- Botão Logout (Invisível) --- */
+.btn-logout { background: none; border: none; cursor: pointer; font-size: 18px; color: inherit; }
+
+/* --- Mobile Menu --- */
+.mobile-menu-btn { display: none; font-size: 24px; cursor: pointer; }
+
+/* --- Footer --- */
+.main-footer { background-color: #1a1a1a; color: #ccc; padding-top: 60px; margin-top: 50px; }
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 5% 50px;
+    flex-wrap: wrap;
+}
+.footer-column { width: 30%; min-width: 250px; margin-bottom: 20px; }
+.footer-column h3 { color: var(--white); font-family: var(--font-title); margin-bottom: 20px; }
+.footer-column ul li { margin-bottom: 10px; font-size: 14px; }
+.footer-column ul li a:hover { color: var(--white); text-decoration: underline; }
+
+.social-links { margin-top: 20px; font-size: 20px; }
+.social-links a { margin-right: 15px; }
+
+.payment-icons { font-size: 24px; margin-bottom: 20px; display: flex; gap: 10px; }
+
+.footer-bottom {
+    border-top: 1px solid #333;
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+}
+
+/* --- Responsividade --- */
+@media (max-width: 768px) {
+    .main-nav { display: none; } /* Esconder menu desktop no celular */
+    .mobile-menu-btn { display: block; }
+}
+
+/* --- Vitrine de Produtos --- */
+.products-section { padding: 50px 5%; }
+.section-title { 
+    text-align: center; font-family: var(--font-title); font-size: 36px; margin-bottom: 40px; 
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Responsivo automático */
+    gap: 30px;
+}
+
+.product-card {
+    transition: transform 0.3s;
+    cursor: pointer;
+}
+.product-card:hover { transform: translateY(-5px); }
+
+.card-image {
+    position: relative;
+    height: 350px; /* Altura fixa para alinhar */
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+.card-image img {
+    width: 100%; height: 100%; object-fit: cover; /* Corta a imagem sem esticar */
+}
+
+/* Botão que aparece ao passar o mouse */
+.btn-quick-view {
+    position: absolute;
+    bottom: -50px; left: 0; width: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    border: none; padding: 15px;
+    text-transform: uppercase; font-weight: bold; cursor: pointer;
+    transition: 0.3s;
+}
+.card-image:hover .btn-quick-view { bottom: 0; }
+
+.card-info h3 { font-size: 16px; margin-bottom: 5px; font-weight: 400; }
+.card-info .category { color: #888; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; }
+.card-info .price { font-weight: 600; font-size: 16px; }
+
+/* Botão CTA para quando não tem produtos */
+.btn-cta {
+    display: inline-block; background: black; color: white; 
+    padding: 10px 20px; margin-top: 10px;
+}

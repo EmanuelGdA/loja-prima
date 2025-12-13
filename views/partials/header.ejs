@@ -1,0 +1,43 @@
+<header class="main-header">
+    <div class="top-bar">
+        <p>FRETE GRÁTIS para todo o Brasil em compras acima de R$ 299,00</p>
+    </div>
+
+    <div class="nav-container">
+        <div class="logo">
+            <a href="/">Loja da Prima<span>.</span></a>
+        </div>
+
+        <nav class="main-nav">
+            <ul>
+                <li><a href="/">Início</a></li>
+                <li><a href="/colecao/lancamentos">Lançamentos</a></li>
+                <li><a href="/colecao/vestidos">Vestidos</a></li>
+                <li><a href="/colecao/promocao" class="promo-link">Sale</a></li>
+            </ul>
+        </nav>
+
+        <div class="user-actions">
+            <a href="/search"><i class="fas fa-search"></i></a>
+            
+            <% if (isAuthenticated) { %>
+                <a href="/pedidos" title="Meus Pedidos"><i class="fas fa-user"></i></a>
+                <form action="/logout" method="POST" style="display:inline;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
+                </form>
+            <% } else { %>
+                <a href="/login"><i class="far fa-user"></i></a>
+            <% } %>
+
+            <a href="/carrinho" class="cart-icon">
+                <i class="fas fa-shopping-bag"></i>
+                <span class="badge"><%= cartCount %></span>
+            </a>
+        </div>
+        
+        <div class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+    </div>
+</header>
