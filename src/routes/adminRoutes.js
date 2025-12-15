@@ -3,25 +3,16 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const isAdmin = require('../middlewares/isAdmin'); // Importa o segurança
 
-// Adicionamos 'isAdmin' no meio da rota. O Node executa na ordem.
-// Se 'isAdmin' der erro, ele nem chama o controller.
-
+// Rotas de Produtos (Protegidas)
 router.get('/adicionar-produto', isAdmin, adminController.getAddProduct);
 router.post('/adicionar-produto', isAdmin, adminController.postAddProduct);
+router.get('/produtos', isAdmin, adminController.getProducts); // Lista de produtos
+router.post('/excluir-produto', isAdmin, adminController.postDeleteProduct); // Excluir
+router.get('/editar-produto/:productId', isAdmin, adminController.getEditProduct); // Tela de Edição
+router.post('/editar-produto', isAdmin, adminController.postEditProduct); // Salvar Edição
 
+// Rotas de Pedidos (Protegidas)
 router.get('/pedidos', isAdmin, adminController.getOrders);
 router.post('/atualizar-status', isAdmin, adminController.postUpdateStatus);
-
-
-
-    if(!req.session.user) return res.redirect('/login');
-    
-    const db = require('../config/firebase');
-    await db.collection('users').doc(req.session.user.id).update({ isAdmin: true });
-    
-    // Atualiza a sessão
-    req.session.user.isAdmin = true;
-    res.send("<h1>Sucesso! Você agora é um Administrador. <a href='/'>Voltar</a></h1>");
-
 
 module.exports = router;
