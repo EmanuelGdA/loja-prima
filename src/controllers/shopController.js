@@ -1,3 +1,5 @@
+const QRCode = require('qrcode');
+const paymentService = require('../services/paymentService');
 const db = require('../config/firebase');
 
 exports.getIndex = async (req, res) => {
@@ -169,7 +171,7 @@ exports.postOrder = async (req, res) => {
         const user = req.session.user;
         const cart = req.session.cart;
         const paymentMethod = req.body.paymentMethod;
-        const cpf = req.body.cpf; // PEGAMOS O CPF AQUI
+        const cpf = req.body.cpf;
 
         if (!cart || cart.items.length === 0) return res.redirect('/carrinho');
 
@@ -188,55 +190,53 @@ exports.postOrder = async (req, res) => {
             },
             date: new Date().toISOString(),
             status: 'Aguardando Pagamento',
-            paymentMethod: 'PIX (Mercado Pago)'
+            paymentMethod: 'PIX (PagSeguro)'
         };
 
         const orderRef = await db.collection('orders').add(orderData);
         const orderId = orderRef.id;
 
-        // 2. Processa Pagamento (Apenas PIX por enquanto)
+        // 2. Processa Pagamento
         if (paymentMethod === 'pix') {
             
-            const pixData = await paymentService.gerarPixMercadoPago(
+            // Chama PagSeguro passando o ID do banco como referência
+            const pixData = await paymentService.gerarPixPagSeguro(
                 { id: orderId, totalPrice: cart.totalPrice }, 
                 user, 
                 cpf
             );
 
-            // Monta a imagem para o HTML (o MP já manda em base64)
-            const qrCodeImage = `data:image/png;base64,${pixData.qrCodeBase64}`;
+            // PAGSEGURO NÃO MANDA A IMAGEM, MANDA O TEXTO.
+            // TEMOS QUE GERAR A IMAGEM NÓS MESMOS:
+            const qrCodeImage = await QRCode.toDataURL(pixData.qrCodeText);
 
-            // Atualiza pedido com dados do Pix
             await orderRef.update({
-                mpTransactionId: pixData.id,
-                pixCode: pixData.qrCode,
+                pagseguroId: pixData.id,
+                pixCode: pixData.qrCodeText,
                 status: 'Aguardando Pagamento'
             });
 
-            req.session.cart = null; // Limpa carrinho
+            req.session.cart = null;
             
             return res.render('shop/success-pix', { 
                 pageTitle: 'Pagar com PIX', 
                 path: '', 
                 qrCodeImage: qrCodeImage, 
-                pixCode: pixData.qrCode, 
+                pixCode: pixData.qrCodeText, 
                 total: cart.totalPrice
             });
 
         } else {
-            // Se escolher cartão, avisamos que só Pix está ativo no momento
-            // (Para cartão no MP precisaríamos de mais configurações de frontend)
-            req.flash('error', 'No momento, escolha a opção PIX para aprovação imediata.');
+            req.flash('error', 'Escolha PIX para aprovação imediata.');
             return res.redirect('/checkout');
         }
 
     } catch (error) {
         console.log(error);
-        req.flash('error', 'Erro ao processar. Verifique se o CPF está correto.');
+        req.flash('error', 'Erro ao processar. O CPF deve ser válido.');
         res.redirect('/checkout');
     }
-}
-
+};
 
 
 // 3. LISTAR MEUS PEDIDOS (GET)

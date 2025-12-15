@@ -1,52 +1,73 @@
-const { MercadoPagoConfig, Payment } = require('mercadopago');
+const axios = require('axios');
 
-// Configura o cliente com a chave do .env
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
-const payment = new Payment(client);
-
-exports.gerarPixMercadoPago = async (pedido, cliente, cpf) => {
+exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
     try {
-        // Limpa o CPF (deixa só números)
+        // Limpa CPF (remove pontos e traços)
         const cleanCPF = cpf.replace(/\D/g, '');
         
-        // Separa nome e sobrenome (o MP exige)
-        const nameParts = cliente.name.split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Cliente';
+        // PagSeguro exige valor em CENTAVOS (R$ 100,00 = 10000)
+        const valorEmCentavos = Math.round(pedido.totalPrice * 100);
 
         const body = {
-            transaction_amount: parseFloat(pedido.totalPrice),
-            description: `Pedido #${pedido.id} - Loja da Prima`,
-            payment_method_id: 'pix',
-            payer: {
+            reference_id: pedido.id,
+            customer: {
+                name: cliente.name,
                 email: cliente.email,
-                first_name: firstName,
-                last_name: lastName,
-                identification: {
-                    type: 'CPF',
-                    number: cleanCPF
-                }
+                tax_id: cleanCPF,
+                // Telefones são obrigatórios no PagSeguro, vamos enviar um fixo se não tivermos
+                phones: [
+                    {
+                        country: "55",
+                        area: "11",
+                        number: "999999999",
+                        type: "MOBILE"
+                    }
+                ]
             },
-            notification_url: 'https://seusite.com/webhook' // (Opcional por enquanto)
+            items: [
+                {
+                    reference_id: "item_01",
+                    name: "Pedido Loja da Prima",
+                    quantity: 1,
+                    unit_amount: valorEmCentavos
+                }
+            ],
+            qr_codes: [
+                {
+                    amount: {
+                        value: valorEmCentavos
+                    },
+                    kind: "CALENDAR" // Tipo padrão para Pix imediato
+                }
+            ],
+            notification_urls: [
+                "https://seusite.com/webhook" // Opcional
+            ]
         };
 
-        // Envia para o Mercado Pago
-        const response = await payment.create({ body });
+        const config = {
+            headers: {
+                'Authorization': `Bearer ${process.env.PAGSEGURO_TOKEN}`,
+                'Content-Type': 'application/json',
+                'x-api-version': '4.0'
+            }
+        };
+
+        // Envia para o PagSeguro (Endpoint de Pedidos)
+        const response = await axios.post(`${process.env.PAGSEGURO_URL}/orders`, body, config);
         
-        // Pega os dados que interessam
-        const paymentData = response; 
-        
+        // O PagSeguro retorna o QR Code dentro de um array
+        const qrCodeData = response.data.qr_codes[0];
+
         return {
-            id: paymentData.id,
-            status: paymentData.status,
-            // O código "Copia e Cola"
-            qrCode: paymentData.point_of_interaction.transaction_data.qr_code,
-            // A imagem em Base64 (já vem pronta para exibir!)
-            qrCodeBase64: paymentData.point_of_interaction.transaction_data.qr_code_base64
+            id: response.data.id,
+            status: 'Aguardando Pagamento',
+            qrCodeText: qrCodeData.text // O código "Copia e Cola"
         };
 
     } catch (error) {
-        console.error("ERRO MERCADO PAGO:", error);
-        throw new Error("Erro ao gerar Pix no Mercado Pago");
+        // Log detalhado para ajudar a achar erro
+        console.error("ERRO PAGSEGURO:", error.response ? JSON.stringify(error.response.data) : error.message);
+        throw new Error("Erro ao gerar Pix no PagSeguro. Verifique o CPF.");
     }
 };
