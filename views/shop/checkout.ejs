@@ -4,17 +4,14 @@
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/checkout.css">
     <style>
-        /* Estilos adicionais para os métodos de pagamento */
         .payment-methods { display: flex; gap: 10px; margin-bottom: 15px; }
         .method-option { 
             flex: 1; border: 1px solid #ccc; padding: 15px; border-radius: 4px; 
             cursor: pointer; background: white; text-align: center; display: block;
         }
-        /* Estilo para quando o input radio estiver marcado */
         .method-option:has(input:checked) { 
             border-color: black; background: #f0f0f0; font-weight: bold; 
         }
-        /* Fallback para navegadores antigos que não suportam :has */
         .method-option input:checked + span { font-weight: bold; }
     </style>
 </head>
@@ -31,12 +28,16 @@
         <form action="/criar-pedido" method="POST" class="checkout-form" id="paymentForm">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-            <!-- COLUNA 1: DADOS E PAGAMENTO -->
             <div class="column">
                 
-                <!-- 1. Endereço -->
+                <!-- DADOS PESSOAIS (CPF É OBRIGATÓRIO) -->
+                <h2>Dados Pessoais</h2>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>CPF (Obrigatório)</label>
+                    <input type="text" name="cpf" placeholder="000.000.000-00" maxlength="14" required>
+                </div>
+
                 <h2>1. Entrega</h2>
-                
                 <div class="form-group">
                     <label>CEP</label>
                     <input type="text" name="cep" id="cep" placeholder="00000-000" maxlength="9" required onblur="buscarCep()">
@@ -69,21 +70,20 @@
                     </div>
                 </div>
 
-                <!-- 2. Pagamento (NOVA SEÇÃO) -->
-                <h2 style="margin-top: 30px;">2. Pagamento</h2>
+                <h2>2. Pagamento</h2>
                 
                 <div class="payment-methods">
                     <label class="method-option">
                         <input type="radio" name="paymentMethod" value="pix" checked onclick="togglePayment('pix')">
-                        <span><i class="fab fa-pix"></i> PIX (Aprovação Imediata)</span>
+                        <span><i class="fab fa-pix"></i> PIX</span>
                     </label>
                     <label class="method-option">
                         <input type="radio" name="paymentMethod" value="credit_card" onclick="togglePayment('card')">
-                        <span><i class="far fa-credit-card"></i> Cartão de Crédito</span>
+                        <span><i class="far fa-credit-card"></i> Cartão</span>
                     </label>
                 </div>
 
-                <!-- Formulário do Cartão (Escondido inicialmente) -->
+                <!-- Formulário do Cartão (Começa escondido) -->
                 <div id="card-form" style="display: none; background: white; padding: 20px; border-radius: 4px; margin-top: 15px; border: 1px solid #eee;">
                     <div class="form-group">
                         <label>Número do Cartão</label>
@@ -91,7 +91,7 @@
                     </div>
                     
                     <div class="form-group">
-                        <label>Nome no Cartão (Como está impresso)</label>
+                        <label>Nome no Cartão</label>
                         <input type="text" name="cardHolder">
                     </div>
 
@@ -109,22 +109,17 @@
                     <div class="form-group">
                         <label>Parcelamento</label>
                         <select name="installments" style="width: 100%; padding: 10px;">
-                            <option value="1">À vista</option>
-                            <option value="2">2x sem juros</option>
-                            <option value="3">3x sem juros</option>
-                            <option value="4">4x (com juros)</option>
-                            <option value="5">5x (com juros)</option>
-                            <option value="6">6x (com juros)</option>
+                            <option value="1">1x (À vista)</option>
+                            <option value="2">2x</option>
+                            <option value="3">3x</option>
                         </select>
                     </div>
                 </div>
             </div>
 
-            <!-- COLUNA 2: RESUMO DO PEDIDO (ESSENCIAL) -->
             <div class="column summary-col">
                 <div class="order-summary-box">
                     <h3>Resumo do Pedido</h3>
-                    
                     <% if (cart.items.length > 0) { %>
                         <% cart.items.forEach(item => { %>
                             <div class="summary-item">
@@ -137,23 +132,19 @@
                             </div>
                         <% }) %>
                     <% } %>
-
                     <hr>
                     <div class="totals">
-                        <div class="row"><span>Subtotal</span> <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span></div>
-                        <div class="row"><span>Frete</span> <span>Grátis</span></div>
                         <div class="row total"><span>Total</span> <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span></div>
                     </div>
-
                     <button type="submit" class="btn-finish">Finalizar Pedido</button>
-                    <p class="secure-info"><i class="fas fa-shield-alt"></i> Seus dados estão protegidos.</p>
+                    <p class="secure-info"><i class="fas fa-shield-alt"></i> Ambiente Seguro</p>
                 </div>
             </div>
         </form>
     </main>
 
-    <!-- Script de Busca de CEP -->
     <script>
+        // Busca CEP
         function buscarCep() {
             const cep = document.getElementById('cep').value.replace(/\D/g, '');
             if (cep.length === 8) {
@@ -165,32 +156,21 @@
                             document.getElementById('bairro').value = data.bairro;
                             document.getElementById('cidade').value = data.localidade;
                             document.getElementById('estado').value = data.uf;
-                        } else {
-                            alert("CEP não encontrado.");
                         }
                     });
             }
         }
-    </script>
 
-    <!-- Script de Troca de Abas (Pix/Cartão) -->
-    <script>
+        // Alterna entre Pix e Cartão
         function togglePayment(method) {
             const cardForm = document.getElementById('card-form');
-            // Pega todos os inputs dentro do formulário de cartão
             const inputs = cardForm.querySelectorAll('input, select');
-
             if (method === 'card') {
-                // Se for cartão, mostra e torna OBRIGATÓRIO
                 cardForm.style.display = 'block';
                 inputs.forEach(i => i.setAttribute('required', 'true'));
             } else {
-                // Se for PIX, esconde e tira o OBRIGATÓRIO
                 cardForm.style.display = 'none';
                 inputs.forEach(i => i.removeAttribute('required'));
-                
-                // Limpa os campos para não enviar lixo
-                inputs.forEach(i => i.value = '');
             }
         }
     </script>

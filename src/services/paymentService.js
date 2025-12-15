@@ -1,73 +1,98 @@
 const axios = require('axios');
 
+// Função Auxiliar para montar o cliente
+const buildCustomer = (cliente, cpf) => {
+    return {
+        name: cliente.name,
+        email: cliente.email,
+        tax_id: cpf.replace(/\D/g, ''),
+        phones: [{ country: "55", area: "11", number: "999999999", type: "MOBILE" }]
+    };
+};
+
+// 1. PIX
 exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
     try {
-        // Limpa CPF (remove pontos e traços)
-        const cleanCPF = cpf.replace(/\D/g, '');
-        
-        // PagSeguro exige valor em CENTAVOS (R$ 100,00 = 10000)
         const valorEmCentavos = Math.round(pedido.totalPrice * 100);
+        
+        const body = {
+            reference_id: pedido.id,
+            customer: buildCustomer(cliente, cpf),
+            items: [{ reference_id: "1", name: "Pedido Loja", quantity: 1, unit_amount: valorEmCentavos }],
+            qr_codes: [{ amount: { value: valorEmCentavos }, kind: "CALENDAR" }]
+        };
+
+        const config = {
+            headers: {
+                'Authorization': `Bearer ${process.env.PAGSEGURO_TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        const response = await axios.post(`${process.env.PAGSEGURO_URL}/orders`, body, config);
+        return {
+            id: response.data.id,
+            status: 'Aguardando Pagamento',
+            qrCodeText: response.data.qr_codes[0].text
+        };
+
+    } catch (error) {
+        console.error("ERRO PIX PAGSEGURO:", error.response?.data || error.message);
+        throw new Error("Erro ao gerar PIX.");
+    }
+};
+
+// 2. CARTÃO DE CRÉDITO
+exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cartao) => {
+    try {
+        const valorEmCentavos = Math.round(pedido.totalPrice * 100);
+        const [mes, ano] = cartao.expiration.split('/');
 
         const body = {
             reference_id: pedido.id,
-            customer: {
-                name: cliente.name,
-                email: cliente.email,
-                tax_id: cleanCPF,
-                // Telefones são obrigatórios no PagSeguro, vamos enviar um fixo se não tivermos
-                phones: [
-                    {
-                        country: "55",
-                        area: "11",
-                        number: "999999999",
-                        type: "MOBILE"
+            customer: buildCustomer(cliente, cpf),
+            items: [{ reference_id: "1", name: "Pedido Loja", quantity: 1, unit_amount: valorEmCentavos }],
+            charges: [
+                {
+                    reference_id: pedido.id,
+                    description: "Compra Loja da Prima",
+                    amount: { value: valorEmCentavos, currency: "BRL" },
+                    payment_method: {
+                        type: "CREDIT_CARD",
+                        installments: parseInt(cartao.installments),
+                        capture: true,
+                        card: {
+                            number: cartao.number.replace(/\s/g, ''),
+                            exp_month: mes,
+                            exp_year: "20" + ano,
+                            security_code: cartao.cvv,
+                            holder: { name: cartao.holder }
+                        }
                     }
-                ]
-            },
-            items: [
-                {
-                    reference_id: "item_01",
-                    name: "Pedido Loja da Prima",
-                    quantity: 1,
-                    unit_amount: valorEmCentavos
                 }
-            ],
-            qr_codes: [
-                {
-                    amount: {
-                        value: valorEmCentavos
-                    },
-                    kind: "CALENDAR" // Tipo padrão para Pix imediato
-                }
-            ],
-            notification_urls: [
-                "https://seusite.com/webhook" // Opcional
             ]
         };
 
         const config = {
             headers: {
                 'Authorization': `Bearer ${process.env.PAGSEGURO_TOKEN}`,
-                'Content-Type': 'application/json',
-                'x-api-version': '4.0'
+                'Content-Type': 'application/json'
             }
         };
 
-        // Envia para o PagSeguro (Endpoint de Pedidos)
         const response = await axios.post(`${process.env.PAGSEGURO_URL}/orders`, body, config);
         
-        // O PagSeguro retorna o QR Code dentro de um array
-        const qrCodeData = response.data.qr_codes[0];
-
+        // Verifica o status da cobrança
+        const charge = response.data.charges[0];
+        
         return {
             id: response.data.id,
-            status: 'Aguardando Pagamento',
-            qrCodeText: qrCodeData.text // O código "Copia e Cola"
+            status: charge.status, // EX: 'PAID', 'DECLINED'
+            message: charge.payment_response ? charge.payment_response.message : 'Processado'
         };
 
     } catch (error) {
-        // Log detalhado para ajudar a achar erro
-        console.error("ERRO PAGSEGURO:", error.response ? JSON.stringify(error.response.data) : error.message);
-        throw new Error("Erro ao gerar Pix no PagSeguro. Verifique o CPF.");
+        console.error("ERRO CARTÃO PAGSEGURO:", error.response?.data || error.message);
+        throw new Error("Erro ao processar Cartão.");
     }
 };

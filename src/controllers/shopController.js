@@ -1,45 +1,36 @@
+const db = require('../config/firebase');
 const QRCode = require('qrcode');
 const paymentService = require('../services/paymentService');
-const db = require('../config/firebase');
+
+// ==========================================
+// 1. VITRINE E PRODUTOS
+// ==========================================
 
 exports.getIndex = async (req, res) => {
     try {
-        // 1. Busca todos os documentos da coleção 'products'
         const snapshot = await db.collection('products').get();
-        
-        // 2. Transforma o resultado estranho do Firebase em um Array limpo de objetos
-        const products = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // 3. Renderiza a Home enviando a lista de produtos
         res.render('shop/home', {
             pageTitle: 'Home - Loja da Prima',
-            products: products, // Enviamos a lista para o EJS aqui
+            products: products,
             path: '/'
         });
-
     } catch (error) {
         console.log("Erro ao buscar produtos:", error);
         res.status(500).render('500', { pageTitle: 'Erro no Servidor' });
     }
-}
-
-// ... (mantenha o getIndex lá em cima)
+};
 
 exports.getProduct = async (req, res) => {
-    const prodId = req.params.productId; // Pega o ID que veio na URL
-
+    const prodId = req.params.productId;
     try {
         const doc = await db.collection('products').doc(prodId).get();
-
         if (!doc.exists) {
             return res.status(404).render('404', { pageTitle: 'Produto não encontrado', path: '' });
         }
-
         const productData = doc.data();
-        productData.id = doc.id; // Garante que o ID vai junto
+        productData.id = doc.id;
 
         res.render('shop/product-detail', {
             pageTitle: productData.title,
@@ -50,37 +41,41 @@ exports.getProduct = async (req, res) => {
         console.log(error);
         res.status(500).send('Erro ao carregar produto');
     }
-}
+};
 
-// ... (mantenha os imports e funções anteriores)
+// ==========================================
+// 2. CARRINHO DE COMPRAS
+// ==========================================
 
-// 1. ADICIONAR AO CARRINHO (POST)
+exports.getCart = (req, res) => {
+    const cart = req.session.cart || { items: [], totalQty: 0, totalPrice: 0 };
+    res.render('shop/cart', {
+        pageTitle: 'Sua Sacola',
+        path: '/carrinho',
+        cart: cart
+    });
+};
+
 exports.postCart = async (req, res) => {
     const prodId = req.body.productId;
-    const size = req.body.size; // Pegamos o tamanho escolhido (P, M, G)
+    const size = req.body.size;
 
     try {
-        // Busca o produto no Firebase para garantir que o preço está certo
         const doc = await db.collection('products').doc(prodId).get();
         if (!doc.exists) return res.redirect('/');
         
         const product = doc.data();
 
-        // Inicializa o carrinho na sessão se não existir
         if (!req.session.cart) {
             req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
         }
-
         const cart = req.session.cart;
 
-        // Verifica se já tem esse produto COM ESSE TAMANHO no carrinho
         const existingItemIndex = cart.items.findIndex(item => item.productId === prodId && item.size === size);
 
         if (existingItemIndex >= 0) {
-            // Se já tem, só aumenta a quantidade
             cart.items[existingItemIndex].qty += 1;
         } else {
-            // Se não tem, adiciona novo
             cart.items.push({
                 productId: prodId,
                 title: product.title,
@@ -91,35 +86,19 @@ exports.postCart = async (req, res) => {
             });
         }
 
-        // Atualiza totais
         cart.totalQty += 1;
         cart.totalPrice += parseFloat(product.price);
 
-        // Salva a sessão manualmente para garantir
         req.session.save(err => {
             if(err) console.log(err);
             res.redirect('/carrinho');
         });
-
     } catch (error) {
         console.log(error);
         res.redirect('/');
     }
 };
 
-// 2. MOSTRAR TELA DO CARRINHO (GET)
-exports.getCart = (req, res) => {
-    // Se não tiver carrinho, cria um vazio para não dar erro na tela
-    const cart = req.session.cart || { items: [], totalQty: 0, totalPrice: 0 };
-
-    res.render('shop/cart', {
-        pageTitle: 'Sua Sacola',
-        path: '/carrinho',
-        cart: cart
-    });
-};
-
-// 3. REMOVER ITEM (POST)
 exports.postCartDeleteProduct = (req, res) => {
     const prodId = req.body.productId;
     const size = req.body.size;
@@ -127,53 +106,53 @@ exports.postCartDeleteProduct = (req, res) => {
 
     if (!cart) return res.redirect('/carrinho');
 
-    // Acha o item para saber o preço e quantidade
     const itemIndex = cart.items.findIndex(item => item.productId === prodId && item.size === size);
     
     if (itemIndex >= 0) {
         const item = cart.items[itemIndex];
-        // Subtrai do total geral
         cart.totalQty -= item.qty;
         cart.totalPrice -= (item.price * item.qty);
-        
-        // Remove do array
         cart.items.splice(itemIndex, 1);
     }
 
     req.session.save(() => res.redirect('/carrinho'));
-}
+};
 
-// ... (código anterior)
+// ==========================================
+// 3. CHECKOUT E PAGAMENTO (PAGSEGURO)
+// ==========================================
 
-// 1. EXIBIR TELA DE CHECKOUT (GET)
 exports.getCheckout = (req, res) => {
-    // Se não tiver carrinho ou estiver vazio, chuta pra Home
     if (!req.session.cart || req.session.cart.items.length === 0) {
         return res.redirect('/carrinho');
     }
-
-    // Se não estiver logado, manda fazer login
     if (!req.session.isLoggedIn) {
         req.flash('error', 'Faça login para finalizar sua compra.');
         return req.session.save(() => res.redirect('/login'));
     }
-
     res.render('shop/checkout', {
         pageTitle: 'Finalizar Compra',
         path: '/checkout',
-        cart: req.session.cart
+        cart: req.session.cart,
+        user: req.session.user // Passamos o user para preencher o email
     });
 };
 
-// 2. FECHAR O PEDIDO (POST)
 exports.postOrder = async (req, res) => {
     try {
         const user = req.session.user;
         const cart = req.session.cart;
         const paymentMethod = req.body.paymentMethod;
-        const cpf = req.body.cpf;
+        
+        // Proteção contra CPF vazio (evita o erro undefined)
+        const cpf = req.body.cpf ? req.body.cpf.trim() : '';
 
         if (!cart || cart.items.length === 0) return res.redirect('/carrinho');
+        
+        if (!cpf) {
+            req.flash('error', 'O CPF é obrigatório para a Nota Fiscal e Pagamento.');
+            return res.redirect('/checkout');
+        }
 
         // 1. Cria Pedido no Banco
         const orderData = {
@@ -190,24 +169,22 @@ exports.postOrder = async (req, res) => {
             },
             date: new Date().toISOString(),
             status: 'Aguardando Pagamento',
-            paymentMethod: 'PIX (PagSeguro)'
+            paymentMethod: paymentMethod === 'pix' ? 'PIX (PagSeguro)' : 'Cartão (PagSeguro)'
         };
 
         const orderRef = await db.collection('orders').add(orderData);
         const orderId = orderRef.id;
 
-        // 2. Processa Pagamento
+        // 2. Decide qual pagamento processar
         if (paymentMethod === 'pix') {
-            
-            // Chama PagSeguro passando o ID do banco como referência
+            // --- PIX ---
             const pixData = await paymentService.gerarPixPagSeguro(
                 { id: orderId, totalPrice: cart.totalPrice }, 
                 user, 
                 cpf
             );
 
-            // PAGSEGURO NÃO MANDA A IMAGEM, MANDA O TEXTO.
-            // TEMOS QUE GERAR A IMAGEM NÓS MESMOS:
+            // Transforma texto em Imagem QR Code
             const qrCodeImage = await QRCode.toDataURL(pixData.qrCodeText);
 
             await orderRef.update({
@@ -227,26 +204,55 @@ exports.postOrder = async (req, res) => {
             });
 
         } else {
-            req.flash('error', 'Escolha PIX para aprovação imediata.');
-            return res.redirect('/checkout');
+            // --- CARTÃO DE CRÉDITO ---
+            const cardData = {
+                number: req.body.cardNumber,
+                holder: req.body.cardHolder,
+                expiration: req.body.cardExpiration,
+                cvv: req.body.cardCvv,
+                installments: req.body.installments
+            };
+
+            const cardResult = await paymentService.processarCartaoPagSeguro(
+                { id: orderId, totalPrice: cart.totalPrice }, 
+                user, 
+                cpf, 
+                cardData
+            );
+
+            if (cardResult.status === 'PAID') {
+                // Sucesso
+                await orderRef.update({ 
+                    status: 'Pago / Aprovado', 
+                    pagseguroId: cardResult.id 
+                });
+                req.session.cart = null;
+                return res.render('shop/success', { pageTitle: 'Compra Aprovada!', path: '' });
+            } else {
+                // Recusado
+                await orderRef.update({ status: 'Recusado (' + cardResult.status + ')' });
+                req.flash('error', 'Pagamento não aprovado: ' + cardResult.message);
+                return res.redirect('/checkout');
+            }
         }
 
     } catch (error) {
-        console.log(error);
-        req.flash('error', 'Erro ao processar. O CPF deve ser válido.');
+        console.log("ERRO CHECKOUT:", error);
+        req.flash('error', 'Erro ao processar pagamento. Verifique os dados e o CPF.');
         res.redirect('/checkout');
     }
 };
 
+// ==========================================
+// 4. ÁREA DO CLIENTE
+// ==========================================
 
-// 3. LISTAR MEUS PEDIDOS (GET)
 exports.getOrders = async (req, res) => {
     if (!req.session.isLoggedIn) {
         return res.redirect('/login');
     }
 
     try {
-        // Busca pedidos do usuário logado
         const snapshot = await db.collection('orders')
             .where('user.id', '==', req.session.user.id)
             .get();
