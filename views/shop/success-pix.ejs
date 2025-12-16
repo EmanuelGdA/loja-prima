@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .pix-container { max-width: 600px; margin: 50px auto; text-align: center; padding: 20px; }
+        .qr-code-img { width: 250px; height: 250px; margin: 20px auto; border: 1px solid #ddd; padding: 10px; border-radius: 8px; }
+        .copy-paste-box { 
+            background: #f4f4f4; padding: 15px; border-radius: 4px; 
+            word-break: break-all; font-size: 12px; margin: 20px 0; border: 1px dashed #ccc; user-select: all;
+        }
+        .btn-copy { background: black; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
+        .timer { color: red; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="pix-container">
+        <i class="fab fa-pix" style="font-size: 50px; color: #32bcad; margin-bottom: 10px;"></i>
+        <h1>Pagamento via PIX</h1>
+        <p>Escaneie o QR Code abaixo para finalizar sua compra de <strong>R$ <%= parseFloat(total).toFixed(2).replace('.', ',') %></strong></p>
+
+        <!-- Imagem do QR Code -->
+        <img src="<%= qrCodeImage %>" alt="QR Code Pix" class="qr-code-img">
+
+        <p>Ou copie e cole o código abaixo (Pix Copia e Cola):</p>
+        
+        <div class="copy-paste-box" id="pixCode">
+            <%= pixCode %>
+        </div>
+        
+        <button onclick="copiarCodigo()" class="btn-copy"><i class="far fa-copy"></i> Copiar Código</button>
+
+        <br><br>
+        <p style="font-size: 14px; color: #666;">Após o pagamento, seu pedido será aprovado automaticamente em instantes.</p>
+        
+        <a href="/pedidos" style="display: inline-block; margin-top: 30px; text-decoration: underline;">Ver Meus Pedidos</a>
+    </main>
+
+    <script>
+        function copiarCodigo() {
+            const codigo = document.getElementById('pixCode').innerText.trim();
+            navigator.clipboard.writeText(codigo).then(() => {
+                alert("Código PIX copiado! Cole no app do seu banco.");
+            }).catch(err => {
+                console.error('Erro ao copiar', err);
+                alert("Erro ao copiar. Por favor, selecione o texto e copie manualmente.");
+            });
+        }
+    </script>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>
