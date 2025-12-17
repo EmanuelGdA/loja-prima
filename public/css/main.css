@@ -156,3 +156,74 @@ ul { list-style: none; }
     display: inline-block; background: black; color: white; 
     padding: 10px 20px; margin-top: 10px;
 }
+
+/* --- HERO BANNER (CAPA DO SITE) --- */
+.hero-banner {
+    /* Imagem de Fundo (Moda Feminina Elegante) */
+    background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop');
+    
+    background-size: cover;       /* Cobre toda a área */
+    background-position: center;  /* Centraliza a foto */
+    background-attachment: fixed; /* Efeito Parallax (foto parada ao rolar) */
+    
+    height: 600px; /* Altura do banner */
+    width: 100%;
+    
+    display: flex;
+    align-items: center; /* Centraliza verticalmente */
+    justify-content: center; /* Centraliza horizontalmente */
+    text-align: center;
+    color: white;
+    margin-bottom: 50px;
+}
+
+.hero-content h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+    font-weight: 500;
+    opacity: 0.9;
+}
+
+.hero-content h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 60px; /* Título bem grande */
+    line-height: 1.1;
+    margin-bottom: 20px;
+    font-weight: 400; /* Fonte mais fina e elegante */
+}
+
+.hero-content p {
+    font-size: 16px;
+    margin-bottom: 35px;
+    font-weight: 300;
+}
+
+/* Botão do Banner */
+.btn-hero {
+    display: inline-block;
+    background-color: white;
+    color: black;
+    padding: 15px 40px;
+    font-family: 'Montserrat', sans-serif;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 600;
+    transition: 0.3s;
+    border: 1px solid white;
+}
+
+.btn-hero:hover {
+    background-color: transparent; /* Fica transparente */
+    color: white; /* Letra branca */
+}
+
+/* Ajuste para Celular */
+@media (max-width: 768px) {
+    .hero-banner { height: 400px; }
+    .hero-content h1 { font-size: 36px; }
+    .hero-content h2 { font-size: 12px; letter-spacing: 2px; }
+}
