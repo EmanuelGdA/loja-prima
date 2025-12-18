@@ -7,7 +7,7 @@ router.get('/', shopController.getIndex);
 
 // Rota dinâmica: Os dois pontos (:) dizem que productId é uma variável
 router.get('/produto/:productId', shopController.getProduct);
-
+router.post('/produto/avaliar', shopController.postReview);
 
 // --- NOVAS ROTAS DO CARRINHO ---
 router.get('/carrinho', shopController.getCart);
@@ -19,5 +19,13 @@ router.get('/login', (req, res) => res.render('user/login', { pageTitle: 'Login'
 router.get('/checkout', shopController.getCheckout);
 router.post('/criar-pedido', shopController.postOrder); // Botão "Pagar"
 router.get('/pedidos', shopController.getOrders);
+
+
+
+// Rota de Categoria (Ex: /colecao/vestidos)
+router.get('/colecao/:categoryName', shopController.getCategory);
+
+// Rota de Busca
+router.get('/search', shopController.getSearch);
 
 module.exports = router;

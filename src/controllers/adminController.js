@@ -14,21 +14,33 @@ exports.getAddProduct = (req, res) => {
 
 exports.postAddProduct = async (req, res) => {
     try {
-        const { title, imageUrl, price, description, category } = req.body;
+        const { title, price, description, categorySelect, newCategory, subcategory } = req.body;
+        
+        // O Cloudinary já subiu a imagem e colocou o link aqui:
+        if (!req.file) {
+            return res.status(422).send("É obrigatório enviar uma imagem.");
+        }
+        const imageUrl = req.file.path; // Link pronto do Cloudinary!
+
+        const finalCategory = (categorySelect === 'new' && newCategory) ? newCategory : categorySelect;
+
         const newProduct = {
-            title: title,
-            imageUrl: imageUrl,
+            title,
             price: parseFloat(price),
-            description: description,
-            category: category,
+            description,
+            category: finalCategory,
+            subcategory: subcategory || '',
+            imageUrl: imageUrl, // Salva o link
             createdAt: new Date().toISOString()
         };
+
         await db.collection('products').add(newProduct);
         console.log('Produto Criado!');
-        res.redirect('/'); 
+        res.redirect('/admin/produtos');
+
     } catch (error) {
         console.log(error);
-        res.status(500).send("Erro ao salvar produto");
+        res.status(500).send("Erro no servidor");
     }
 };
 
@@ -122,21 +134,39 @@ exports.getEditProduct = async (req, res) => {
 
 // 8. SALVAR A EDIÇÃO
 exports.postEditProduct = async (req, res) => {
+    console.log("--- TENTANDO EDITAR PRODUTO ---");
+    
     const prodId = req.body.productId;
+    const { title, price, description, categorySelect, newCategory, subcategory, oldImageUrl } = req.body;
+
     try {
+        let imageUrl = oldImageUrl; // Começa com a antiga
+
+        // Verifica se chegou arquivo
+        if (req.file) {
+            console.log("FOTO NOVA RECEBIDA:", req.file.path);
+            imageUrl = req.file.path; // Atualiza para a nova
+        } else {
+            console.log("NENHUMA FOTO NOVA. MANTENDO A ANTIGA:", oldImageUrl);
+        }
+
+        const finalCategory = (categorySelect === 'new' && newCategory) ? newCategory : categorySelect;
+
         const updatedProduct = {
-            title: req.body.title,
-            price: parseFloat(req.body.price),
-            description: req.body.description,
-            imageUrl: req.body.imageUrl,
-            category: req.body.category
+            title,
+            price: parseFloat(price),
+            description,
+            category: finalCategory,
+            subcategory: subcategory || '',
+            imageUrl: imageUrl // Salva o link (novo ou velho)
         };
 
         await db.collection('products').doc(prodId).update(updatedProduct);
-        console.log('Produto Atualizado');
+        console.log('PRODUTO SALVO NO FIREBASE COM SUCESSO!');
         res.redirect('/admin/produtos');
+
     } catch (error) {
-        console.log(error);
+        console.log("ERRO AO EDITAR:", error);
         res.redirect('/admin/produtos');
     }
 };

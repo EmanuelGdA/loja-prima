@@ -5,15 +5,15 @@
 
     <div class="nav-container">
         <div class="logo">
-    <a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
-        <!-- 1. A IMAGEM DA LOGO -->
-        <img src="/img/ui/logo.png" alt="Logo" style="height: 80px; width: auto;">
-        
-        <!-- 2. O TEXTO DO NOME -->
-        <span style="font-family: 'Playfair Display', serif; font-size: 22px; color: #000000; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
-            Maely Cristina
-        </span>
-    </a>
+            <a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
+                <!-- 1. A IMAGEM DA LOGO -->
+                <img src="/img/ui/logo.png" alt="Logo" style="height: 80px; width: auto;">
+                
+                <!-- 2. O TEXTO DO NOME -->
+                <span style="font-family: 'Playfair Display', serif; font-size: 22px; color: #000000; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
+                    Maely Cristina
+                </span>
+            </a>
         </div>
 
         <nav class="main-nav">
@@ -25,20 +25,31 @@
 
                 <!-- ÁREA RESTRITA DO ADMIN -->
                 <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-                    <!-- Adicionei uma margem e uma borda para separar visualmente -->
-                    <li style="margin-left: 15px; border-left: 1px solid #ccc; padding-left: 15px;">
+                    <!-- Divisória visual -->
+                    <li style="border-left: 1px solid #ccc; margin-left: 10px; padding-left: 15px;"></li>
+                    
+                    <!-- Botão 1: Ver Pedidos -->
+                    <li>
                         <a href="/admin/pedidos" style="color: #c4a47c; font-weight: bold;">VENDAS</a>
                     </li>
+
+                    <!-- Botão 2: Ver Lista de Produtos -->
                     <li>
-                        <a href="/admin/adicionar-produto" style="color: #c4a47c; font-weight: bold;">+ ROUPA</a>
+                        <a href="/admin/produtos" style="color: #c4a47c; font-weight: bold;">PRODUTOS</a>
                     </li>
                 <% } %>
             </ul>
         </nav>
 
-        <div class="user-actions">
-            <a href="/search"><i class="fas fa-search"></i></a>
+        <div class="user-actions" style="display: flex; align-items: center;">
+            <form action="/search" method="GET" style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 20px; padding: 2px 10px; margin-right: 10px;">
+                <input type="text" name="q" placeholder="Buscar..." style="border: none; outline: none; width: 100px; font-size: 12px;">
+                <button type="submit" style="background: none; border: none; cursor: pointer;">
+                    <i class="fas fa-search" style="color: #333;"></i>
+                </button>
+            </form>
             
+            <!-- AQUI ESTAVA O ERRO (DUPLICIDADE) - AGORA ESTÁ CORRIGIDO -->
             <% if (isAuthenticated) { %>
                 <a href="/pedidos" title="Meus Pedidos"><i class="fas fa-user"></i></a>
                 <form action="/logout" method="POST" style="display:inline;">
@@ -51,7 +62,7 @@
 
             <a href="/carrinho" class="cart-icon">
                 <i class="fas fa-shopping-bag"></i>
-                <span class="badge"><%= cartCount %></span>
+                <span class="badge"><%= typeof cartCount !== 'undefined' ? cartCount : 0 %></span>
             </a>
         </div>
         

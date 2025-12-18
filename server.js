@@ -25,7 +25,25 @@ app.set('view engine', 'ejs');
 app.set('views', 'views'); // Pasta onde estão os HTMLs
 
 // 3. Middlewares de Segurança e Parsers
-app.use(helmet()); // Protege cabeçalhos HTTP
+// Configuração do Helmet (Segurança) permitindo imagens externas
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"], // Permite scripts simples no EJS
+        imgSrc: [
+            "'self'", 
+            "data:", 
+            "https://res.cloudinary.com", // Permite Cloudinary
+            "https://images.unsplash.com", // Permite Unsplash (Banner)
+            "*.google.com" // Outros possíveis
+        ],
+        connectSrc: ["'self'", "https://viacep.com.br"], // Permite buscar CEP
+      },
+    },
+  })
+);
 app.use(bodyParser.urlencoded({ extended: false })); // Para ler formulários
 app.use(bodyParser.json());
 app.use(cookieParser());

@@ -32,9 +32,31 @@ exports.getProduct = async (req, res) => {
         const productData = doc.data();
         productData.id = doc.id;
 
+        // 1. Busca Produtos Relacionados (Mesma categoria)
+        const relatedSnapshot = await db.collection('products')
+            .where('category', '==', productData.category)
+            .limit(5) 
+            .get();
+
+        // Filtra para não mostrar o próprio produto que estamos vendo
+        let relatedProducts = relatedSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(p => p.id !== prodId)
+            .slice(0, 4); 
+
+        // 2. Busca Avaliações
+        const reviewsSnapshot = await db.collection('reviews')
+            .where('productId', '==', prodId)
+            .orderBy('date', 'desc')
+            .get();
+            
+        const reviews = reviewsSnapshot.docs.map(doc => doc.data());
+
         res.render('shop/product-detail', {
             pageTitle: productData.title,
             product: productData,
+            relatedProducts: relatedProducts,
+            reviews: reviews,
             path: '/produtos'
         });
     } catch (error) {
@@ -207,6 +229,94 @@ exports.getOrders = async (req, res) => {
         const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         res.render('shop/orders', { pageTitle: 'Meus Pedidos', path: '/pedidos', orders: orders });
+    } catch (error) {
+        console.log(error);
+        res.redirect('/');
+    }
+};
+
+// ==========================================
+// 5. NOVA FUNÇÃO PARA SALVAR AVALIAÇÃO
+// ==========================================
+
+exports.postReview = async (req, res) => {
+    const user = req.session.user;
+    const { productId, rating, comment } = req.body;
+
+    if (!user) {
+        // Se usar connect-flash:
+        // req.flash('error', 'Você precisa estar logado para avaliar.');
+        return res.redirect('/produto/' + productId);
+    }
+
+    try {
+        const review = {
+            productId: productId,
+            userId: user.id,
+            userName: user.name,
+            rating: parseInt(rating),
+            comment: comment,
+            date: new Date().toISOString()
+        };
+
+        await db.collection('reviews').add(review);
+        
+        // req.flash('success', 'Avaliação enviada com sucesso!');
+        res.redirect('/produto/' + productId);
+    } catch (error) {
+        console.log(error);
+        res.redirect('/produto/' + productId);
+    }
+};
+
+// ==========================================
+// 6. FILTROS E BUSCA
+// ==========================================
+
+// Filtrar por Categoria (Ex: /colecao/vestidos)
+exports.getCategory = async (req, res) => {
+    const categoryName = req.params.categoryName; // Pega 'vestidos' da URL
+
+    try {
+        const snapshot = await db.collection('products')
+            .where('category', '==', categoryName)
+            .get();
+
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        res.render('shop/home', { // Reutilizamos o visual da Home
+            pageTitle: categoryName.charAt(0).toUpperCase() + categoryName.slice(1), // Capitaliza (Vestidos)
+            products: products,
+            path: '/colecao'
+        });
+    } catch (error) {
+        console.log(error);
+        res.redirect('/');
+    }
+};
+
+// Buscar por Texto (Ex: ?q=vermelho)
+exports.getSearch = async (req, res) => {
+    const query = req.query.q ? req.query.q.toLowerCase() : '';
+
+    try {
+        // Firestore não tem busca nativa "LIKE %texto%". 
+        // Para lojas pequenas, baixamos tudo e filtramos aqui no código. 
+        // (Para lojas gigantes, usaríamos Algolia ou ElasticSearch).
+        
+        const snapshot = await db.collection('products').get();
+        const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const filteredProducts = allProducts.filter(p => 
+            p.title.toLowerCase().includes(query) || 
+            (p.description && p.description.toLowerCase().includes(query))
+        );
+
+        res.render('shop/home', {
+            pageTitle: `Busca: "${query}"`,
+            products: filteredProducts,
+            path: '/search'
+        });
     } catch (error) {
         console.log(error);
         res.redirect('/');

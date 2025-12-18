@@ -1,15 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const isAdmin = require('../middlewares/isAdmin'); // Importa o segurança
+const isAdmin = require('../middlewares/isAdmin');
+const multer = require('multer');
+const { storage } = require('../config/cloudinary'); 
+const upload = multer({ storage: storage }); 
 
 // Rotas de Produtos (Protegidas)
+
+// GET: Só mostra a tela (não precisa de upload)
 router.get('/adicionar-produto', isAdmin, adminController.getAddProduct);
-router.post('/adicionar-produto', isAdmin, adminController.postAddProduct);
-router.get('/produtos', isAdmin, adminController.getProducts); // Lista de produtos
-router.post('/excluir-produto', isAdmin, adminController.postDeleteProduct); // Excluir
-router.get('/editar-produto/:productId', isAdmin, adminController.getEditProduct); // Tela de Edição
-router.post('/editar-produto', isAdmin, adminController.postEditProduct); // Salvar Edição
+
+// POST: Recebe o formulário com foto -> AQUI PRECISA DO UPLOAD
+router.post('/adicionar-produto', isAdmin, upload.single('image'), adminController.postAddProduct);
+
+router.get('/produtos', isAdmin, adminController.getProducts);
+router.post('/excluir-produto', isAdmin, adminController.postDeleteProduct);
+
+router.get('/editar-produto/:productId', isAdmin, adminController.getEditProduct);
+
+// POST: Edição também recebe foto -> AQUI TAMBÉM PRECISA
+router.post('/editar-produto', isAdmin, upload.single('image'), adminController.postEditProduct);
 
 // Rotas de Pedidos (Protegidas)
 router.get('/pedidos', isAdmin, adminController.getOrders);

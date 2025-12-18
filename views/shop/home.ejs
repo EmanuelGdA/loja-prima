@@ -11,45 +11,64 @@
 
     <main>
         
-        <!-- === NOVO BANNER PRINCIPAL (HERO) === -->
-        <section class="hero-banner">
-            <div class="hero-content">
-                <h2>Nova Coleção</h2>
-                <h1>Elegância &<br>Sofisticação</h1>
-                <p>Peças exclusivas selecionadas para você.</p>
-                <!-- O link leva para a parte de baixo da página -->
-                <a href="#Destaques" class="btn-hero">Ver Coleção</a>
-            </div>
-        </section>
-        <!-- ==================================== -->
+        <!-- === LÓGICA DO BANNER === -->
+        <!-- O banner só aparece se estivermos na Home (path === '/') -->
+        <% if (path === '/') { %>
+            <section class="hero-banner">
+                <div class="hero-content">
+                    <h2>Nova Coleção</h2>
+                    <h1>Elegância &<br>Sofisticação</h1>
+                    <p>Peças exclusivas selecionadas para você.</p>
+                    <!-- O link leva para o ID "destaques" abaixo -->
+                    <a href="#destaques" class="btn-hero">Ver Coleção</a>
+                </div>
+            </section>
+        <% } %>
+        <!-- ======================== -->
 
         <!-- Conteúdo específico da Home -->
-        <section class="products-section">
-            <h2 class="section-title">Destaques</h2>
+        <!-- Adicionei id="destaques" aqui para o botão funcionar -->
+        <section class="products-section" id="destaques">
+            
+            <!-- Título Dinâmico (Muda se for Busca ou Categoria) -->
+            <h2 class="section-title">
+                <%= (typeof path !== 'undefined' && (path === '/colecao' || path === '/search')) ? pageTitle : 'Destaques' %>
+            </h2>
             
             <div class="product-grid">
                 <% if (products.length > 0) { %>
                     <!-- Loop: Para cada produto 'p' na lista... -->
                     <% products.forEach(p => { %>
-    <article class="product-card">
-        <!-- O Link leva para /produto/ID_DO_FIREBASE -->
-        <a href="/produto/<%= p.id %>">
-            <div class="card-image">
-                <img src="<%= p.imageUrl %>" alt="<%= p.title %>">
-                <button class="btn-quick-view">Ver Detalhes</button>
-            </div>
-            <div class="card-info">
-                <h3><%= p.title %></h3>
-                <p class="category"><%= p.category %></p>
-                <div class="price">R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %></div>
-            </div>
-        </a>
-    </article>
-<% }) %>
+                        <article class="product-card">
+                            <!-- O Link leva para /produto/ID_DO_FIREBASE -->
+                            <a href="/produto/<%= p.id %>">
+                                <div class="card-image">
+                                    <img src="<%= p.imageUrl %>" alt="<%= p.title %>">
+                                    <button class="btn-quick-view">Ver Detalhes</button>
+                                </div>
+                                <div class="card-info">
+                                    <h3><%= p.title %></h3>
+                                    
+                                    <!-- Categoria + Subcategoria -->
+                                    <p class="category">
+                                        <%= p.category %> 
+                                        <% if(p.subcategory) { %> | <%= p.subcategory %> <% } %>
+                                    </p>
+                                    
+                                    <div class="price">R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %></div>
+                                </div>
+                            </a>
+                        </article>
+                    <% }) %>
                 <% } else { %>
-                    <div class="no-products">
-                        <p>Nenhum produto cadastrado ainda.</p>
-                        <a href="/admin/adicionar-produto" class="btn-cta">Cadastrar Primeiro Produto</a>
+                    <!-- Mensagem quando não acha produtos (útil na busca) -->
+                    <div class="no-products" style="grid-column: 1 / -1; text-align: center;">
+                        <p>Nenhum produto encontrado.</p>
+                        <% if (typeof path !== 'undefined' && path !== '/') { %>
+                            <a href="/" class="btn-cta" style="margin-top: 10px; display: inline-block;">Voltar para o Início</a>
+                        <% } else { %>
+                            <a href="/admin/adicionar-produto" class="btn-cta">Cadastrar Primeiro Produto</a>
+                        <% } %>
                     </div>
                 <% } %>
             </div>

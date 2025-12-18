@@ -58,6 +58,86 @@
         </div>
     </main>
 
+    <!-- SEÇÃO DE AVALIAÇÕES -->
+    <section class="reviews-section" style="max-width: 1200px; margin: 50px auto; padding: 0 20px;">
+        <h2 style="font-family: 'Playfair Display'; margin-bottom: 20px; border-bottom: 1px solid #ddd; padding-bottom: 10px;">Avaliações das Clientes</h2>
+        
+        <!-- Lista de Comentários -->
+        <div class="reviews-list" style="margin-bottom: 40px;">
+            <% if (reviews && reviews.length > 0) { %>
+                <% reviews.forEach(review => { %>
+                    <div class="review-card" style="background: #f9f9f9; padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong><%= review.userName %></strong>
+                            <span style="color: #D4AF37;">
+                                <% for(let i=0; i<review.rating; i++) { %>★<% } %>
+                                <% for(let i=review.rating; i<5; i++) { %>☆<% } %>
+                            </span>
+                        </div>
+                        <p style="margin-top: 5px; color: #555;"><%= review.comment %></p>
+                        <small style="color: #999;"><%= new Date(review.date).toLocaleDateString('pt-BR') %></small>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p style="color: #777; font-style: italic;">Este produto ainda não tem avaliações. Seja a primeira a avaliar!</p>
+            <% } %>
+        </div>
+
+        <!-- Formulário para Avaliar (Só aparece se logado) -->
+        <% if (isAuthenticated) { %>
+            <div class="review-form" style="background: white; border: 1px solid #eee; padding: 20px;">
+                <h3>Deixe sua opinião</h3>
+                <form action="/produto/avaliar" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <input type="hidden" name="productId" value="<%= product.id %>">
+                    
+                    <div style="margin-bottom: 10px;">
+                        <label>Nota:</label>
+                        <select name="rating" style="padding: 5px;">
+                            <option value="5">5 Estrelas (Amei!)</option>
+                            <option value="4">4 Estrelas (Muito bom)</option>
+                            <option value="3">3 Estrelas (Bom)</option>
+                            <option value="2">2 Estrelas (Regular)</option>
+                            <option value="1">1 Estrela (Ruim)</option>
+                        </select>
+                    </div>
+                    
+                    <div style="margin-bottom: 10px;">
+                        <label>Comentário:</label>
+                        <textarea name="comment" rows="3" style="width: 100%; padding: 10px;" required placeholder="O que você achou da peça?"></textarea>
+                    </div>
+                    
+                    <button type="submit" style="background: black; color: white; border: none; padding: 10px 20px; cursor: pointer;">Enviar Avaliação</button>
+                </form>
+            </div>
+        <% } else { %>
+            <div style="background: #f0f0f0; padding: 15px; text-align: center;">
+                <a href="/login" style="text-decoration: underline; font-weight: bold;">Faça login</a> para deixar uma avaliação.
+            </div>
+        <% } %>
+    </section>
+
+    <!-- SEÇÃO DE PRODUTOS RELACIONADOS -->
+    <% if (relatedProducts && relatedProducts.length > 0) { %>
+        <section class="related-products" style="max-width: 1200px; margin: 80px auto; padding: 0 20px;">
+            <h2 style="font-family: 'Playfair Display'; text-align: center; margin-bottom: 40px;">Você também pode gostar</h2>
+            
+            <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;">
+                <% relatedProducts.forEach(p => { %>
+                    <article class="product-card" style="text-align: center;">
+                        <a href="/produto/<%= p.id %>" style="text-decoration: none; color: inherit;">
+                            <div class="card-image" style="height: 300px; overflow: hidden; margin-bottom: 10px;">
+                                <img src="<%= p.imageUrl %>" alt="<%= p.title %>" style="width: 100%; height: 100%; object-fit: cover;">
+                            </div>
+                            <h3 style="font-size: 14px; margin: 0;"><%= p.title %></h3>
+                            <div style="font-weight: bold;">R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %></div>
+                        </a>
+                    </article>
+                <% }) %>
+            </div>
+        </section>
+    <% } %>
+
     <%- include('../partials/footer.ejs') %>
 </body>
 </html>

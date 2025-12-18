@@ -2,63 +2,110 @@
 <html lang="pt-br">
 <head>
     <%- include('../partials/head.ejs') %>
+    <link rel="stylesheet" href="/css/auth.css">
     <style>
-        .form-control { margin-bottom: 1rem; }
-        .form-control label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
-        .form-control input, .form-control textarea, .form-control select {
-            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;
-        }
-        .btn-save {
-            background-color: black; color: white; padding: 10px 20px; 
-            border: none; cursor: pointer; text-transform: uppercase; width: 100%;
-        }
         .container { max-width: 600px; margin: 50px auto; padding: 20px; }
+        .current-img-preview { margin-top: 10px; font-size: 13px; color: #666; }
+        .current-img-preview a { color: blue; text-decoration: underline; }
     </style>
 </head>
 <body>
     <%- include('../partials/header.ejs') %>
 
     <main class="container">
-        <h1 style="text-align: center; margin-bottom: 30px;">Cadastrar Novo Produto</h1>
+        <h1 style="text-align: center; margin-bottom: 30px;">
+            <%= editing ? 'Editar Produto' : 'Cadastrar Novo Produto' %>
+        </h1>
 
-        <form action="/admin/adicionar-produto" method="POST">
-            <!-- Token de Segurança Obrigatório -->
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <!-- ATENÇÃO: O 'enctype' abaixo é OBRIGATÓRIO para envio de arquivos -->
+        <form action="/admin/<%= editing ? 'editar-produto' : 'adicionar-produto' %>?_csrf=<%= csrfToken %>" method="POST" enctype="multipart/form-data">
+            
+           
+            <% if (editing) { %>
+                <input type="hidden" name="productId" value="<%= product.id %>">
+                <input type="hidden" name="oldImageUrl" value="<%= product.imageUrl %>">
+            <% } %>
 
-            <div class="form-control">
-                <label for="title">Nome da Peça</label>
-                <input type="text" name="title" id="title" placeholder="Ex: Vestido Floral Midi" required>
+            <div class="form-group">
+                <label>Nome da Peça</label>
+                <input type="text" name="title" value="<%= editing ? product.title : '' %>" required>
             </div>
 
-            <div class="form-control">
-                <label for="imageUrl">URL da Imagem</label>
-                <input type="text" name="imageUrl" id="imageUrl" placeholder="Cole o link da foto aqui (ex: https://...)" required>
-                <small style="color: #666;">Dica: Pegue um link do Pinterest ou Google Imagens para testar.</small>
+            <!-- CAMPO DE UPLOAD DE IMAGEM -->
+            <div class="form-group">
+                <label>Foto do Produto (Do seu computador)</label>
+                <input type="file" name="image" accept="image/*" <%= editing ? '' : 'required' %>>
+                
+                <% if (editing) { %>
+                    <div class="current-img-preview">
+                        Foto atual: <a href="<%= product.imageUrl %>" target="_blank">Ver imagem</a>
+                        <br>
+                        (Deixe em branco se não quiser trocar a foto)
+                    </div>
+                <% } %>
             </div>
 
-            <div class="form-control">
-                <label for="category">Categoria</label>
-                <select name="category" id="category">
-                    <option value="vestidos">Vestidos</option>
-                    <option value="blusas">Blusas</option>
-                    <option value="calcas">Calças</option>
-                    <option value="acessorios">Acessórios</option>
+            <!-- CATEGORIAS INTELIGENTES -->
+            <div class="form-group">
+                <label>Categoria Principal</label>
+                <select name="categorySelect" id="catSelect" onchange="checkNewCat(this)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="vestidos" <%= (editing && product.category === 'vestidos') ? 'selected' : '' %>>Vestidos</option>
+                    <option value="blusas" <%= (editing && product.category === 'blusas') ? 'selected' : '' %>>Blusas</option>
+                    <option value="calcas" <%= (editing && product.category === 'calcas') ? 'selected' : '' %>>Calças</option>
+                    <option value="conjuntos" <%= (editing && product.category === 'conjuntos') ? 'selected' : '' %>>Conjuntos</option>
+                    <option value="acessorios" <%= (editing && product.category === 'acessorios') ? 'selected' : '' %>>Acessórios</option>
+                    <option value="new" style="font-weight: bold; color: blue;">+ Criar Nova Categoria</option>
                 </select>
+                
+                <!-- Input que aparece só se escolher "Criar Nova" -->
+                <input type="text" name="newCategory" id="newCatInput" placeholder="Digite o nome da nova categoria" style="display: none; margin-top: 10px;">
             </div>
 
-            <div class="form-control">
-                <label for="price">Preço (R$)</label>
-                <input type="number" name="price" id="price" step="0.01" placeholder="199.90" required>
+            <div class="form-group">
+                <label>Sub-Categoria (Opcional)</label>
+                <input type="text" name="subcategory" placeholder="Ex: Longo, Estampado, Festa..." value="<%= editing && product.subcategory ? product.subcategory : '' %>">
             </div>
 
-            <div class="form-control">
-                <label for="description">Descrição Detalhada</label>
-                <textarea name="description" id="description" rows="5" required></textarea>
+            <div class="form-group">
+                <label>Preço (R$)</label>
+                <input type="number" name="price" step="0.01" value="<%= editing ? product.price : '' %>" required>
             </div>
 
-            <button type="submit" class="btn-save">Salvar Produto</button>
+            <div class="form-group">
+                <label>Descrição</label>
+                <textarea name="description" rows="5" required><%= editing ? product.description : '' %></textarea>
+            </div>
+
+            <button type="submit" class="btn-auth" style="background: black;">
+                <%= editing ? 'Salvar Alterações' : 'Cadastrar Produto' %>
+            </button>
         </form>
     </main>
+
+    <!-- Script para mostrar/esconder o campo de nova categoria -->
+    <script>
+        function checkNewCat(select) {
+            const input = document.getElementById('newCatInput');
+            if (select.value === 'new') {
+                input.style.display = 'block';
+                input.required = true;
+                input.focus();
+            } else {
+                input.style.display = 'none';
+                input.required = false;
+                input.value = '';
+            }
+        }
+        
+        // Verifica ao carregar a página (caso esteja editando uma categoria customizada)
+        window.onload = function() {
+            const select = document.getElementById('catSelect');
+            const editingCategory = "<%= editing ? product.category : '' %>";
+            
+            // Se a categoria salva não estiver na lista padrão, marcamos como "Nova" ou ajustamos (lógica simples)
+            // Para simplificar, mantemos o select padrão. Se quiser algo avançado, teríamos que popular o select dinamicamente.
+        };
+    </script>
 
     <%- include('../partials/footer.ejs') %>
 </body>
