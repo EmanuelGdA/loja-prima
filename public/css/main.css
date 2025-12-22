@@ -215,12 +215,20 @@ ul { list-style: none; }
     .hero-content { display: none; }
 
     /* 3. MENU E OUTROS */
+    /* Menu Gaveta (Escondido por padrão) */
     .main-nav {
-        display: none; position: absolute; top: 100%; left: 0; width: 100%;
-        background: white; padding: 0; z-index: 999;
+        display: none; 
+        position: absolute; 
+        top: 100%; left: 0; width: 100%;
+        background: white; 
+        z-index: 9999; /* Z-Index bem alto para ficar na frente de tudo */
         box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
-    .main-nav.active { display: block; }
+
+    /* ESSA PARTE É A QUE FAZ ELE APARECER */
+    .main-nav.active { 
+        display: block !important; 
+    }
     .main-nav ul { flex-direction: column; text-align: center; margin: 0; padding: 20px; }
     .main-nav li { border-bottom: 1px solid #f4f4f4; padding: 15px 0; }
     
