@@ -104,54 +104,82 @@ ul { list-style: none; }
 /* --- RESPONSIVIDADE (CELULAR) --- */
 @media (max-width: 768px) {
     
-    /* ORGANIZAÇÃO DO HEADER: Hambúrguer na ponta, Logo no meio, Carrinho na ponta */
+    /* 1. HEADER IGUAL REFERÊNCIA (Hambúrguer Esq | Logo Meio | Ícones Dir) */
     .nav-container {
-        padding: 10px 15px;
+        padding: 15px 20px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        position: relative; /* Necessário para centralizar a logo */
     }
 
-    /* 1. Logo Limpa */
-    .desktop-name { display: none !important; } /* Esconde o nome escrito */
-    .logo img { height: 45px; } /* Logo MC tamanho ideal */
-    .logo { margin-right: auto; margin-left: 15px; } /* Ajuste de posição */
-
-    /* 2. Menu Hambúrguer (Esquerda) */
+    /* Menu Hambúrguer (Esquerda) */
     .mobile-menu-btn { 
         display: block; 
-        font-size: 20px; 
-        order: -1; /* Força ele a ser o primeiro item (Esquerda) */
+        font-size: 24px; 
+        color: var(--black);
+        width: 40px; /* Largura fixa para equilibrar */
     }
 
-    /* 3. Ícones (Direita) */
-    .user-actions { gap: 15px; }
+    /* Logo (Exatamente no Centro) */
+    .logo {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        margin: 0;
+    }
+    .logo a { display: block; }
+    .desktop-name { display: none !important; }
+    .logo img { height: 55px; } /* Logo um pouco maior */
+
+    /* Ícones (Direita) */
+    .user-actions { 
+        margin-left: auto; /* Empurra para a direita */
+        gap: 15px; 
+    }
     
-    /* Esconde a caixa branca da busca, deixa só a lupa */
+    /* Esconde a caixa de busca, deixa só a lupa */
     .search-form { border: none !important; padding: 0 !important; margin: 0 !important; }
     .search-form input { display: none; } 
-    .search-form button i { font-size: 18px; color: var(--black); }
+    .search-form button i { font-size: 20px; color: var(--black); }
+    .cart-icon i { font-size: 20px; } /* Ícone da sacola maior */
 
-    /* 4. Banner Mobile */
+    /* 2. BANNER FIXO (PARALLAX) E ALTO */
     .hero-banner {
-        background-image: url('/img/banner-mobile.png') !important;
-        background-position: center top;
+        background-image: url('/img/banner-mobile.jpg') !important;
+        
+        /* O SEGREDO DO EFEITO FIXO: */
+        background-attachment: fixed; 
+        
+        background-position: center top; /* Foca no topo (rosto) */
         background-size: cover;
-        height: 75vh;
+        
+        /* Altura: 85% da tela do celular (Bem alto igual a referência) */
+        height: 85vh; 
+        
         box-shadow: none;
+        margin-bottom: 30px;
     }
+    
+    /* Esconde o texto do HTML para mostrar só a foto */
     .hero-content { display: none; }
 
-    /* 5. Menu Gaveta */
+    /* 3. MENU GAVETA */
     .main-nav {
-        display: none; position: absolute; top: 100%; left: 0; width: 100%;
-        background: white; padding: 20px; z-index: 999;
-        border-bottom: 3px solid var(--gold);
+        display: none; 
+        position: absolute; 
+        top: 100%; left: 0; width: 100%;
+        background: white; padding: 0; 
+        z-index: 999;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
-    .main-nav.active { display: block; animation: slideDown 0.3s ease; }
-    .main-nav ul { flex-direction: column; text-align: left; }
-    .main-nav li { border-bottom: 1px solid #eee; padding: 10px 0; }
+    .main-nav.active { display: block; }
     
+    .main-nav ul { flex-direction: column; text-align: center; margin: 0; padding: 20px; }
+    .main-nav li { border-bottom: 1px solid #f4f4f4; padding: 15px 0; }
+    .main-nav li:last-child { border: none; }
+    .main-nav a { font-size: 14px; font-weight: 600; }
+
+    /* Ajuste da grade */
     .product-grid { grid-template-columns: 1fr; padding: 0 20px; }
     .checkout-form { flex-direction: column-reverse; }
 }
