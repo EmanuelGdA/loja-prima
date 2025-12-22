@@ -1,10 +1,8 @@
-/* public/css/main.css */
-
 /* --- Variáveis (Cores da Marca) --- */
 :root {
     --primary-color: #000000;
     --secondary-color: #333333;
-    --accent-color: #c4a47c; /* Um tom dourado/bege chique */
+    --accent-color: #c4a47c; /* Dourado/Bege */
     --light-bg: #f9f9f9;
     --white: #ffffff;
     --font-main: 'Montserrat', sans-serif;
@@ -41,6 +39,7 @@ ul { list-style: none; }
     align-items: center;
     padding: 20px 5%;
     border-bottom: 1px solid #eee;
+    background: white;
 }
 
 .logo a {
@@ -48,16 +47,27 @@ ul { list-style: none; }
     font-size: 28px;
     font-weight: 600;
     letter-spacing: -1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-.logo span { color: var(--accent-color); }
+.logo span { color: var(--primary-color); }
 
 .main-nav ul { display: flex; gap: 30px; }
 .main-nav a { font-size: 14px; text-transform: uppercase; font-weight: 500; }
 .main-nav a:hover { color: var(--accent-color); }
 .promo-link { color: #d9534f !important; }
 
-.user-actions { display: flex; gap: 20px; font-size: 18px; }
+/* Ícones e Busca */
+.user-actions { display: flex; gap: 20px; font-size: 18px; align-items: center; }
+.search-form {
+    display: flex; align-items: center; border: 1px solid #ddd; 
+    border-radius: 20px; padding: 2px 10px; margin-right: 10px;
+}
+.search-form input { border: none; outline: none; width: 100px; font-size: 12px; }
+.search-form button { background: none; border: none; cursor: pointer; }
+
 .cart-icon { position: relative; }
 .badge {
     position: absolute;
@@ -70,116 +80,141 @@ ul { list-style: none; }
     display: flex; align-items: center; justify-content: center;
 }
 
-/* --- Botão Logout (Invisível) --- */
 .btn-logout { background: none; border: none; cursor: pointer; font-size: 18px; color: inherit; }
-
-/* --- Mobile Menu --- */
 .mobile-menu-btn { display: none; font-size: 24px; cursor: pointer; }
 
-/* --- Footer --- */
-.main-footer { background-color: #1a1a1a; color: #ccc; padding-top: 60px; margin-top: 50px; }
-.footer-content {
+/* --- HERO BANNER (DESKTOP) --- */
+.hero-banner {
+    /* Imagem Padrão (será substituída pelo JS) */
+    background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; /* Efeito Parallax no PC */
+    height: 600px;
+    width: 100%;
     display: flex;
-    justify-content: space-between;
-    padding: 0 5% 50px;
-    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: white;
+    margin-bottom: 50px;
+    transition: background-image 1s ease-in-out;
 }
+
+.hero-content h2 {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 15px; font-weight: 500;
+}
+.hero-content h1 {
+    font-family: 'Playfair Display', serif; font-size: 60px; line-height: 1.1; margin-bottom: 20px;
+}
+.hero-content p { font-size: 16px; margin-bottom: 35px; }
+
+.btn-hero {
+    display: inline-block; background-color: white; color: black; padding: 15px 40px;
+    font-family: 'Montserrat', sans-serif; text-transform: uppercase; font-size: 12px;
+    letter-spacing: 2px; font-weight: 600; transition: 0.3s; border: 1px solid white;
+}
+.btn-hero:hover { background-color: transparent; color: white; }
+
+/* --- VITRINE PRODUTOS (DESIGN NOVO) --- */
+.products-section { padding: 50px 5%; max-width: 1400px; margin: 0 auto; }
+.section-title { 
+    text-align: center; font-family: var(--font-title); font-size: 42px; margin-bottom: 60px; position: relative;
+}
+.section-title::after {
+    content: ''; display: block; width: 60px; height: 3px; background-color: var(--accent-color); margin: 15px auto 0;
+}
+
+.product-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 40px;
+}
+
+.product-card { transition: transform 0.4s; cursor: pointer; text-align: center; }
+.product-card:hover { transform: translateY(-10px); }
+
+.card-image {
+    width: 100%; height: 450px; overflow: hidden; position: relative; background-color: #f4f4f4; margin-bottom: 20px;
+}
+.card-image img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
+.product-card:hover .card-image img { transform: scale(1.1); }
+
+.btn-quick-view {
+    position: absolute; bottom: -50px; left: 0; width: 100%; background: rgba(255,255,255,0.95);
+    border: none; padding: 15px; text-transform: uppercase; font-weight: 600; font-size: 12px; transition: 0.3s;
+}
+.card-image:hover .btn-quick-view { bottom: 0; }
+
+.card-info h3 { font-family: var(--font-title); font-size: 18px; margin-bottom: 5px; color: #111; }
+.card-info .category { color: #999; font-size: 11px; text-transform: uppercase; margin-bottom: 10px; }
+.card-info .price { font-weight: 600; font-size: 16px; color: #111; }
+.btn-cta { display: inline-block; background: black; color: white; padding: 10px 20px; margin-top: 10px; }
+
+/* --- ANIMAÇÃO FRETE (MARQUEE) --- */
+.top-bar-marquee {
+    background-color: var(--primary-color); color: white; padding: 8px 0; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 1px; overflow: hidden; white-space: nowrap;
+}
+.marquee-content { display: inline-block; padding-left: 100%; animation: marquee 20s linear infinite; }
+@keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+
+/* --- FOOTER --- */
+.main-footer { background-color: #1a1a1a; color: #ccc; padding-top: 60px; margin-top: 50px; }
+.footer-content { display: flex; justify-content: space-between; padding: 0 5% 50px; flex-wrap: wrap; }
 .footer-column { width: 30%; min-width: 250px; margin-bottom: 20px; }
 .footer-column h3 { color: var(--white); font-family: var(--font-title); margin-bottom: 20px; }
 .footer-column ul li { margin-bottom: 10px; font-size: 14px; }
 .footer-column ul li a:hover { color: var(--white); text-decoration: underline; }
-
 .social-links { margin-top: 20px; font-size: 20px; }
 .social-links a { margin-right: 15px; }
-
 .payment-icons { font-size: 24px; margin-bottom: 20px; display: flex; gap: 10px; }
+.footer-bottom { border-top: 1px solid #333; text-align: center; padding: 20px; font-size: 12px; }
 
-.footer-bottom {
-    border-top: 1px solid #333;
-    text-align: center;
-    padding: 20px;
-    font-size: 12px;
-}
-
-/* --- RESPONSIVIDADE (CELULAR - FINAL) --- */
+/* ========================================= */
+/*      RESPONSIVIDADE (CELULAR) - FINAL     */
+/* ========================================= */
 @media (max-width: 768px) {
     
-    /* 1. HEADER (Logo + Nome) */
+    /* 1. HEADER (Logo + Nome Ajustados) */
     .nav-container {
         padding: 10px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: white;
+        display: flex; justify-content: space-between; align-items: center;
+        height: 70px;
     }
 
-    /* Menu Hambúrguer */
-    .mobile-menu-btn { 
-        display: block; font-size: 22px; color: var(--black); 
-        width: 30px; /* Espaço reservado */
-    }
+    .mobile-menu-btn { display: block; font-size: 22px; color: var(--black); width: 30px; }
 
-    /* Logo Central (Imagem + Texto) */
+    /* Logo Centralizada com Nome */
     .logo {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        /* Centralização absoluta */
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        width: max-content;
+        position: absolute; left: 50%; transform: translateX(-50%);
+        display: flex; align-items: center; gap: 6px; width: max-content;
     }
-    .logo a { display: flex; align-items: center; gap: 5px; text-decoration: none; }
-    
-    .logo img { height: 35px; } /* Logo um pouco menor para caber o texto */
-    
-    /* Mostrar o nome no celular, mas menor */
+    .logo img { height: 32px; }
     .logo span { 
-        display: block !important; /* Força aparecer */
-        font-size: 14px !important; /* Fonte menor */
-        line-height: 1;
-        color: var(--black);
+        display: block !important; font-size: 13px !important; font-weight: 600;
+        letter-spacing: 0.5px; white-space: nowrap; color: var(--black);
     }
 
-    /* Ícones (Direita) */
+    /* Ícones e Busca */
     .user-actions { gap: 12px; margin-left: auto; }
-    .search-form { display: none !important; } /* Apenas ícone de busca se quiser, ou removemos */
-    
-    /* 2. FAIXA DE FRETE (MARQUEE) */
-    .top-bar-marquee {
-        background-color: var(--black); /* Fundo Preto */
-        color: white; /* Letra Branca */
-        padding: 8px 0;
-        font-size: 10px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        overflow: hidden;
-        white-space: nowrap;
-        position: relative;
-        z-index: 5;
-    }
-    
-    .marquee-content {
-        display: inline-block;
-        padding-left: 100%;
-        animation: marquee 15s linear infinite;
-    }
+    .search-form { display: none !important; } /* Esconde caixa de busca no mobile */
 
-    /* 3. BANNER FIXO (PARALLAX) */
+    /* 2. BANNER MOBILE (Correção do corte de cabeça) */
     .hero-banner {
-        /* A imagem será definida pelo JavaScript na Home */
-        background-attachment: fixed; /* EFEITO FIXO */
-        background-position: center top;
+        background-image: url('/img/banner-mobile.jpg') !important;
+        
+        background-attachment: scroll !important; /* Rola normal para não cortar */
+        background-position: center top !important; /* Foca no rosto */
         background-size: cover;
-        height: 85vh; /* Altura tela cheia */
-        box-shadow: none;
-        margin-bottom: 30px;
-        transition: background-image 1s ease-in-out; /* Transição suave na troca */
+        
+        height: 130vw; /* Altura proporcional à largura */
+        max-height: 85vh;
+        
+        box-shadow: none; margin-bottom: 20px;
     }
     .hero-content { display: none; }
 
-    /* MENU GAVETA */
+    /* 3. MENU E OUTROS */
     .main-nav {
         display: none; position: absolute; top: 100%; left: 0; width: 100%;
         background: white; padding: 0; z-index: 999;
@@ -192,160 +227,3 @@ ul { list-style: none; }
     .product-grid { grid-template-columns: 1fr; padding: 0 20px; }
     .checkout-form { flex-direction: column-reverse; }
 }
-
-@keyframes marquee {
-    0%   { transform: translate(0, 0); }
-    100% { transform: translate(-100%, 0); }
-}
-
-/* --- Vitrine de Produtos --- */
-.products-section { padding: 50px 5%; }
-.section-title { 
-    text-align: center; font-family: var(--font-title); font-size: 36px; margin-bottom: 40px; 
-}
-
-.product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Responsivo automático */
-    gap: 30px;
-}
-
-.product-card {
-    transition: transform 0.3s;
-    cursor: pointer;
-}
-.product-card:hover { transform: translateY(-5px); }
-
-.card-image {
-    position: relative;
-    height: 350px; /* Altura fixa para alinhar */
-    overflow: hidden;
-    margin-bottom: 15px;
-}
-
-.card-image img {
-    width: 100%; height: 100%; object-fit: cover; /* Corta a imagem sem esticar */
-}
-
-/* Botão que aparece ao passar o mouse */
-.btn-quick-view {
-    position: absolute;
-    bottom: -50px; left: 0; width: 100%;
-    background: rgba(255, 255, 255, 0.9);
-    border: none; padding: 15px;
-    text-transform: uppercase; font-weight: bold; cursor: pointer;
-    transition: 0.3s;
-}
-.card-image:hover .btn-quick-view { bottom: 0; }
-
-.card-info h3 { font-size: 16px; margin-bottom: 5px; font-weight: 400; }
-.card-info .category { color: #888; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; }
-.card-info .price { font-weight: 600; font-size: 16px; }
-
-/* Botão CTA para quando não tem produtos */
-.btn-cta {
-    display: inline-block; background: black; color: white; 
-    padding: 10px 20px; margin-top: 10px;
-}
-
-/* --- HERO BANNER (CAPA DO SITE) --- */
-.hero-banner {
-    /* Imagem de Fundo (Moda Feminina Elegante) */
-    background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070&auto=format&fit=crop');
-    
-    background-size: cover;       /* Cobre toda a área */
-    background-position: center;  /* Centraliza a foto */
-    background-attachment: fixed; /* Efeito Parallax (foto parada ao rolar) */
-    
-    height: 600px; /* Altura do banner */
-    width: 100%;
-    
-    display: flex;
-    align-items: center; /* Centraliza verticalmente */
-    justify-content: center; /* Centraliza horizontalmente */
-    text-align: center;
-    color: white;
-    margin-bottom: 50px;
-}
-
-.hero-content h2 {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 14px;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    margin-bottom: 15px;
-    font-weight: 500;
-    opacity: 0.9;
-}
-
-.hero-content h1 {
-    font-family: 'Playfair Display', serif;
-    font-size: 60px; /* Título bem grande */
-    line-height: 1.1;
-    margin-bottom: 20px;
-    font-weight: 400; /* Fonte mais fina e elegante */
-}
-
-.hero-content p {
-    font-size: 16px;
-    margin-bottom: 35px;
-    font-weight: 300;
-}
-
-/* Botão do Banner */
-.btn-hero {
-    display: inline-block;
-    background-color: white;
-    color: black;
-    padding: 15px 40px;
-    font-family: 'Montserrat', sans-serif;
-    text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: 2px;
-    font-weight: 600;
-    transition: 0.3s;
-    border: 1px solid white;
-}
-
-.btn-hero:hover {
-    background-color: transparent; /* Fica transparente */
-    color: white; /* Letra branca */
-}
-
-/* Ajuste para Celular */
-@media (max-width: 768px) {
-    .hero-banner { height: 400px; }
-    .hero-content h1 { font-size: 36px; }
-    .hero-content h2 { font-size: 12px; letter-spacing: 2px; }
-}
-
-/* --- ANIMAÇÃO DO FRETE (MARQUEE) --- */
-.top-bar-marquee {
-    background-color: var(--black);
-    color: white;
-    overflow: hidden; /* Esconde o que sai da tela */
-    white-space: nowrap; /* Impede quebra de linha */
-    padding: 8px 0;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
-
-.marquee-content {
-    display: inline-block;
-    padding-left: 100%; /* Começa fora da tela */
-    animation: marquee 20s linear infinite; /* Animação infinita */
-}
-
-@keyframes marquee {
-    0%   { transform: translate(0, 0); }
-    100% { transform: translate(-100%, 0); }
-}
-
-/* Ajustes Gerais do Header */
-.search-form {
-    display: flex; align-items: center; border: 1px solid #ddd; 
-    border-radius: 20px; padding: 2px 10px; margin-right: 10px;
-}
-.search-form input { border: none; outline: none; width: 100px; font-size: 12px; }
-.search-form button { background: none; border: none; cursor: pointer; }
