@@ -201,7 +201,7 @@ ul { list-style: none; }
 
     /* 2. BANNER MOBILE (Correção do corte de cabeça) */
     .hero-banner {
-        background-image: url('/img/banner-mobile.jpg') !important;
+        background-image: url('/img/banner-mobile.png') !important;
         
         background-attachment: scroll !important; /* Rola normal para não cortar */
         background-position: center top !important; /* Foca no rosto */
