@@ -11,7 +11,7 @@
         <div class="logo">
             <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
                 <img src="/img/ui/logo.png" alt="Logo" style="height: 60px; width: auto;">
-                <!-- O CSS vai esconder esse texto no celular -->
+                <!-- O CSS esconde este texto no celular -->
                 <span class="desktop-name" style="font-family: 'Playfair Display', serif; font-size: 22px; color: #000; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
                     Maely Cristina
                 </span>
@@ -36,14 +36,23 @@
 
         <!-- Ícones (Direita) -->
         <div class="user-actions">
-            <!-- Busca: No celular será só o ícone -->
+            <!-- Busca -->
             <form action="/search" method="GET" class="search-form">
                 <input type="text" name="q" placeholder="Buscar...">
                 <button type="submit"><i class="fas fa-search"></i></button>
             </form>
             
             <% if (isAuthenticated) { %>
-                <a href="/pedidos"><i class="fas fa-user"></i></a>
+                <!-- Link para Pedidos -->
+                <a href="/pedidos" title="Meus Pedidos"><i class="fas fa-user"></i></a>
+                
+                <!-- BOTÃO DE SAIR (RESTAURADO) -->
+                <form action="/logout" method="POST" style="display:inline; margin-left: 5px;">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn-logout" title="Sair" style="background:none; border:none; cursor:pointer; font-size:16px;">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </form>
             <% } else { %>
                 <a href="/login"><i class="far fa-user"></i></a>
             <% } %>
@@ -55,10 +64,10 @@
         </div>
     </div>
 
-    <!-- 2. FAIXA DE FRETE ANIMADA (AGORA EMBAIXO) -->
+    <!-- 2. FAIXA DE FRETE ANIMADA -->
     <div class="top-bar-marquee">
         <div class="marquee-content">
-            <span>FRETE GRÁTIS PARA TODO O BRASIL EM COMPRAS ACIMA DE R$ 499,00  •  ENVIAMOS PARA TODO O BRASIL</span>
+            <span>FRETE GRÁTIS PARA TODO O BRASIL EM COMPRAS ACIMA DE R$ 499,00  •  PARCELE EM ATÉ 6X SEM JUROS  •  ENVIAMOS PARA TODO O BRASIL</span>
         </div>
     </div>
 

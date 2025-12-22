@@ -101,87 +101,101 @@ ul { list-style: none; }
     font-size: 12px;
 }
 
-/* --- RESPONSIVIDADE (CELULAR) --- */
+/* --- RESPONSIVIDADE (CELULAR - FINAL) --- */
 @media (max-width: 768px) {
     
-    /* 1. HEADER IGUAL REFERÊNCIA (Hambúrguer Esq | Logo Meio | Ícones Dir) */
+    /* 1. HEADER (Logo + Nome) */
     .nav-container {
-        padding: 15px 20px;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+    }
+
+    /* Menu Hambúrguer */
+    .mobile-menu-btn { 
+        display: block; font-size: 22px; color: var(--black); 
+        width: 30px; /* Espaço reservado */
+    }
+
+    /* Logo Central (Imagem + Texto) */
+    .logo {
         display: flex;
         align-items: center;
-        position: relative; /* Necessário para centralizar a logo */
-    }
-
-    /* Menu Hambúrguer (Esquerda) */
-    .mobile-menu-btn { 
-        display: block; 
-        font-size: 24px; 
-        color: var(--black);
-        width: 40px; /* Largura fixa para equilibrar */
-    }
-
-    /* Logo (Exatamente no Centro) */
-    .logo {
+        gap: 5px;
+        /* Centralização absoluta */
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
-        margin: 0;
+        width: max-content;
     }
-    .logo a { display: block; }
-    .desktop-name { display: none !important; }
-    .logo img { height: 55px; } /* Logo um pouco maior */
+    .logo a { display: flex; align-items: center; gap: 5px; text-decoration: none; }
+    
+    .logo img { height: 35px; } /* Logo um pouco menor para caber o texto */
+    
+    /* Mostrar o nome no celular, mas menor */
+    .logo span { 
+        display: block !important; /* Força aparecer */
+        font-size: 14px !important; /* Fonte menor */
+        line-height: 1;
+        color: var(--black);
+    }
 
     /* Ícones (Direita) */
-    .user-actions { 
-        margin-left: auto; /* Empurra para a direita */
-        gap: 15px; 
+    .user-actions { gap: 12px; margin-left: auto; }
+    .search-form { display: none !important; } /* Apenas ícone de busca se quiser, ou removemos */
+    
+    /* 2. FAIXA DE FRETE (MARQUEE) */
+    .top-bar-marquee {
+        background-color: var(--black); /* Fundo Preto */
+        color: white; /* Letra Branca */
+        padding: 8px 0;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        overflow: hidden;
+        white-space: nowrap;
+        position: relative;
+        z-index: 5;
     }
     
-    /* Esconde a caixa de busca, deixa só a lupa */
-    .search-form { border: none !important; padding: 0 !important; margin: 0 !important; }
-    .search-form input { display: none; } 
-    .search-form button i { font-size: 20px; color: var(--black); }
-    .cart-icon i { font-size: 20px; } /* Ícone da sacola maior */
+    .marquee-content {
+        display: inline-block;
+        padding-left: 100%;
+        animation: marquee 15s linear infinite;
+    }
 
-    /* 2. BANNER FIXO (PARALLAX) E ALTO */
+    /* 3. BANNER FIXO (PARALLAX) */
     .hero-banner {
-        background-image: url('/img/banner-mobile.png') !important;
-        
-        /* O SEGREDO DO EFEITO FIXO: */
-        background-attachment: fixed; 
-        
-        background-position: center top; /* Foca no topo (rosto) */
+        /* A imagem será definida pelo JavaScript na Home */
+        background-attachment: fixed; /* EFEITO FIXO */
+        background-position: center top;
         background-size: cover;
-        
-        /* Altura: 85% da tela do celular (Bem alto igual a referência) */
-        height: 85vh; 
-        
+        height: 85vh; /* Altura tela cheia */
         box-shadow: none;
         margin-bottom: 30px;
+        transition: background-image 1s ease-in-out; /* Transição suave na troca */
     }
-    
-    /* Esconde o texto do HTML para mostrar só a foto */
     .hero-content { display: none; }
 
-    /* 3. MENU GAVETA */
+    /* MENU GAVETA */
     .main-nav {
-        display: none; 
-        position: absolute; 
-        top: 100%; left: 0; width: 100%;
-        background: white; padding: 0; 
-        z-index: 999;
+        display: none; position: absolute; top: 100%; left: 0; width: 100%;
+        background: white; padding: 0; z-index: 999;
         box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     }
     .main-nav.active { display: block; }
-    
     .main-nav ul { flex-direction: column; text-align: center; margin: 0; padding: 20px; }
     .main-nav li { border-bottom: 1px solid #f4f4f4; padding: 15px 0; }
-    .main-nav li:last-child { border: none; }
-    .main-nav a { font-size: 14px; font-weight: 600; }
-
-    /* Ajuste da grade */
+    
     .product-grid { grid-template-columns: 1fr; padding: 0 20px; }
     .checkout-form { flex-direction: column-reverse; }
+}
+
+@keyframes marquee {
+    0%   { transform: translate(0, 0); }
+    100% { transform: translate(-100%, 0); }
 }
 
 /* --- Vitrine de Produtos --- */
