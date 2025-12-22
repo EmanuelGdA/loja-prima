@@ -145,7 +145,7 @@ ul { list-style: none; }
 
     /* 2. BANNER FIXO (PARALLAX) E ALTO */
     .hero-banner {
-        background-image: url('/img/banner-mobile.jpg') !important;
+        background-image: url('/img/banner-mobile.png') !important;
         
         /* O SEGREDO DO EFEITO FIXO: */
         background-attachment: fixed; 
