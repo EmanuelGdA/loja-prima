@@ -43,3 +43,20 @@
 
 <!-- Scripts Globais -->
 <script src="/js/main.js"></script>
+
+<!-- SCRIPT DO MENU MOBILE (Adicionado Aqui) -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Pega o botão dos 3 risquinhos
+        const menuBtn = document.querySelector('.mobile-menu-btn');
+        // Pega a caixa do menu
+        const nav = document.querySelector('.main-nav');
+
+        if (menuBtn && nav) {
+            menuBtn.addEventListener('click', (e) => {
+                e.preventDefault(); // Evita pular a tela
+                nav.classList.toggle('active'); // Faz o menu aparecer/sumir
+            });
+        }
+    });
+</script>
