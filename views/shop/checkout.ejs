@@ -27,6 +27,9 @@
         
         <form action="/criar-pedido" method="POST" class="checkout-form" id="paymentForm">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <!-- Campos que guardam o frete escolhido para enviar pro servidor -->
+            <input type="hidden" name="shippingCost" id="shippingCostInput" value="0">
+            <input type="hidden" name="shippingMethod" id="shippingMethodInput" value="A combinar">
 
             <div class="column">
                 
@@ -70,6 +73,13 @@
                     </div>
                 </div>
 
+                <div id="frete-options" style="margin-bottom: 30px; display: none;">
+                 <h3>Opções de Entrega</h3>
+                <div id="lista-frete">
+        <!-- O JavaScript vai preencher aqui -->
+                </div>
+                </div>
+                
                 <h2>2. Pagamento</h2>
                 
                 <div class="payment-methods">
@@ -134,8 +144,24 @@
                     <% } %>
                     <hr>
                     <div class="totals">
-                        <div class="row total"><span>Total</span> <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span></div>
-                    </div>
+    <!-- Linha 1: Subtotal -->
+    <div class="row">
+        <span>Subtotal</span> 
+        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
+    </div>
+    
+    <!-- Linha 2: Frete (O JavaScript procura essa linha para atualizar) -->
+    <div class="row">
+        <span>Frete</span> 
+        <span>-</span> 
+    </div>
+
+    <!-- Linha 3: Total Final -->
+    <div class="row total" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+        <span>Total</span> 
+        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
+    </div>
+</div>
                     <button type="submit" class="btn-finish">Finalizar Pedido</button>
                     <p class="secure-info"><i class="fas fa-shield-alt"></i> Ambiente Seguro</p>
                 </div>
@@ -144,35 +170,123 @@
     </main>
 
     <script>
-        // Busca CEP
-        function buscarCep() {
-            const cep = document.getElementById('cep').value.replace(/\D/g, '');
-            if (cep.length === 8) {
-                fetch(`https://viacep.com.br/ws/${cep}/json/`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (!data.erro) {
-                            document.getElementById('rua').value = data.logradouro;
-                            document.getElementById('bairro').value = data.bairro;
-                            document.getElementById('cidade').value = data.localidade;
-                            document.getElementById('estado').value = data.uf;
-                        }
-                    });
+    // Variável para guardar o subtotal original (vindo do servidor)
+    const cartSubtotal = parseFloat('<%= cart.totalPrice %>');
+
+    function buscarCep() {
+        const cep = document.getElementById('cep').value.replace(/\D/g, '');
+        
+        if (cep.length === 8) {
+            // 1. Busca Endereço (ViaCEP)
+            fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.erro) {
+                        document.getElementById('rua').value = data.logradouro;
+                        document.getElementById('bairro').value = data.bairro;
+                        document.getElementById('cidade').value = data.localidade;
+                        document.getElementById('estado').value = data.uf;
+                        
+                        // 2. CHAMA O CÁLCULO DE FRETE (Melhor Envio)
+                        calcularFreteCarrinho(cep);
+                    } else {
+                        alert("CEP não encontrado.");
+                    }
+                });
+        }
+    }
+
+    async function calcularFreteCarrinho(cep) {
+        const listaDiv = document.getElementById('lista-frete');
+        const container = document.getElementById('frete-options');
+        
+        listaDiv.innerHTML = 'Calculando entrega...';
+        container.style.display = 'block';
+
+        try {
+            // Chama nossa API sem mandar ID de produto (para ele entender que é o carrinho)
+            const response = await fetch('/api/frete', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'CSRF-Token': '<%= csrfToken %>' // Importante!
+                },
+                body: JSON.stringify({ cep: cep }) 
+            });
+
+            const opcoes = await response.json();
+
+            if (opcoes.error || opcoes.length === 0) {
+                listaDiv.innerHTML = '<span style="color:red">Não há entregas para este CEP.</span>';
+                return;
             }
+
+            // Monta os botões de escolha
+            let html = '';
+            opcoes.forEach((op, index) => {
+                // O primeiro item já vem marcado (checked)
+                const checked = index === 0 ? 'checked' : '';
+                if(index === 0) selecionarFrete(op.preco, op.nome); // Seleciona o primeiro automaticamente
+
+                html += `
+                    <label style="display: flex; justify-content: space-between; padding: 10px; border: 1px solid #ddd; margin-bottom: 5px; cursor: pointer; border-radius: 4px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="radio" name="freteRadio" ${checked} 
+                                onchange="selecionarFrete(${op.preco}, '${op.nome}')">
+                            <img src="${op.logo}" height="20">
+                            <span>${op.nome}</span>
+                        </div>
+                        <div>
+                            <strong>R$ ${op.preco.toFixed(2).replace('.', ',')}</strong>
+                            <small>(${op.prazo} dias)</small>
+                        </div>
+                    </label>
+                `;
+            });
+            listaDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error(error);
+            listaDiv.innerHTML = 'Erro ao calcular frete.';
+        }
+    }
+
+    function selecionarFrete(valor, nome) {
+        // 1. Atualiza os inputs escondidos
+        document.getElementById('shippingCostInput').value = valor;
+        document.getElementById('shippingMethodInput').value = nome;
+
+        // 2. Atualiza o visual do Total
+        const totalVisual = document.querySelector('.row.total span:last-child');
+        const freteVisual = document.querySelector('.row span:nth-child(2)'); // Campo onde estava "Grátis"
+        
+        // Atualiza texto do frete
+        // Procura a div de resumo onde diz "Frete"
+        const linhasResumo = document.querySelectorAll('.totals .row');
+        if(linhasResumo[1]) {
+            linhasResumo[1].querySelector('span:last-child').innerText = 'R$ ' + valor.toFixed(2).replace('.', ',');
         }
 
-        // Alterna entre Pix e Cartão
-        function togglePayment(method) {
-            const cardForm = document.getElementById('card-form');
-            const inputs = cardForm.querySelectorAll('input, select');
-            if (method === 'card') {
-                cardForm.style.display = 'block';
-                inputs.forEach(i => i.setAttribute('required', 'true'));
-            } else {
-                cardForm.style.display = 'none';
-                inputs.forEach(i => i.removeAttribute('required'));
-            }
+        // Soma Subtotal + Frete
+        const novoTotal = cartSubtotal + valor;
+        totalVisual.innerText = 'R$ ' + novoTotal.toFixed(2).replace('.', ',');
+    }
+
+    // ... (Mantenha a função togglePayment aqui também) ...
+    function togglePayment(method) {
+        const cardForm = document.getElementById('card-form');
+        const inputs = cardForm.querySelectorAll('input, select');
+
+        if (method === 'card') {
+            // Se escolheu Cartão: Mostra o formulário e torna os campos obrigatórios
+            cardForm.style.display = 'block';
+            inputs.forEach(i => i.setAttribute('required', 'true'));
+        } else {
+            // Se escolheu Pix: Esconde o formulário e tira a obrigatoriedade
+            cardForm.style.display = 'none';
+            inputs.forEach(i => i.removeAttribute('required'));
         }
-    </script>
+    }
+</script>
 </body>
 </html>

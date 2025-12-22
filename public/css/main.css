@@ -101,10 +101,68 @@ ul { list-style: none; }
     font-size: 12px;
 }
 
-/* --- Responsividade --- */
+/* --- RESPONSIVIDADE (CELULAR) --- */
 @media (max-width: 768px) {
-    .main-nav { display: none; } /* Esconder menu desktop no celular */
-    .mobile-menu-btn { display: block; }
+    
+    /* 1. CONFIGURAÇÃO DO BANNER MOBILE */
+    .hero-banner {
+        /* Troca a imagem para a foto da Maely vertical */
+        background-image: url('/img/banner-mobile.png') !important;
+        
+        background-position: center top; /* Foca no rosto e desce */
+        background-size: cover;          /* Preenche a tela */
+        height: 85vh;                    /* Ocupa 85% da altura da tela do celular (Bem alto) */
+        
+        /* Remove o degradê escuro para a foto ficar clarinha e nítida */
+        box-shadow: none; 
+    }
+
+    /* 2. ESCONDER O TEXTO DO CÓDIGO */
+    .hero-content {
+        display: none; 
+    }
+
+    /* 3. AJUSTES GERAIS DO MOBILE */
+    .logo img { height: 45px; } /* Logo menor */
+    
+    /* O Menu Mobile */
+    .mobile-menu-btn { 
+        display: block; 
+        font-size: 24px; 
+        cursor: pointer; 
+        color: var(--black);
+    }
+
+    .main-nav {
+        display: none; 
+        position: absolute;
+        top: 100%; 
+        left: 0;
+        width: 100%;
+        background-color: white;
+        padding: 20px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-top: 1px solid #eee;
+        z-index: 999;
+    }
+
+    .main-nav.active {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+
+    .main-nav ul {
+        flex-direction: column; 
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .product-grid {
+        grid-template-columns: 1fr; /* Uma coluna de produtos */
+        padding: 0 20px;
+    }
+    
+    .checkout-form { flex-direction: column-reverse; }
 }
 
 /* --- Vitrine de Produtos --- */

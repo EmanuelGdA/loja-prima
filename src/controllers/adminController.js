@@ -14,7 +14,7 @@ exports.getAddProduct = (req, res) => {
 
 exports.postAddProduct = async (req, res) => {
     try {
-        const { title, price, description, categorySelect, newCategory, subcategory } = req.body;
+        const { title, price, description, categorySelect, newCategory, subcategory, weight, height, width, length } = req.body;
         
         // O Cloudinary já subiu a imagem e colocou o link aqui:
         if (!req.file) {
@@ -31,6 +31,10 @@ exports.postAddProduct = async (req, res) => {
             category: finalCategory,
             subcategory: subcategory || '',
             imageUrl: imageUrl, // Salva o link
+            weight: parseFloat(weight) || 0.3,
+            height: parseInt(height) || 5,
+            width: parseInt(width) || 20,
+            length: parseInt(length) || 20,
             createdAt: new Date().toISOString()
         };
 
@@ -158,7 +162,11 @@ exports.postEditProduct = async (req, res) => {
             description,
             category: finalCategory,
             subcategory: subcategory || '',
-            imageUrl: imageUrl // Salva o link (novo ou velho)
+            imageUrl: imageUrl, // Salva o link (novo ou velho)
+            weight: parseFloat(weight) || 0.3,
+            height: parseInt(height) || 5,
+            width: parseInt(width) || 20,
+            length: parseInt(length) || 20,
         };
 
         await db.collection('products').doc(prodId).update(updatedProduct);

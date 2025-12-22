@@ -7,6 +7,9 @@
         .container { max-width: 600px; margin: 50px auto; padding: 20px; }
         .current-img-preview { margin-top: 10px; font-size: 13px; color: #666; }
         .current-img-preview a { color: blue; text-decoration: underline; }
+        .frete-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
+        .frete-title { font-weight: bold; margin-bottom: 10px; display: block; border-bottom: 1px solid #ddd; padding-bottom: 5px; font-size: 14px; }
+        .frete-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     </style>
 </head>
 <body>
@@ -70,6 +73,37 @@
                 <label>Preço (R$)</label>
                 <input type="number" name="price" step="0.01" value="<%= editing ? product.price : '' %>" required>
             </div>
+
+            <!-- === INÍCIO DO CÓDIGO NOVO (FRETE) === -->
+            <div class="frete-section">
+                <span class="frete-title"><i class="fas fa-box"></i> Informações para Frete (Pacote)</span>
+                
+                <div class="frete-grid">
+                    <div class="form-group">
+                        <label>Peso (kg)</label>
+                        <!-- Se estiver editando, mostra o peso salvo. Se for novo, sugere 0.3 -->
+                        <input type="number" name="weight" step="0.001" placeholder="Ex: 0.300" 
+                               value="<%= editing && product.weight ? product.weight : '0.3' %>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Altura (cm)</label>
+                        <input type="number" name="height" placeholder="Ex: 5" 
+                               value="<%= editing && product.height ? product.height : '5' %>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Largura (cm)</label>
+                        <input type="number" name="width" placeholder="Ex: 20" 
+                               value="<%= editing && product.width ? product.width : '20' %>" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Comprimento (cm)</label>
+                        <input type="number" name="length" placeholder="Ex: 20" 
+                               value="<%= editing && product.length ? product.length : '20' %>" required>
+                    </div>
+                </div>
+                <small style="color: #666; font-size: 11px;">* Medidas aproximadas do pacote dobrado.</small>
+            </div>
+            <!-- === FIM DO CÓDIGO NOVO === -->
 
             <div class="form-group">
                 <label>Descrição</label>

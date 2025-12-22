@@ -25,6 +25,18 @@
                 <span class="installment">em até 3x de R$ <%= (product.price / 3).toFixed(2).replace('.', ',') %> sem juros</span>
             </div>
 
+            <!-- CÁLCULO DE FRETE -->
+            <div class="shipping-calc" style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 10px;">Calcular Frete e Prazo</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="cepFrete" placeholder="00000-000" maxlength="9" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; flex: 1;">
+                    <button onclick="calcularFrete()" style="background: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">OK</button>
+                </div>
+                
+                <!-- Onde o resultado vai aparecer -->
+                <div id="resultadoFrete" style="margin-top: 15px; font-size: 14px;"></div>
+            </div>
+
             <!-- Formulário de Compra -->
             <form action="/carrinho" method="POST">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -139,5 +151,67 @@
     <% } %>
 
     <%- include('../partials/footer.ejs') %>
+
+    <script>
+    async function calcularFrete() {
+        const cep = document.getElementById('cepFrete').value.replace(/\D/g, '');
+        const resultadoDiv = document.getElementById('resultadoFrete');
+        const productId = "<%= product.id %>"; 
+
+        if (cep.length !== 8) {
+            resultadoDiv.innerHTML = '<span style="color: red;">CEP inválido</span>';
+            return;
+        }
+
+        resultadoDiv.innerHTML = 'Calculando... <i class="fas fa-spinner fa-spin"></i>';
+
+        try {
+            const response = await fetch('/api/frete', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    // AQUI ESTÁ A CORREÇÃO: Enviamos o token de segurança junto
+                    'CSRF-Token': '<%= csrfToken %>' 
+                },
+                body: JSON.stringify({ cep, productId })
+            });
+
+            const opcoes = await response.json();
+
+            if (opcoes.error) {
+                resultadoDiv.innerHTML = `<span style="color: red;">${opcoes.error}</span>`;
+                return;
+            }
+
+            if (opcoes.length === 0) {
+                resultadoDiv.innerHTML = 'Nenhuma opção de entrega encontrada.';
+                return;
+            }
+
+            // Monta a lista de fretes
+            let html = '<ul style="list-style: none; padding: 0;">';
+            opcoes.forEach(op => {
+                html += `
+                    <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="${op.logo}" height="20" alt="${op.nome}" style="max-width: 50px;">
+                            <span style="font-size: 13px;">${op.nome}</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>R$ ${op.preco.toFixed(2).replace('.', ',')}</strong><br>
+                            <small style="color: #666;">${op.prazo} dias úteis</small>
+                        </div>
+                    </li>
+                `;
+            });
+            html += '</ul>';
+            resultadoDiv.innerHTML = html;
+
+        } catch (error) {
+            console.error(error);
+            resultadoDiv.innerHTML = '<span style="color: red;">Erro ao calcular. Tente mais tarde.</span>';
+        }
+    }
+</script>
 </body>
 </html>

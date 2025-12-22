@@ -1,4 +1,5 @@
-const db = require('../config/firebase');
+const shippingService = require('../services/shippingService');
+const  db   = require('../config/firebase');
 const QRCode = require('qrcode');
 const paymentService = require('../services/paymentService');
 
@@ -140,80 +141,69 @@ exports.getCheckout = (req, res) => {
 };
 
 exports.postOrder = async (req, res) => {
-    console.log("--- INICIANDO CRIAÇÃO DE PEDIDO ---");
-    
+    console.log("--- INICIANDO PEDIDO ---");
     try {
         const user = req.session.user;
         const cart = req.session.cart;
-        const paymentMethod = req.body.paymentMethod || 'pix'; // Padrão pix se vier vazio
-        const cpf = req.body.cpf || '000.000.000-00'; // Simulação aceita qualquer coisa
+        const paymentMethod = req.body.paymentMethod;
+        const cpf = req.body.cpf ? req.body.cpf.trim() : '';
+        
+        // --- NOVO: PEGAR DADOS DO FRETE ---
+        const shippingCost = parseFloat(req.body.shippingCost) || 0;
+        const shippingMethod = req.body.shippingMethod || 'A combinar';
 
         if (!cart || cart.items.length === 0) return res.redirect('/carrinho');
+        if (!cpf) {
+            req.flash('error', 'CPF Obrigatório.');
+            return res.redirect('/checkout');
+        }
 
-        // 1. Cria Pedido no Banco
+        // CÁLCULO DO TOTAL FINAL (Produtos + Frete)
+        const finalTotalPrice = cart.totalPrice + shippingCost;
+
         const orderData = {
             user: { id: user.id, email: user.email, name: user.name, cpf: cpf },
             items: cart.items,
-            totalPrice: cart.totalPrice,
+            subtotal: cart.totalPrice, // Guardamos o subtotal
+            shippingCost: shippingCost, // Guardamos o valor do frete
+            shippingMethod: shippingMethod, // Ex: "Loggi Express"
+            totalPrice: finalTotalPrice, // TOTAL COM FRETE
             address: {
                 cep: req.body.cep, rua: req.body.rua, numero: req.body.numero,
                 bairro: req.body.bairro, cidade: req.body.cidade, estado: req.body.estado
             },
             date: new Date().toISOString(),
-            status: 'Aguardando Pagamento (Simulado)',
+            status: 'Aguardando Pagamento',
             paymentMethod: paymentMethod
         };
 
         const orderRef = await db.collection('orders').add(orderData);
         const orderId = orderRef.id;
-        console.log("Pedido Criado no Firebase:", orderId);
 
-        // 2. Processa Pagamento (Simulação)
+        // Agora passamos o 'totalPrice' atualizado (com frete) para o PagSeguro
         if (paymentMethod === 'pix') {
-            
-            // Chama o simulador
-            const pixData = await paymentService.gerarPixPagSeguro({ id: orderId, totalPrice: cart.totalPrice }, user, cpf);
-            
-            // Gera QR Code Visual
+            const pixData = await paymentService.gerarPixPagSeguro(
+                { id: orderId, totalPrice: finalTotalPrice }, // <--- Valor atualizado
+                user, cpf
+            );
+            // ... resto do código igual ...
             const qrCodeImage = await QRCode.toDataURL(pixData.qrCodeText);
-
-            await orderRef.update({
-                pagseguroId: pixData.id,
-                pixCode: pixData.qrCodeText,
-                status: 'Aguardando Pagamento'
-            });
-
+            await orderRef.update({ pagseguroId: pixData.id, pixCode: pixData.qrCodeText, status: 'Aguardando Pagamento' });
             req.session.cart = null;
-            
-            return res.render('shop/success-pix', { 
-                pageTitle: 'Pagar com PIX', 
-                path: '', 
-                qrCodeImage: qrCodeImage, 
-                pixCode: pixData.qrCodeText, 
-                total: cart.totalPrice
-            });
+            return res.render('shop/success-pix', { pageTitle: 'Pagar com PIX', path: '', qrCodeImage, pixCode: pixData.qrCodeText, total: finalTotalPrice });
 
         } else {
-            // Cartão (Simulado)
-            const cardData = {
-                number: req.body.cardNumber,
-                holder: req.body.cardHolder,
-                expiration: req.body.cardExpiration,
-                cvv: req.body.cardCvv,
-                installments: req.body.installments || 1
-            };
-
-            const cardResult = await paymentService.processarCartaoPagSeguro({ id: orderId, totalPrice: cart.totalPrice }, user, cpf, cardData);
-
-            await orderRef.update({ status: 'Pago / Aprovado (Simulado)' });
-            req.session.cart = null;
-            return res.render('shop/success', { pageTitle: 'Compra Aprovada!', path: '' });
+            // Cartão
+            const cardData = { /* ... */ }; // (pegue do código anterior)
+            // Lembre de passar 'finalTotalPrice' para o serviço do cartão também!
+            // ...
         }
+        
+        // ... (resto do código igual) ...
 
     } catch (error) {
-        console.error("ERRO GRAVE NO CHECKOUT:", error);
-        req.flash('error', 'Erro interno no servidor. Tente novamente.');
-        res.redirect('/checkout');
+        console.error("ERRO CHECKOUT:", error);
+        // ...
     }
 };
 
@@ -320,5 +310,49 @@ exports.getSearch = async (req, res) => {
     } catch (error) {
         console.log(error);
         res.redirect('/');
+    }
+};
+
+// --- CÁLCULO DE FRETE (API) ---
+exports.postCalculateShipping = async (req, res) => {
+    const { cep, productId } = req.body;
+
+    try {
+        let produtosParaCalculo = [];
+
+        // Se veio um ID (Página de Produto), calcula só ele
+        if (productId) {
+            const doc = await db.collection('products').doc(productId).get();
+            if (doc.exists) {
+                const prod = doc.data();
+                prod.id = doc.id;
+                produtosParaCalculo.push(prod);
+            }
+        } 
+        // Se NÃO veio ID (Página de Checkout), calcula o Carrinho todo
+        else if (req.session.cart && req.session.cart.items.length > 0) {
+            // O Melhor Envio precisa de altura/largura. Como não temos no carrinho,
+            // vamos pegar do banco ou usar padrão para cada item
+            // Simplificação: Vamos usar os dados que já estão no carrinho + padrão
+            produtosParaCalculo = req.session.cart.items.map(item => ({
+                id: item.productId,
+                price: item.price,
+                width: 20, height: 5, length: 20, weight: 0.3, // Padrão
+                quantity: item.qty
+            }));
+        }
+
+        if (produtosParaCalculo.length === 0) {
+            return res.status(400).json({ error: 'Nenhum produto para calcular' });
+        }
+
+        // Chama o serviço do Melhor Envio
+        const opcoesFrete = await shippingService.calcularFrete(cep, produtosParaCalculo);
+
+        res.json(opcoesFrete);
+
+    } catch (error) {
+        console.log("Erro Frete:", error.message);
+        res.status(500).json({ error: 'Erro ao calcular frete' });
     }
 };

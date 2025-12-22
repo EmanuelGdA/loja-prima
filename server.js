@@ -28,20 +28,8 @@ app.set('views', 'views'); // Pasta onde estão os HTMLs
 // Configuração do Helmet (Segurança) permitindo imagens externas
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"], // Permite scripts simples no EJS
-        imgSrc: [
-            "'self'", 
-            "data:", 
-            "https://res.cloudinary.com", // Permite Cloudinary
-            "https://images.unsplash.com", // Permite Unsplash (Banner)
-            "*.google.com" // Outros possíveis
-        ],
-        connectSrc: ["'self'", "https://viacep.com.br"], // Permite buscar CEP
-      },
-    },
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
   })
 );
 app.use(bodyParser.urlencoded({ extended: false })); // Para ler formulários

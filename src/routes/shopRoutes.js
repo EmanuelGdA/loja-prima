@@ -28,4 +28,8 @@ router.get('/colecao/:categoryName', shopController.getCategory);
 // Rota de Busca
 router.get('/search', shopController.getSearch);
 
+
+// rota api/frete 
+router.post('/api/frete', shopController.postCalculateShipping);
+
 module.exports = router;
