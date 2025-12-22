@@ -134,7 +134,7 @@ ul { list-style: none; }
 
     /* 4. Banner Mobile */
     .hero-banner {
-        background-image: url('/img/banner-mobile.jpg') !important;
+        background-image: url('/img/banner-mobile.png') !important;
         background-position: center top;
         background-size: cover;
         height: 75vh;
