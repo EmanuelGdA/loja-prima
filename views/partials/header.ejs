@@ -1,61 +1,49 @@
 <header class="main-header">
-    <div class="top-bar">
-        <p>FRETE GRÁTIS para todo o Brasil em compras acima de R$ 299,00</p>
-    </div>
-
+    
+    <!-- 1. NAVEGAÇÃO E LOGO -->
     <div class="nav-container">
+        <!-- Menu Mobile (Esquerda) -->
+        <div class="mobile-menu-btn">
+            <i class="fas fa-bars"></i>
+        </div>
+
+        <!-- Logo (Centro) -->
         <div class="logo">
-            <a href="/" style="display: flex; align-items: center; gap: 12px; text-decoration: none;">
-                <!-- 1. A IMAGEM DA LOGO -->
-                <img src="/img/ui/logo.png" alt="Logo" style="height: 80px; width: auto;">
-                
-                <!-- 2. O TEXTO DO NOME -->
-                <span style="font-family: 'Playfair Display', serif; font-size: 22px; color: #000000; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
+            <a href="/" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+                <img src="/img/ui/logo.png" alt="Logo" style="height: 60px; width: auto;">
+                <!-- O CSS vai esconder esse texto no celular -->
+                <span class="desktop-name" style="font-family: 'Playfair Display', serif; font-size: 22px; color: #000; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
                     Maely Cristina
                 </span>
             </a>
         </div>
 
+        <!-- Menu Desktop (Meio) -->
         <nav class="main-nav">
             <ul>
                 <li><a href="/">Início</a></li>
                 <li><a href="/colecao/lancamentos">Lançamentos</a></li>
                 <li><a href="/colecao/vestidos">Vestidos</a></li>
                 <li><a href="/colecao/promocao" class="promo-link">Sale</a></li>
-
-                <!-- ÁREA RESTRITA DO ADMIN -->
+                
                 <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-                    <!-- Divisória visual -->
                     <li style="border-left: 1px solid #ccc; margin-left: 10px; padding-left: 15px;"></li>
-                    
-                    <!-- Botão 1: Ver Pedidos -->
-                    <li>
-                        <a href="/admin/pedidos" style="color: #c4a47c; font-weight: bold;">VENDAS</a>
-                    </li>
-
-                    <!-- Botão 2: Ver Lista de Produtos -->
-                    <li>
-                        <a href="/admin/produtos" style="color: #c4a47c; font-weight: bold;">PRODUTOS</a>
-                    </li>
+                    <li><a href="/admin/pedidos" style="color: #c4a47c; font-weight: bold;">VENDAS</a></li>
+                    <li><a href="/admin/produtos" style="color: #c4a47c; font-weight: bold;">PRODUTOS</a></li>
                 <% } %>
             </ul>
         </nav>
 
-        <div class="user-actions" style="display: flex; align-items: center;">
-            <form action="/search" method="GET" style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 20px; padding: 2px 10px; margin-right: 10px;">
-                <input type="text" name="q" placeholder="Buscar..." style="border: none; outline: none; width: 100px; font-size: 12px;">
-                <button type="submit" style="background: none; border: none; cursor: pointer;">
-                    <i class="fas fa-search" style="color: #333;"></i>
-                </button>
+        <!-- Ícones (Direita) -->
+        <div class="user-actions">
+            <!-- Busca: No celular será só o ícone -->
+            <form action="/search" method="GET" class="search-form">
+                <input type="text" name="q" placeholder="Buscar...">
+                <button type="submit"><i class="fas fa-search"></i></button>
             </form>
             
-            <!-- AQUI ESTAVA O ERRO (DUPLICIDADE) - AGORA ESTÁ CORRIGIDO -->
             <% if (isAuthenticated) { %>
-                <a href="/pedidos" title="Meus Pedidos"><i class="fas fa-user"></i></a>
-                <form action="/logout" method="POST" style="display:inline;">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button type="submit" class="btn-logout"><i class="fas fa-sign-out-alt"></i></button>
-                </form>
+                <a href="/pedidos"><i class="fas fa-user"></i></a>
             <% } else { %>
                 <a href="/login"><i class="far fa-user"></i></a>
             <% } %>
@@ -65,9 +53,13 @@
                 <span class="badge"><%= typeof cartCount !== 'undefined' ? cartCount : 0 %></span>
             </a>
         </div>
-        
-        <div class="mobile-menu-btn">
-            <i class="fas fa-bars"></i>
+    </div>
+
+    <!-- 2. FAIXA DE FRETE ANIMADA (AGORA EMBAIXO) -->
+    <div class="top-bar-marquee">
+        <div class="marquee-content">
+            <span>FRETE GRÁTIS PARA TODO O BRASIL EM COMPRAS ACIMA DE R$ 499,00  •  ENVIAMOS PARA TODO O BRASIL</span>
         </div>
     </div>
+
 </header>
