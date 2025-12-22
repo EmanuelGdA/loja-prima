@@ -155,7 +155,7 @@ ul { list-style: none; }
     background-color: var(--primary-color); color: white; padding: 8px 0; font-size: 10px;
     text-transform: uppercase; letter-spacing: 1px; overflow: hidden; white-space: nowrap;
 }
-.marquee-content { display: inline-block; padding-left: 100%; animation: marquee 20s linear infinite; }
+.marquee-content { display: inline-block; padding-left: 100%; animation: marquee 17s linear infinite; }
 @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
 
 /* --- FOOTER --- */
@@ -226,4 +226,54 @@ ul { list-style: none; }
     
     .product-grid { grid-template-columns: 1fr; padding: 0 20px; }
     .checkout-form { flex-direction: column-reverse; }
+    
+    .product-grid {
+        /* Transforma em 2 colunas iguais */
+        grid-template-columns: 1fr 1fr !important; 
+        gap: 10px; /* Espaço pequeno entre eles */
+        padding: 0 10px; /* Espaço nas laterais da tela */
+    }
+
+    .product-card {
+        text-align: left; /* Alinha texto à esquerda igual a referência */
+        border: none;
+        background: transparent; /* Fundo limpo */
+    }
+
+    .product-card:hover {
+        transform: none; /* Remove efeito de pular no celular */
+    }
+
+    .card-image {
+        /* Altura ajustada para ficar proporcional em 2 colunas */
+        height: 280px; 
+        margin-bottom: 8px;
+        border-radius: 4px; /* Cantos levemente arredondados */
+    }
+
+    .card-info h3 {
+        font-family: 'Montserrat', sans-serif; /* Fonte mais limpa */
+        font-size: 13px; /* Tamanho delicado */
+        font-weight: 400; /* Letra normal (não negrito) */
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        color: #333;
+        letter-spacing: 0.5px;
+        
+        /* Limita a 1 linha e coloca "..." se for muito grande */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .card-info .price {
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--black);
+    }
+
+    /* Esconde a categoria e o botão "Ver Detalhes" no celular para limpar o visual */
+    .card-info .category { display: none; }
+    .btn-quick-view { display: none !important; }
 }
