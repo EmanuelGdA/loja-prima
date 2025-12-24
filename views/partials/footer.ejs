@@ -40,26 +40,9 @@
         <p>&copy; 2025 Maely Cristina. Todos os direitos reservados. CNPJ: 00.000.000/0001-00</p>
     </div>
 
-    <!-- Botão Flutuante Inteligente -->
-<div onclick="abrirWhatsGeral()" class="whatsapp-float" style="cursor: pointer;">
+   <!-- Botão WhatsApp SEM SCRIPT (Mais seguro para celular) -->
+<a href="https://wa.me/5541996813385?text=Olá,%20vim%20pelo%20site%20e%20gostaria%20de%20ajuda!" 
+   class="whatsapp-float"
+   target="_blank"> <!-- target blank ajuda a forçar o app em alguns androids -->
     <i class="fab fa-whatsapp"></i>
-</div>
-
-<!-- Script Global do Whats -->
-<script>
-    function abrirWhatsGeral() {
-        const phone = "5541996813385"; 
-        const msg = encodeURIComponent("Olá! Vim pelo site e gostaria de atendimento.");
-        
-        // Verifica se é celular
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-        if (isMobile) {
-            // Força o App no celular (sem abrir aba nova, direto pro app)
-            window.location.href = `whatsapp://send?phone=${phone}&text=${msg}`;
-        } else {
-            // Web no PC
-            window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${msg}`, '_blank');
-        }
-    }
-</script>
+</a>
