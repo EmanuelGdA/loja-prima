@@ -1,5 +1,5 @@
 const shippingService = require('../services/shippingService');
-const  db   = require('../config/firebase');
+const  { db }  = require('../config/firebase');
 const QRCode = require('qrcode');
 const paymentService = require('../services/paymentService');
 
@@ -10,16 +10,27 @@ const paymentService = require('../services/paymentService');
 exports.getIndex = async (req, res) => {
     try {
         const snapshot = await db.collection('products').get();
-        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Mapeia e já converte textos para números para evitar erros
+        const products = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Garante que preço é número (se não for, vira 0)
+                price: parseFloat(data.price) || 0,
+                originalPrice: parseFloat(data.originalPrice) || 0,
+                promoPrice: parseFloat(data.promoPrice) || 0
+            };
+        });
 
         res.render('shop/home', {
-            pageTitle: 'Home - Loja da Prima',
+            pageTitle: 'Home - Maely Cristina',
             products: products,
             path: '/'
         });
     } catch (error) {
-        console.log("Erro Home:", error);
-        res.render('shop/home', { pageTitle: 'Home', products: [], path: '/' });
+        console.log("Erro ao buscar produtos:", error);
+        res.status(500).render('500', { pageTitle: 'Erro no Servidor' });
     }
 };
 
@@ -285,22 +296,24 @@ exports.getCategory = async (req, res) => {
     }
 };
 
-// Buscar por Texto (Ex: ?q=vermelho)
+// Buscar por Texto (Agora olha Título, Descrição, Categoria e Subcategoria)
 exports.getSearch = async (req, res) => {
     const query = req.query.q ? req.query.q.toLowerCase() : '';
 
     try {
-        // Firestore não tem busca nativa "LIKE %texto%". 
-        // Para lojas pequenas, baixamos tudo e filtramos aqui no código. 
-        // (Para lojas gigantes, usaríamos Algolia ou ElasticSearch).
-        
         const snapshot = await db.collection('products').get();
         const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const filteredProducts = allProducts.filter(p => 
-            p.title.toLowerCase().includes(query) || 
-            (p.description && p.description.toLowerCase().includes(query))
-        );
+        const filteredProducts = allProducts.filter(p => {
+            // Verifica se a palavra buscada existe em algum desses lugares:
+            const inTitle = p.title.toLowerCase().includes(query);
+            const inDesc = p.description && p.description.toLowerCase().includes(query);
+            const inCat = p.category && p.category.toLowerCase().includes(query);
+            const inSub = p.subcategory && p.subcategory.toLowerCase().includes(query);
+
+            // Se encontrar em QUALQUER um, retorna o produto
+            return inTitle || inDesc || inCat || inSub;
+        });
 
         res.render('shop/home', {
             pageTitle: `Busca: "${query}"`,

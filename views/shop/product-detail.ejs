@@ -9,64 +9,150 @@
 
     <main class="product-container">
         
-        <!-- Coluna da Esquerda: Imagem -->
+        <!-- 1. GALERIA DE FOTOS (ESQUERDA) -->
         <div class="product-image">
-            <img src="<%= product.imageUrl %>" alt="<%= product.title %>" id="mainImg">
+            
+            <!-- Foto Principal Grande -->
+            <div class="main-image-container">
+                <% 
+                   // Pega a primeira imagem disponível ou a capa
+                   let mainImg = (product.images && product.images.length > 0) ? product.images[0] : product.imageUrl; 
+                %>
+                <img src="<%= mainImg %>" id="zoomImage" alt="<%= product.title %>">
+            </div>
+
+            <!-- Miniaturas (Só aparece se tiver mais de 1 foto) -->
+            <% if (product.images && product.images.length > 1) { %>
+                <div class="thumbnails">
+                    <% product.images.forEach((img, index) => { %>
+                        <div class="thumb-box <%= index === 0 ? 'active' : '' %>" onclick="changeImage(this, '<%= img %>')">
+                            <img src="<%= img %>">
+                        </div>
+                    <% }) %>
+                </div>
+            <% } %>
         </div>
 
-        <!-- Coluna da Direita: Informações -->
+        <!-- 2. INFORMAÇÕES (DIREITA) -->
         <div class="product-info">
-            <p class="breadcrumbs">Home / <%= product.category %> / <%= product.title %></p>
+            <p style="font-size: 12px; color: #999; margin-bottom: 10px;">
+                Home / <%= product.category %> / <%= product.subcategory || '' %>
+            </p>
             
-            <h1><%= product.title %></h1>
+            <h1 class="product-title"><%= product.title %></h1>
+            <% if (product.sku) { %><span class="sku">REF: <%= product.sku %></span><% } %>
             
-            <div class="price-box">
-                <span class="price">R$ <%= parseFloat(product.price).toFixed(2).replace('.', ',') %></span>
-                <span class="installment">em até 3x de R$ <%= (product.price / 3).toFixed(2).replace('.', ',') %> sem juros</span>
+            <!-- PREÇO -->
+            <div class="price-container">
+                <% if (product.promoPrice && product.originalPrice > product.promoPrice) { %>
+                    <!-- TEM PROMOÇÃO -->
+                    <span class="old-price">R$ <%= parseFloat(product.originalPrice).toFixed(2).replace('.', ',') %></span>
+                    <span class="current-price">R$ <%= parseFloat(product.price).toFixed(2).replace('.', ',') %></span>
+                    
+                    <% let desc = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100); %>
+                    <span class="promo-tag"><%= desc %>% OFF</span>
+                <% } else { %>
+                    <!-- PREÇO NORMAL -->
+                    <span class="current-price">R$ <%= parseFloat(product.price).toFixed(2).replace('.', ',') %></span>
+                <% } %>
+
+                <!-- Parcela -->
+                <span class="installments">
+                    ou em até 6x de R$ <%= (product.price / 6).toFixed(2).replace('.', ',') %> sem juros
+                </span>
             </div>
 
-            <!-- CÁLCULO DE FRETE -->
-            <div class="shipping-calc" style="margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 8px;">
-                <label style="font-weight: bold; display: block; margin-bottom: 10px;">Calcular Frete e Prazo</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="cepFrete" placeholder="00000-000" maxlength="9" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; flex: 1;">
-                    <button onclick="calcularFrete()" style="background: #333; color: white; border: none; padding: 0 20px; border-radius: 4px; cursor: pointer;">OK</button>
-                </div>
-                
-                <!-- Onde o resultado vai aparecer -->
-                <div id="resultadoFrete" style="margin-top: 15px; font-size: 14px;"></div>
-            </div>
-
-            <!-- Formulário de Compra -->
+            <!-- FORMULÁRIO DE ADICIONAR AO CARRINHO -->
             <form action="/carrinho" method="POST">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <input type="hidden" name="productId" value="<%= product.id %>">
-                
-                <!-- Seletor de Tamanho -->
-                <div class="size-selector">
-                    <p>Tamanho:</p>
-                    <div class="sizes">
-                        <input type="radio" name="size" id="size-p" value="P" required>
-                        <label for="size-p">P</label>
 
-                        <input type="radio" name="size" id="size-m" value="M">
-                        <label for="size-m">M</label>
-
-                        <input type="radio" name="size" id="size-g" value="G">
-                        <label for="size-g">G</label>
+                <!-- SELETOR DE CORES (Dinâmico) -->
+                <% if (product.colors && product.colors.length > 0) { %>
+                    <div class="variation-group">
+                        <label class="variation-label">Cor:</label>
+                        <div class="color-options">
+                            <% product.colors.forEach((cor, index) => { %>
+                                <label class="color-option">
+                                    <!-- A primeira cor vem marcada por padrão -->
+                                    <input type="radio" name="color" value="<%= cor %>" <%= index === 0 ? 'checked' : '' %>>
+                                    <!-- Exibe a bolinha colorida -->
+                                    <span class="color-circle" style="background-color: <%= cor %>;" title="<%= cor %>"></span>
+                                </label>
+                            <% }) %>
+                        </div>
                     </div>
-                    <a href="#" class="size-guide"><i class="fas fa-ruler"></i> Guia de Medidas</a>
-                </div>
+                <% } %>
 
-                <button type="submit" class="btn-add-cart">
+                <!-- SELETOR DE TAMANHOS (Dinâmico) -->
+                <% if (product.sizes && product.sizes.length > 0) { %>
+                    <div class="variation-group">
+                        <label class="variation-label">Tamanho:</label>
+                        <div class="size-options">
+                            <% product.sizes.forEach((size, index) => { %>
+                                <label class="size-option">
+                                    <input type="radio" name="size" value="<%= size %>" required>
+                                    <span class="size-box"><%= size %></span>
+                                </label>
+                            <% }) %>
+                        </div>
+                        <a href="#" style="font-size: 11px; text-decoration: underline; margin-top: 5px; display: block;">Guia de Medidas</a>
+                    </div>
+                <% } %>
+
+                <!-- BOTÃO COMPRAR -->
+                <button type="submit" class="btn-add-cart" 
+                    style="width: 100%; background: #000; color: white; padding: 15px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase;">
                     Adicionar à Sacola
                 </button>
+                
             </form>
 
-            <div class="description-box">
-                <h3>Detalhes do Produto</h3>
-                <p><%= product.description %></p>
+            <!-- BOTÃO ZAP PRODUTO -->
+            <button onclick="openProductZap()" class="btn-whatsapp-product">
+                <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
+                Dúvidas? Chame no Zap
+            </button>
+
+            <!-- Script para montar a mensagem automática -->
+            <script>
+                function openProductZap() {
+                    // SEU NÚMERO AQUI (Apenas números, com DDD e 55 na frente)
+                    const phone = "5541996813385"; 
+                    
+                    // Pega o nome do produto que está na tela
+                    const productName = "<%= product.title %>";
+                    
+                    // Pega o link atual do navegador
+                    const productLink = window.location.href;
+
+                    // Monta a mensagem
+                    const msg = `Olá! Estou vendo o produto *${productName}* e tenho uma dúvida. \nLink: ${productLink}`;
+
+                    // Abre o WhatsApp
+                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                }
+            </script>
+
+            <!-- FRETE (Mantive o que já tínhamos feito) -->
+            <div class="shipping-calc" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                <label style="font-weight: bold; font-size: 13px;">Calcular Frete</label>
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                    <input type="text" id="cepFrete" placeholder="00000-000" maxlength="9" style="padding: 8px; border: 1px solid #ddd; width: 150px;">
+                    <button type="button" onclick="calcularFrete()" style="background: #333; color: white; border: none; padding: 0 15px; cursor: pointer;">OK</button>
+                </div>
+                <div id="resultadoFrete" style="margin-top: 10px; font-size: 13px;"></div>
             </div>
+
+            <!-- DESCRIÇÃO -->
+            <div style="margin-top: 30px;">
+                <h3 style="font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #ddd; padding-bottom: 5px;">Detalhes</h3>
+                <p style="font-size: 14px; line-height: 1.6; color: #555; margin-top: 10px; white-space: pre-wrap;"><%= product.description %></p>
+                <% if(product.material) { %>
+                    <p style="font-size: 13px; margin-top: 10px;"><strong>Tecido:</strong> <%= product.material %></p>
+                <% } %>
+            </div>
+
         </div>
     </main>
 
@@ -131,19 +217,65 @@
 
     <!-- SEÇÃO DE PRODUTOS RELACIONADOS -->
     <% if (relatedProducts && relatedProducts.length > 0) { %>
-        <section class="related-products" style="max-width: 1200px; margin: 80px auto; padding: 0 20px;">
-            <h2 style="font-family: 'Playfair Display'; text-align: center; margin-bottom: 40px;">Você também pode gostar</h2>
+        <section class="related-products" style="max-width: 1400px; margin: 80px auto; padding: 0 5%;">
+            <h2 class="section-title">Você também pode gostar</h2>
             
-            <div class="product-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;">
+            <div class="product-grid">
                 <% relatedProducts.forEach(p => { %>
-                    <article class="product-card" style="text-align: center;">
-                        <a href="/produto/<%= p.id %>" style="text-decoration: none; color: inherit;">
-                            <div class="card-image" style="height: 300px; overflow: hidden; margin-bottom: 10px;">
-                                <img src="<%= p.imageUrl %>" alt="<%= p.title %>" style="width: 100%; height: 100%; object-fit: cover;">
+                    <article class="product-card">
+                        
+                        <!-- PARTE DE CIMA: IMAGEM (Clicável) -->
+                        <a href="/produto/<%= p.id %>" style="display: block; text-decoration: none;">
+                            <div class="card-image">
+                                <img src="<%= p.imageUrl %>" alt="<%= p.title %>">
+                                
+                                <!-- Etiquetas -->
+                                <div class="product-badges">
+                                    <% if (p.isNew) { %> <span class="badge-tag badge-new">New</span> <% } %>
+                                    <% if (p.promoPrice) { %> 
+                                        <% let desc = 0; try { desc = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100); } catch(e){} %>
+                                        <% if(desc > 0) { %><span class="badge-tag badge-sale"><%= desc %>% OFF</span><% } %>
+                                    <% } %>
+                                </div>
                             </div>
-                            <h3 style="font-size: 14px; margin: 0;"><%= p.title %></h3>
-                            <div style="font-weight: bold;">R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %></div>
                         </a>
+
+                        <!-- PARTE DE BAIXO: FUNDO ROSA TOTAL (Texto + Botões) -->
+                        <div class="card-content-rose">
+                            
+                            <!-- Texto (Clicável) -->
+                            <a href="/produto/<%= p.id %>" style="text-decoration: none;">
+                                <div class="card-info">
+                                    <h3><%= p.title %></h3>
+                                    
+                                    <div class="price-container">
+                                        <% if (p.promoPrice && p.originalPrice > p.promoPrice) { %>
+                                            <span class="old-price" style="font-size: 12px; margin-bottom: -3px;">
+                                                De: R$ <%= parseFloat(p.originalPrice).toFixed(2).replace('.', ',') %>
+                                            </span>
+                                            <span class="current-price promo" style="font-size: 18px;">
+                                                Por: R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %>
+                                            </span>
+                                        <% } else { %>
+                                            <span class="current-price" style="font-size: 18px;">
+                                                R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %>
+                                            </span>
+                                        <% } %>
+                                        
+                                        <small style="font-size: 10px; color: #888; margin-top: 4px;">
+                                            ou 3x de R$ <%= (p.price / 3).toFixed(2).replace('.', ',') %>
+                                        </small>
+                                    </div>
+                                </div>
+                            </a>
+
+                            <!-- Botões Duplos -->
+                            <div class="card-actions">
+                                <a href="/produto/<%= p.id %>" class="btn-card btn-spy">ESPIAR</a>
+                                <a href="/produto/<%= p.id %>" class="btn-card btn-buy">COMPRAR</a>
+                            </div>
+                        </div>
+
                     </article>
                 <% }) %>
             </div>
@@ -153,6 +285,19 @@
     <%- include('../partials/footer.ejs') %>
 
     <script>
+
+        // Função para trocar a imagem principal
+    function changeImage(element, src) {
+        // Troca a foto grande
+        document.getElementById('zoomImage').src = src;
+        
+        // Remove a borda dos outros
+        document.querySelectorAll('.thumb-box').forEach(el => el.classList.remove('active'));
+        
+        // Adiciona borda no clicado
+        element.classList.add('active');
+    }
+
     async function calcularFrete() {
         const cep = document.getElementById('cepFrete').value.replace(/\D/g, '');
         const resultadoDiv = document.getElementById('resultadoFrete');

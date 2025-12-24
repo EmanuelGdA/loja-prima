@@ -22,7 +22,7 @@ if (serviceAccount) {
         credential: admin.credential.cert(serviceAccount)
     });
     const db = admin.firestore();
-    module.exports = db ;
+    module.exports = { db };
 } else {
     module.exports = null;
 }

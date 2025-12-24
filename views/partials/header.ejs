@@ -17,13 +17,51 @@
                 </span>
             </a>
         </div>
-
-        <!-- Menu Desktop (Meio) -->
+        
+        <!-- Menu Lateral (Drawer) -->
         <nav class="main-nav">
+            <!-- Cabeçalho do Menu Mobile (Novo) -->
+            <div class="mobile-nav-header">
+                <span style="font-family: 'Playfair Display'; font-weight: bold; font-size: 18px;">MENU</span>
+                <span class="close-menu-btn">&times;</span> <!-- Botão X -->
+            </div>
+
             <ul>
                 <li><a href="/">Início</a></li>
+                
+                <!-- === MENU DINÂMICO DE CATEGORIAS (DROPDOWN) === -->
+                
+                <!-- Link Principal que abre o Dropdown -->
+                <li class="dropdown">
+                    <a href="#" class="dropbtn">Categorias <i class="fas fa-chevron-down" style="font-size: 10px; margin-left: 5px;"></i></a>
+                    
+                    <!-- Conteúdo do Dropdown -->
+                    <div class="dropdown-content">
+                        <% if (typeof menuCategories !== 'undefined' && menuCategories.length > 0) { %>
+                            <% menuCategories.forEach(cat => { %>
+                                <div class="dropdown-item">
+                                    <!-- Nome da Categoria Principal -->
+                                    <a href="/colecao/<%= cat.id %>" class="cat-title"><%= cat.name %></a>
+                                    
+                                    <!-- Subcategorias -->
+                                    <% if (cat.subcategories && cat.subcategories.length > 0) { %>
+                                        <div class="sub-links">
+                                            <% cat.subcategories.forEach(sub => { %>
+                                                <!-- Link busca por categoria E texto da subcategoria -->
+                                                <a href="/search?q=<%= sub %>"><%= sub %></a>
+                                            <% }) %>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            <% }) %>
+                        <% } else { %>
+                            <span style="padding: 10px; display:block; color: #999;">Sem categorias</span>
+                        <% } %>
+                    </div>
+                </li>
+                <!-- ============================================== -->
+
                 <li><a href="/colecao/lancamentos">Lançamentos</a></li>
-                <li><a href="/colecao/vestidos">Vestidos</a></li>
                 <li><a href="/colecao/promocao" class="promo-link">Sale</a></li>
                 
                 <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
@@ -33,6 +71,9 @@
                 <% } %>
             </ul>
         </nav>
+
+        <!-- Fundo Escuro (Overlay) - Adicione isso logo DEPOIS do </nav> -->
+        <div class="menu-overlay"></div>
 
         <!-- Ícones (Direita) -->
         <div class="user-actions">

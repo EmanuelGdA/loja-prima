@@ -3,88 +3,231 @@
 <head>
     <%- include('../partials/head.ejs') %>
     <style>
-        .admin-container { max-width: 1200px; margin: 40px auto; padding: 20px; }
-        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .admin-table th, .admin-table td { padding: 15px; text-align: left; border-bottom: 1px solid #ddd; }
-        .admin-table th { background-color: #333; color: white; }
-        .admin-table tr:hover { background-color: #f5f5f5; }
+        .admin-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
         
-        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-        .status-badge.Pendente { background: #ffeeba; color: #856404; }
-        .status-badge.Enviado { background: #d4edda; color: #155724; }
-        .status-badge.Cancelado { background: #f8d7da; color: #721c24; }
+        .page-header { text-align: center; margin-bottom: 40px; }
+        .page-header h1 { font-family: 'Playfair Display'; margin-bottom: 10px; }
+        .page-header p { color: #666; }
 
-        .btn-update { background: black; color: white; border: none; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+        /* ESTILO DOS CARDS DE PEDIDO */
+        .orders-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .order-card {
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: 0.3s;
+        }
+
+        /* Cabeçalho do Card (Sempre visível) */
+        .order-summary {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+        }
+        .order-summary:hover { background: #f9f9f9; }
+
+        /* Informações do Resumo */
+        .summary-left h3 { font-size: 16px; margin-bottom: 5px; }
+        .summary-left span { font-size: 13px; color: #888; display: block; }
         
-        .address-box { font-size: 12px; color: #555; }
+        .summary-right { text-align: right; }
+        .order-price { font-weight: bold; font-size: 16px; color: var(--black); display: block; margin-bottom: 5px;}
+        
+        /* Badge de Status */
+        .status-badge { 
+            display: inline-block; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            text-transform: uppercase;
+        }
+        /* Cores dos Status */
+        .status-pendente { background: #fff3cd; color: #856404; }
+        .status-pago { background: #d1e7dd; color: #0f5132; }
+        .status-enviado { background: #cff4fc; color: #055160; }
+        .status-cancelado { background: #f8d7da; color: #842029; }
+
+        /* Área de Detalhes (Escondida) */
+        .order-details {
+            display: none; /* Começa fechado */
+            border-top: 1px solid #eee;
+            padding: 20px;
+            background: #fdfdfd;
+        }
+        .order-details.open { display: block; animation: fadeIn 0.3s; }
+
+        /* Colunas internas dos detalhes */
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h4 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; color: #ccc; }
+        .info-box p { font-size: 14px; margin-bottom: 5px; }
+        .info-box strong { font-weight: 600; }
+
+        /* Lista de Produtos */
+        .item-list { list-style: none; padding: 0; }
+        .item-list li { 
+            display: flex; justify-content: space-between; 
+            padding: 8px 0; border-bottom: 1px solid #eee; font-size: 14px;
+        }
+
+        /* Formulário de Ação */
+        .action-area {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .action-area select { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-update { background: black; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; }
+
+        /* Botão Seta (ícone) */
+        .toggle-icon { transition: 0.3s; font-size: 20px; color: #ccc; margin-left: 15px; }
+        .open .toggle-icon { transform: rotate(180deg); color: black; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* RESPONSIVO MOBILE */
+        @media (max-width: 768px) {
+            .details-grid { grid-template-columns: 1fr; gap: 20px; }
+            .action-area { flex-direction: column; }
+            .btn-update { width: 100%; }
+        }
     </style>
 </head>
 <body>
     <%- include('../partials/header.ejs') %>
 
     <main class="admin-container">
-        <h1>Painel de Vendas</h1>
-        <p>Gerencie os pedidos da loja aqui.</p>
+        <div class="page-header">
+            <h1>Gestão de Pedidos</h1>
+            <p><%= orders.length %> vendas registradas</p>
+        </div>
 
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>Data/ID</th>
-                    <th>Cliente</th>
-                    <th>Itens</th>
-                    <th>Endereço</th>
-                    <th>Total</th>
-                    <th>Status / Ação</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% if (orders.length > 0) { %>
-                    <% orders.forEach(order => { %>
-                        <tr>
-                            <td>
-                                <strong><%= new Date(order.date).toLocaleDateString('pt-BR') %></strong><br>
-                                <small style="color:#999">#<%= order.id.slice(0,5) %>...</small>
-                            </td>
-                            <td>
-                                <%= order.user.name %><br>
-                                <small><%= order.user.email %></small>
-                            </td>
-                            <td>
-                                <% order.items.forEach(item => { %>
-                                    <div><%= item.qty %>x <%= item.title %> (<%= item.size %>)</div>
-                                <% }) %>
-                            </td>
-                            <td class="address-box">
-                                <%= order.address.rua %>, <%= order.address.numero %><br>
-                                <%= order.address.bairro %> - <%= order.address.cidade %>/<%= order.address.estado %><br>
-                                CEP: <%= order.address.cep %>
-                            </td>
-                            <td><strong>R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %></strong></td>
-                            <td>
-                                <form action="/admin/atualizar-status" method="POST">
+        <div class="orders-grid">
+            <% if (orders.length > 0) { %>
+                <% orders.forEach(order => { %>
+                    <!-- DEFINIR COR DO STATUS -->
+                    <% 
+                        let statusClass = 'status-pendente';
+                        if (order.status.includes('Pago') || order.status.includes('Aprovado')) statusClass = 'status-pago';
+                        if (order.status.includes('Enviado') || order.status.includes('Entregue')) statusClass = 'status-enviado';
+                        if (order.status.includes('Cancelado') || order.status.includes('Recusado')) statusClass = 'status-cancelado';
+                    %>
+
+                    <div class="order-card" onclick="toggleOrder('<%= order.id %>')">
+                        <!-- RESUMO (O que aparece fechado) -->
+                        <div class="order-summary" id="summary-<%= order.id %>">
+                            <div class="summary-left">
+                                <h3><%= order.user.name %></h3>
+                                <span>#<%= order.id.slice(0, 8) %>... • <%= new Date(order.date).toLocaleDateString('pt-BR') %></span>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center;">
+                                <div class="summary-right">
+                                    <span class="order-price">R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %></span>
+                                    <span class="status-badge <%= statusClass %>"><%= order.status %></span>
+                                </div>
+                                <i class="fas fa-chevron-down toggle-icon"></i>
+                            </div>
+                        </div>
+
+                        <!-- DETALHES (O que abre ao clicar) -->
+                        <div class="order-details" id="details-<%= order.id %>" onclick="event.stopPropagation()">
+                            
+                            <div class="details-grid">
+                                <!-- Coluna 1: Endereço -->
+                                <div class="info-box">
+                                    <h4>Entrega</h4>
+                                    <p><strong>Rua:</strong> <%= order.address.rua %>, <%= order.address.numero %></p>
+                                    <p><strong>Bairro:</strong> <%= order.address.bairro %></p>
+                                    <p><strong>Cidade:</strong> <%= order.address.cidade %> - <%= order.address.estado %></p>
+                                    <p><strong>CEP:</strong> <%= order.address.cep %></p>
+                                    <p style="margin-top:5px; color:#555;"><i class="fas fa-truck"></i> <%= order.shippingMethod || 'Frete' %></p>
+                                </div>
+
+                                <!-- Coluna 2: Produtos -->
+                                <div class="info-box">
+                                    <h4>Itens do Pedido</h4>
+                                    <ul class="item-list">
+                                        <% order.items.forEach(item => { %>
+                                            <li>
+                                                <span><%= item.qty %>x <%= item.title %> (Tam: <%= item.size %>)</span>
+                                                <strong>R$ <%= (item.price * item.qty).toFixed(2) %></strong>
+                                            </li>
+                                        <% }) %>
+                                    </ul>
+                                    <div style="text-align: right; margin-top: 10px; font-size: 18px;">
+                                        Total: <strong>R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %></strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Área de Ação -->
+                            <div class="action-area">
+                                <strong>Atualizar Status:</strong>
+                                <form action="/admin/atualizar-status" method="POST" style="display: flex; flex: 1; gap: 10px;">
                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                     <input type="hidden" name="orderId" value="<%= order.id %>">
                                     
-                                    <select name="status" onchange="this.form.submit()" style="padding: 5px; border-radius: 4px;">
-                                        <option value="Pendente Pagamento" <%= order.status === 'Pendente Pagamento' ? 'selected' : '' %>>Pendente</option>
-                                        <option value="Pago / Preparando" <%= order.status === 'Pago / Preparando' ? 'selected' : '' %>>Pago</option>
-                                        <option value="Enviado" <%= order.status === 'Enviado' ? 'selected' : '' %>>Enviado</option>
-                                        <option value="Entregue" <%= order.status === 'Entregue' ? 'selected' : '' %>>Entregue</option>
-                                        <option value="Cancelado" <%= order.status === 'Cancelado' ? 'selected' : '' %>>Cancelado</option>
+                                    <select name="status">
+                                        <option value="Aguardando Pagamento" <%= order.status.includes('Aguardando') ? 'selected' : '' %>>Aguardando Pagamento</option>
+                                        <option value="Pago / Preparando" <%= order.status.includes('Pago') ? 'selected' : '' %>>Pago / Preparando</option>
+                                        <option value="Enviado" <%= order.status.includes('Enviado') ? 'selected' : '' %>>Enviado</option>
+                                        <option value="Entregue" <%= order.status.includes('Entregue') ? 'selected' : '' %>>Entregue</option>
+                                        <option value="Cancelado" <%= order.status.includes('Cancelado') ? 'selected' : '' %>>Cancelado</option>
                                     </select>
+                                    <button type="submit" class="btn-update">Salvar</button>
                                 </form>
-                            </td>
-                        </tr>
-                    <% }) %>
-                <% } else { %>
-                    <tr>
-                        <td colspan="6" style="text-align:center; padding: 50px;">Nenhuma venda realizada ainda.</td>
-                    </tr>
-                <% } %>
-            </tbody>
-        </table>
+                            </div>
+
+                        </div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p style="text-align: center;">Nenhum pedido encontrado.</p>
+            <% } %>
+        </div>
     </main>
 
     <%- include('../partials/footer.ejs') %>
+
+    <!-- Script para abrir e fechar -->
+    <script>
+        function toggleOrder(id) {
+            const details = document.getElementById('details-' + id);
+            const summary = document.getElementById('summary-' + id);
+            
+            if (details.style.display === 'block') {
+                details.style.display = 'none';
+                summary.classList.remove('open');
+            } else {
+                // Fecha todos os outros antes de abrir este (Opcional, mas fica mais limpo)
+                document.querySelectorAll('.order-details').forEach(d => d.style.display = 'none');
+                document.querySelectorAll('.order-summary').forEach(s => s.classList.remove('open'));
+
+                details.style.display = 'block';
+                summary.classList.add('open');
+            }
+        }
+    </script>
 </body>
 </html>

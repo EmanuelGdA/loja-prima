@@ -39,6 +39,15 @@
     <div class="footer-bottom">
         <p>&copy; 2025 Maely Cristina. Todos os direitos reservados. CNPJ: 00.000.000/0001-00</p>
     </div>
+
+    <!-- Botão Flutuante do WhatsApp -->
+<a href="https://wa.me/5541996813385?text=Olá, visitei o site e gostaria de tirar uma dúvida!" 
+   class="whatsapp-float" 
+   target="_blank" 
+   title="Fale Conosco">
+    <i class="fab fa-whatsapp"></i>
+</a>
+
 </footer>
 
 <!-- Scripts Globais -->
@@ -47,16 +56,20 @@
 <!-- SCRIPT DO MENU MOBILE (Adicionado Aqui) -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // Pega o botão dos 3 risquinhos
-        const menuBtn = document.querySelector('.mobile-menu-btn');
-        // Pega a caixa do menu
-        const nav = document.querySelector('.main-nav');
+        const menuBtn = document.querySelector('.mobile-menu-btn'); // 3 risquinhos
+        const closeBtn = document.querySelector('.close-menu-btn'); // Botão X
+        const nav = document.querySelector('.main-nav');            // A gaveta
+        const overlay = document.querySelector('.menu-overlay');    // Fundo escuro
 
-        if (menuBtn && nav) {
-            menuBtn.addEventListener('click', (e) => {
-                e.preventDefault(); // Evita pular a tela
-                nav.classList.toggle('active'); // Faz o menu aparecer/sumir
-            });
+        function toggleMenu() {
+            nav.classList.toggle('active');
+            overlay.classList.toggle('active');
+            // Trava a rolagem do fundo quando o menu abre
+            document.body.style.overflow = nav.classList.contains('active') ? 'hidden' : 'auto';
         }
+
+        if (menuBtn) menuBtn.addEventListener('click', (e) => { e.preventDefault(); toggleMenu(); });
+        if (closeBtn) closeBtn.addEventListener('click', toggleMenu);
+        if (overlay) overlay.addEventListener('click', toggleMenu); // Fecha se clicar fora
     });
 </script>

@@ -12,7 +12,7 @@ const upload = multer({ storage: storage });
 router.get('/adicionar-produto', isAdmin, adminController.getAddProduct);
 
 // POST: Recebe o formulário com foto -> AQUI PRECISA DO UPLOAD
-router.post('/adicionar-produto', isAdmin, upload.single('image'), adminController.postAddProduct);
+router.post('/adicionar-produto', isAdmin, upload.array('images', 5), adminController.postAddProduct);
 
 router.get('/produtos', isAdmin, adminController.getProducts);
 router.post('/excluir-produto', isAdmin, adminController.postDeleteProduct);
@@ -20,7 +20,7 @@ router.post('/excluir-produto', isAdmin, adminController.postDeleteProduct);
 router.get('/editar-produto/:productId', isAdmin, adminController.getEditProduct);
 
 // POST: Edição também recebe foto -> AQUI TAMBÉM PRECISA
-router.post('/editar-produto', isAdmin, upload.single('image'), adminController.postEditProduct);
+router.post('/editar-produto', isAdmin, upload.array('images', 5), adminController.postEditProduct);
 
 // Rotas de Pedidos (Protegidas)
 router.get('/pedidos', isAdmin, adminController.getOrders);

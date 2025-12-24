@@ -1,4 +1,4 @@
-const db = require('../config/firebase');
+const { db } = require('../config/firebase');
 
 // ==========================================
 // 1. FUNÇÕES DE ADICIONAR (JÁ EXISTIAM)
@@ -8,42 +8,91 @@ exports.getAddProduct = (req, res) => {
     res.render('admin/edit-product', {
         pageTitle: 'Adicionar Produto',
         path: '/admin/adicionar-produto',
-        editing: false
+        editing: false, // Define que NÃO estamos editando
+        product: {} // Envia um produto vazio para o formulário não quebrar
     });
+};
+
+// --- FUNÇÃO AUXILIAR: Converte "R$ 1.200,50" para número 1200.50
+const parseCurrency = (str) => {
+    if (!str) return 0;
+    // Remove "R$", pontos e espaços, troca vírgula por ponto
+    const cleanStr = str.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+    return parseFloat(cleanStr);
 };
 
 exports.postAddProduct = async (req, res) => {
     try {
-        const { title, price, description, categorySelect, newCategory, subcategory, weight, height, width, length } = req.body;
+        const body = req.body;
         
-        // O Cloudinary já subiu a imagem e colocou o link aqui:
-        if (!req.file) {
-            return res.status(422).send("É obrigatório enviar uma imagem.");
+        // 1. Multifotos (Cloudinary)
+        // req.files contém o array de arquivos enviados
+        let images = [];
+        if (req.files && req.files.length > 0) {
+            images = req.files.map(f => f.path);
+        } else {
+            return res.status(422).send("Pelo menos uma foto é obrigatória.");
         }
-        const imageUrl = req.file.path; // Link pronto do Cloudinary!
 
-        const finalCategory = (categorySelect === 'new' && newCategory) ? newCategory : categorySelect;
+        // 2. Categoria Dinâmica
+        const finalCategory = (body.categorySelect === 'new' && body.newCategory) ? body.newCategory : body.categorySelect;
+
+        // 3. Cores e Tamanhos (Garante que sejam Arrays)
+        let sizes = body.sizes || [];
+        if (!Array.isArray(sizes)) sizes = [sizes];
+
+        let colors = body.colors || [];
+        if (!Array.isArray(colors)) colors = [colors];
 
         const newProduct = {
-            title,
-            price: parseFloat(price),
-            description,
+            // Dados Básicos
+            title: body.title,
+            sku: body.sku || '',
+            description: body.description,
+            
             category: finalCategory,
-            subcategory: subcategory || '',
-            imageUrl: imageUrl, // Salva o link
-            weight: parseFloat(weight) || 0.3,
-            height: parseInt(height) || 5,
-            width: parseInt(width) || 20,
-            length: parseInt(length) || 20,
+            subcategory: body.subcategory || '',
+            
+            // Imagens (Salva o Array)
+            images: images, 
+            imageUrl: images[0], // Mantemos esse campo para compatibilidade na Home (pega a primeira foto)
+
+            // Preços (Convertidos da Máscara)
+            price: parseCurrency(body.originalPrice), // Preço Base
+            promoPrice: body.promoPrice ? parseCurrency(body.promoPrice) : null, // Preço Promo
+
+            // Se tiver promo, o preço oficial de venda é o promo
+            finalPrice: body.promoPrice ? parseCurrency(body.promoPrice) : parseCurrency(body.originalPrice),
+
+            // Detalhes
+            stock: parseInt(body.stock) || 0,
+            material: body.material || '',
+            
+            // Arrays
+            sizes: sizes,
+            colors: colors, // Novo campo de cores
+
+            // Visibilidade (Só Ativo)
+            isActive: body.isActive === 'true',
+
+            // Frete
+            weight: parseFloat(body.weight) || 0.3,
+            height: parseInt(body.height) || 5,
+            width: parseInt(body.width) || 20,
+            length: parseInt(body.length) || 20,
+
             createdAt: new Date().toISOString()
         };
-
+        
+        // Atualiza menu lateral
+        await updateCategoryList(finalCategory, body.subcategory);
+        
         await db.collection('products').add(newProduct);
         console.log('Produto Criado!');
         res.redirect('/admin/produtos');
 
     } catch (error) {
-        console.log(error);
+        console.log("Erro Add:", error);
         res.status(500).send("Erro no servidor");
     }
 };
@@ -136,45 +185,127 @@ exports.getEditProduct = async (req, res) => {
     }
 };
 
-// 8. SALVAR A EDIÇÃO
+// 8. SALVAR A EDIÇÃO (CORRIGIDO E BLINDADO)
 exports.postEditProduct = async (req, res) => {
-    console.log("--- TENTANDO EDITAR PRODUTO ---");
-    
     const prodId = req.body.productId;
-    const { title, price, description, categorySelect, newCategory, subcategory, oldImageUrl } = req.body;
+    const body = req.body;
 
     try {
-        let imageUrl = oldImageUrl; // Começa com a antiga
+        // 1. LÓGICA DE IMAGENS
+        let keptImages = body.keptImages || [];
+        if (!Array.isArray(keptImages)) keptImages = [keptImages];
 
-        // Verifica se chegou arquivo
-        if (req.file) {
-            console.log("FOTO NOVA RECEBIDA:", req.file.path);
-            imageUrl = req.file.path; // Atualiza para a nova
-        } else {
-            console.log("NENHUMA FOTO NOVA. MANTENDO A ANTIGA:", oldImageUrl);
+        let newImages = [];
+        if (req.files && req.files.length > 0) {
+            newImages = req.files.map(f => f.path);
         }
 
-        const finalCategory = (categorySelect === 'new' && newCategory) ? newCategory : categorySelect;
+        let finalImages = [...keptImages, ...newImages];
+        if (finalImages.length === 0 && body.oldImageUrl) finalImages = [body.oldImageUrl];
 
+        // 2. Arrays e Lógicas
+        const finalCategory = (body.categorySelect === 'new' && body.newCategory) ? body.newCategory : body.categorySelect;
+
+        let sizes = body.sizes || []; if (!Array.isArray(sizes)) sizes = [sizes];
+        let colors = body.colors || []; if (!Array.isArray(colors)) colors = [colors];
+
+        const price = parseCurrency(body.originalPrice);
+        const promo = body.promoPrice ? parseCurrency(body.promoPrice) : null;
+
+        // 3. Monta o Objeto (AQUI ESTÁ A CORREÇÃO: || '')
         const updatedProduct = {
-            title,
-            price: parseFloat(price),
-            description,
+            title: body.title || '',
+            // Proteção: Se sku for undefined, salva vazio
+            sku: body.sku || '', 
+            description: body.description || '',
             category: finalCategory,
-            subcategory: subcategory || '',
-            imageUrl: imageUrl, // Salva o link (novo ou velho)
-            weight: parseFloat(weight) || 0.3,
-            height: parseInt(height) || 5,
-            width: parseInt(width) || 20,
-            length: parseInt(length) || 20,
+            subcategory: body.subcategory || '',
+            
+            images: finalImages,
+            imageUrl: finalImages[0] || '', 
+
+            price: promo || price,
+            originalPrice: price,
+            promoPrice: promo,
+
+            stock: parseInt(body.stock) || 0,
+            
+            // Proteção: Se material for undefined, salva vazio (Isso corrige seu erro)
+            material: body.material || '', 
+            
+            sizes: sizes,
+            colors: colors,
+            
+            // Botões (Switches) - Faltavam no seu código anterior
+            isActive: body.isActive === 'true',
+            isNew: body.isNew === 'true',
+            isFeatured: body.isFeatured === 'true',
+
+            weight: parseFloat(body.weight) || 0.3,
+            height: parseInt(body.height) || 5,
+            width: parseInt(body.width) || 20,
+            length: parseInt(body.length) || 20,
+            
+            updatedAt: new Date().toISOString()
         };
 
+        // 4. Salvar
+        await updateCategoryList(finalCategory, body.subcategory);
         await db.collection('products').doc(prodId).update(updatedProduct);
-        console.log('PRODUTO SALVO NO FIREBASE COM SUCESSO!');
+        
+        console.log('Produto Editado com sucesso!');
         res.redirect('/admin/produtos');
 
     } catch (error) {
-        console.log("ERRO AO EDITAR:", error);
+        console.log("Erro Edit:", error);
+        // Dica: Adicione isso para saber QUAL campo está dando erro no terminal
+        console.log("Dados recebidos:", JSON.stringify(body, null, 2)); 
         res.redirect('/admin/produtos');
     }
 };
+
+// --- FUNÇÃO AUXILIAR PARA ATUALIZAR O MENU (COM LOGS DE DEBUG) ---
+async function updateCategoryList(category, subcategory) {
+    console.log(">>> TENTANDO ATUALIZAR MENU...");
+    console.log("Categoria recebida:", category);
+    
+    if (!category) {
+        console.log(">>> ERRO: Categoria vazia/nula.");
+        return;
+    }
+    
+    // Normaliza para minúsculo para usar como ID
+    const catId = category.toLowerCase().trim();
+    const catName = category.charAt(0).toUpperCase() + category.slice(1); 
+    const subName = subcategory ? (subcategory.charAt(0).toUpperCase() + subcategory.slice(1)) : null;
+
+    try {
+        const catRef = db.collection('categories').doc(catId);
+        const doc = await catRef.get();
+
+        if (!doc.exists) {
+            console.log(">>> CRIANDO NOVA CATEGORIA NO BANCO:", catName);
+            await catRef.set({
+                name: catName,
+                id: catId,
+                subcategories: subName ? [subName] : []
+            });
+        } else {
+            console.log(">>> CATEGORIA JÁ EXISTE. VERIFICANDO SUBCATEGORIA...");
+            if (subName) {
+                const data = doc.data();
+                const subs = data.subcategories || [];
+                if (!subs.includes(subName)) {
+                    console.log(">>> ADICIONANDO SUBCATEGORIA:", subName);
+                    subs.push(subName);
+                    await catRef.update({ subcategories: subs });
+                } else {
+                    console.log(">>> SUBCATEGORIA JÁ EXISTE.");
+                }
+            }
+        }
+        console.log(">>> MENU ATUALIZADO COM SUCESSO!");
+    } catch (error) {
+        console.error(">>> ERRO GRAVE AO SALVAR CATEGORIA:", error);
+    }
+}

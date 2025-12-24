@@ -36,21 +36,60 @@
                 <% if (products.length > 0) { %>
                     <% products.forEach(p => { %>
                         <article class="product-card">
-                            <a href="/produto/<%= p.id %>">
-                                <div class="card-image">
-                                    <img src="<%= p.imageUrl %>" alt="<%= p.title %>">
-                                    <button class="btn-quick-view">Ver Detalhes</button>
-                                </div>
-                                <div class="card-info">
-                                    <h3><%= p.title %></h3>
-                                    <p class="category">
-                                        <%= p.category %> 
-                                        <% if(p.subcategory) { %> | <%= p.subcategory %> <% } %>
-                                    </p>
-                                    <div class="price">R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %></div>
-                                </div>
-                            </a>
-                        </article>
+    
+    <!-- PARTE DE CIMA: IMAGEM (Clicável) -->
+    <a href="/produto/<%= p.id %>" style="display: block; text-decoration: none;">
+        <div class="card-image">
+            <img src="<%= p.imageUrl %>" alt="<%= p.title %>">
+            
+            <!-- Etiquetas (New / Off) -->
+            <div class="product-badges">
+                <% if (p.isNew) { %> <span class="badge-tag badge-new">New</span> <% } %>
+                <% if (p.promoPrice) { %> 
+                    <% let desc = 0; try { desc = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100); } catch(e){} %>
+                    <% if(desc > 0) { %><span class="badge-tag badge-sale"><%= desc %>% OFF</span><% } %>
+                <% } %>
+            </div>
+        </div>
+    </a>
+
+    <!-- PARTE DE BAIXO: FUNDO ROSA TOTAL (Texto + Botões) -->
+    <div class="card-content-rose">
+        
+        <!-- Texto (Clicável) -->
+        <a href="/produto/<%= p.id %>" style="text-decoration: none;">
+            <div class="card-info">
+                <h3><%= p.title %></h3>
+                
+                <div class="price-container">
+                    <% if (p.promoPrice && p.originalPrice > p.promoPrice) { %>
+                        <span class="old-price" style="font-size: 12px; margin-bottom: -3px;">
+                            De: R$ <%= parseFloat(p.originalPrice).toFixed(2).replace('.', ',') %>
+                        </span>
+                        <span class="current-price promo" style="font-size: 18px;">
+                            Por: R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %>
+                        </span>
+                    <% } else { %>
+                        <span class="current-price" style="font-size: 18px;">
+                            R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %>
+                        </span>
+                    <% } %>
+                    
+                    <small style="font-size: 10px; color: #888; margin-top: 4px;">
+                        ou 3x de R$ <%= (p.price / 3).toFixed(2).replace('.', ',') %>
+                    </small>
+                </div>
+            </div>
+        </a>
+
+        <!-- Botões -->
+        <div class="card-actions">
+            <a href="/produto/<%= p.id %>" class="btn-card btn-spy">ESPIAR</a>
+            <a href="/produto/<%= p.id %>" class="btn-card btn-buy">COMPRAR</a>
+        </div>
+    </div>
+
+</article>
                     <% }) %>
                 <% } else { %>
                     <div class="no-products" style="grid-column: 1 / -1; text-align: center;">

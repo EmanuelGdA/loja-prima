@@ -4,141 +4,520 @@
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/auth.css">
     <style>
-        .container { max-width: 600px; margin: 50px auto; padding: 20px; }
-        .current-img-preview { margin-top: 10px; font-size: 13px; color: #666; }
-        .current-img-preview a { color: blue; text-decoration: underline; }
-        .frete-section { background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
-        .frete-title { font-weight: bold; margin-bottom: 10px; display: block; border-bottom: 1px solid #ddd; padding-bottom: 5px; font-size: 14px; }
-        .frete-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        
+        /* CSS para o Preview de NOVAS fotos */
+        .preview-box { 
+            width: 80px; height: 80px; border: 1px solid #ddd; 
+            border-radius: 4px; overflow: hidden; position: relative; 
+        }
+        .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Botão X para as novas fotos */
+        .btn-remove-preview {
+            position: absolute; top: 0; right: 0;
+            background: rgba(255, 0, 0, 0.8); color: white; border: none;
+            width: 20px; height: 20px; font-size: 14px; 
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-remove-preview:hover { background: red; }
+
+        /* FOTOS EXISTENTES */
+        .existing-photos-container {
+            display: flex; gap: 10px; flex-wrap: wrap;
+            padding: 10px; background: #f0f0f0; border-radius: 6px;
+        }
+        .photo-item {
+            position: relative; width: 80px; height: 80px;
+            border: 1px solid #ccc; border-radius: 4px; overflow: hidden;
+        }
+        .photo-item img {
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .btn-remove-photo {
+            position: absolute; top: 0; right: 0;
+            background: red; color: white; border: none;
+            width: 20px; height: 20px; font-size: 16px; line-height: 16px;
+            cursor: pointer; font-weight: bold;
+        }
+        .btn-remove-photo:hover { background: darkred; }
+
+        /* --- TABELA DE CORES (PALETA) --- */
+        .color-wrapper {
+            background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px;
+        }
+        
+        .color-grid {
+            display: grid;
+            /* Cria colunas pequenas automaticamente (tipo a imagem que vc mandou) */
+            grid-template-columns: repeat(auto-fill, minmax(25px, 1fr)); 
+            gap: 4px;
+            max-height: 200px; /* Se tiver muitas, cria rolagem */
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .color-option { position: relative; cursor: pointer; }
+        .color-option input { display: none; } /* Esconde a checkbox real */
+        
+        .color-swatch {
+            display: block;
+            width: 100%;
+            padding-bottom: 100%; /* Faz ficar quadrado */
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.1);
+            transition: transform 0.1s, border 0.1s;
+        }
+
+        /* Efeito quando passa o mouse */
+        .color-option:hover .color-swatch { transform: scale(1.1); z-index: 2; border: 1px solid #666; }
+
+        /* Efeito quando SELECIONADO (Borda preta grossa e check) */
+        .color-option input:checked + .color-swatch {
+            border: 2px solid black;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            transform: scale(0.9); /* Diminui um pouco para mostrar a seleção */
+        }
+        /* Pequeno check no centro */
+        .color-option input:checked + .color-swatch::after {
+            content: '✓'; color: white; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); font-size: 14px; font-weight: bold;
+            text-shadow: 0 0 2px black;
+        }
+
+        /* Cores Selecionadas (Resumo) */
+        .selected-colors-preview {
+            display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; min-height: 30px;
+        }
+        .selected-bubble { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ccc; }
+
+        .container { max-width: 800px; margin: 50px auto; padding: 20px; }
+        .form-section { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .section-title { font-weight: bold; font-size: 16px; margin-bottom: 15px; display: block; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; color: #333; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        /* PREVIEW DE FOTOS */
+        .image-preview-container { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .preview-box { width: 80px; height: 80px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; position: relative; }
+        .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* CORES */
+        .color-options { display: flex; gap: 10px; flex-wrap: wrap; }
+        .color-checkbox { display: none; }
+        .color-label { 
+            width: 35px; height: 35px; border-radius: 50%; border: 2px solid #eee; cursor: pointer; 
+            display: inline-block; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .color-checkbox:checked + .color-label { border: 3px solid black; transform: scale(1.1); }
+        .color-checkbox:checked + .color-label::after {
+            content: '✔'; color: white; position: absolute; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%); font-size: 14px; text-shadow: 0 0 2px black;
+        }
+
+        /* TAMANHOS */
+        .size-group { display: flex; gap: 10px; }
+        .size-item input { display: none; }
+        .size-item span { display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; border: 1px solid #ccc; cursor: pointer; font-weight: bold; background: white; }
+        .size-item input:checked + span { background: black; color: white; border-color: black; }
+
+        /* SWITCH ATIVO */
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #2ecc71; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* DESCRIÇÃO FULLSCREEN MOBILE */
+        @media (max-width: 768px) {
+            .fullscreen-focus:focus {
+                position: fixed; top: 0; left: 0; width: 100%; height: 50vh; z-index: 9999;
+                padding: 20px; font-size: 16px; border-radius: 0; border-bottom: 2px solid black;
+            }
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        
     </style>
 </head>
 <body>
     <%- include('../partials/header.ejs') %>
 
     <main class="container">
-        <h1 style="text-align: center; margin-bottom: 30px;">
-            <%= editing ? 'Editar Produto' : 'Cadastrar Novo Produto' %>
-        </h1>
+        <h1><%= editing ? 'Editar Produto' : 'Cadastrar Produto' %></h1>
 
-        <!-- ATENÇÃO: O 'enctype' abaixo é OBRIGATÓRIO para envio de arquivos -->
+        <!-- Enctype importantíssimo para multifotos -->
         <form action="/admin/<%= editing ? 'editar-produto' : 'adicionar-produto' %>?_csrf=<%= csrfToken %>" method="POST" enctype="multipart/form-data">
             
-           
             <% if (editing) { %>
                 <input type="hidden" name="productId" value="<%= product.id %>">
-                <input type="hidden" name="oldImageUrl" value="<%= product.imageUrl %>">
+                <!-- Salva as fotos antigas como string para recuperar no backend -->
+                <input type="hidden" name="oldImages" value="<%= product.images ? product.images.join(',') : (product.imageUrl || '') %>">
             <% } %>
 
-            <div class="form-group">
-                <label>Nome da Peça</label>
-                <input type="text" name="title" value="<%= editing ? product.title : '' %>" required>
-            </div>
-
-            <!-- CAMPO DE UPLOAD DE IMAGEM -->
-            <div class="form-group">
-                <label>Foto do Produto (Do seu computador)</label>
-                <input type="file" name="image" accept="image/*" <%= editing ? '' : 'required' %>>
+            <!-- 1. DADOS E FOTOS -->
+            <div class="form-section">
+                <span class="section-title">📸 Fotos e Dados</span>
                 
-                <% if (editing) { %>
-                    <div class="current-img-preview">
-                        Foto atual: <a href="<%= product.imageUrl %>" target="_blank">Ver imagem</a>
-                        <br>
-                        (Deixe em branco se não quiser trocar a foto)
-                    </div>
-                <% } %>
-            </div>
+                <div class="form-group">
+                    <label>Fotos do Produto</label>
+                    
+                    <!-- FOTOS EXISTENTES (Compatível com Antigas e Novas) -->
+                    <% 
+                        // Truque para normalizar: Transforma tudo em lista
+                        let listaFotos = [];
+                        if (product.images && product.images.length > 0) {
+                            listaFotos = product.images; // Usa a lista nova
+                        } else if (product.imageUrl) {
+                            listaFotos = [product.imageUrl]; // Pega a antiga e põe numa lista
+                        }
+                    %>
 
-            <!-- CATEGORIAS INTELIGENTES -->
-            <div class="form-group">
-                <label>Categoria Principal</label>
-                <select name="categorySelect" id="catSelect" onchange="checkNewCat(this)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="vestidos" <%= (editing && product.category === 'vestidos') ? 'selected' : '' %>>Vestidos</option>
-                    <option value="blusas" <%= (editing && product.category === 'blusas') ? 'selected' : '' %>>Blusas</option>
-                    <option value="calcas" <%= (editing && product.category === 'calcas') ? 'selected' : '' %>>Calças</option>
-                    <option value="conjuntos" <%= (editing && product.category === 'conjuntos') ? 'selected' : '' %>>Conjuntos</option>
-                    <option value="acessorios" <%= (editing && product.category === 'acessorios') ? 'selected' : '' %>>Acessórios</option>
-                    <option value="new" style="font-weight: bold; color: blue;">+ Criar Nova Categoria</option>
-                </select>
-                
-                <!-- Input que aparece só se escolher "Criar Nova" -->
-                <input type="text" name="newCategory" id="newCatInput" placeholder="Digite o nome da nova categoria" style="display: none; margin-top: 10px;">
-            </div>
+                    <% if (editing && listaFotos.length > 0) { %>
+                        <p style="font-size: 12px; margin-bottom: 5px; font-weight: bold;">Fotos Salvas (Clique no X para remover):</p>
+                        <div class="existing-photos-container">
+                            <% listaFotos.forEach((img, index) => { %>
+                                <div class="photo-item" id="photo-<%= index %>">
+                                    <img src="<%= img %>">
+                                    <!-- ESTE INPUT É O SEGREDO: Ele avisa o servidor para manter essa foto -->
+                                    <input type="hidden" name="keptImages" value="<%= img %>">
+                                    <button type="button" class="btn-remove-photo" onclick="removePhoto('photo-<%= index %>')">&times;</button>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } %>
 
-            <div class="form-group">
-                <label>Sub-Categoria (Opcional)</label>
-                <input type="text" name="subcategory" placeholder="Ex: Longo, Estampado, Festa..." value="<%= editing && product.subcategory ? product.subcategory : '' %>">
-            </div>
-
-            <div class="form-group">
-                <label>Preço (R$)</label>
-                <input type="number" name="price" step="0.01" value="<%= editing ? product.price : '' %>" required>
-            </div>
-
-            <!-- === INÍCIO DO CÓDIGO NOVO (FRETE) === -->
-            <div class="frete-section">
-                <span class="frete-title"><i class="fas fa-box"></i> Informações para Frete (Pacote)</span>
-                
-                <div class="frete-grid">
-                    <div class="form-group">
-                        <label>Peso (kg)</label>
-                        <!-- Se estiver editando, mostra o peso salvo. Se for novo, sugere 0.3 -->
-                        <input type="number" name="weight" step="0.001" placeholder="Ex: 0.300" 
-                               value="<%= editing && product.weight ? product.weight : '0.3' %>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Altura (cm)</label>
-                        <input type="number" name="height" placeholder="Ex: 5" 
-                               value="<%= editing && product.height ? product.height : '5' %>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Largura (cm)</label>
-                        <input type="number" name="width" placeholder="Ex: 20" 
-                               value="<%= editing && product.width ? product.width : '20' %>" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Comprimento (cm)</label>
-                        <input type="number" name="length" placeholder="Ex: 20" 
-                               value="<%= editing && product.length ? product.length : '20' %>" required>
+                    <!-- UPLOAD DE NOVAS FOTOS -->
+                    <div style="margin-top: 15px;">
+                        <label style="font-size: 13px;">Adicionar Novas Fotos (Máx 5 total)</label>
+                        <input type="file" name="images" id="imageInput" accept="image/*" multiple onchange="previewImages()">
+                        
+                        <!-- Preview das Novas -->
+                        <div class="image-preview-container" id="previewContainer" style="margin-top: 10px;"></div>
                     </div>
                 </div>
-                <small style="color: #666; font-size: 11px;">* Medidas aproximadas do pacote dobrado.</small>
-            </div>
-            <!-- === FIM DO CÓDIGO NOVO === -->
 
-            <div class="form-group">
-                <label>Descrição</label>
-                <textarea name="description" rows="5" required><%= editing ? product.description : '' %></textarea>
+                <div class="form-group">
+                    <label>Nome da Peça</label>
+                    <input type="text" name="title" value="<%= editing ? product.title : '' %>" required>
+                </div>
+
+                <div class="form-grid">
+                <!-- 1. CATEGORIA (Atualizado) -->
+                <div class="form-group">
+                    <label>Categoria Principal</label>
+                    
+                    <!-- IMPORTANTE: id="catSelect" e onchange="toggleNewCat()" -->
+                    <select name="categorySelect" id="catSelect" onchange="toggleNewCat()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        
+                        <!-- Lista categorias já existentes no banco -->
+                        <% if (typeof menuCategories !== 'undefined' && menuCategories.length > 0) { %>
+                            <% menuCategories.forEach(cat => { %>
+                                <option value="<%= cat.id %>" <%= (editing && product.category === cat.id) ? 'selected' : '' %>>
+                                    <%= cat.name %>
+                                </option>
+                            <% }) %>
+                        <% } %>
+
+                        <!-- Opções Padrão -->
+                        <option value="vestidos" <%= (editing && product.category === 'vestidos') ? 'selected' : '' %>>Vestidos</option>
+                        <option value="blusas" <%= (editing && product.category === 'blusas') ? 'selected' : '' %>>Blusas</option>
+                        <option value="conjuntos" <%= (editing && product.category === 'conjuntos') ? 'selected' : '' %>>Conjuntos</option>
+                        
+                        <!-- Opção para criar nova -->
+                        <option value="new" style="color: blue; font-weight: bold;">+ Criar Nova Categoria</option>
+                    </select>
+                    
+                    <!-- Input escondido que aparece ao selecionar "Criar Nova" -->
+                    <input type="text" name="newCategory" id="newCatInput" placeholder="Nome da nova categoria" style="display: none; margin-top: 10px; border: 1px solid blue;">
+                </div>
+                
+                <!-- 2. SUBCATEGORIA (Adicionado aqui) -->
+                <div class="form-group">
+                    <label>Sub-Categoria (Ex: Longo, Festa)</label>
+                    <input type="text" name="subcategory" value="<%= editing ? product.subcategory : '' %>" placeholder="Digite a subcategoria">
+                </div>
             </div>
 
-            <button type="submit" class="btn-auth" style="background: black;">
+            <!-- 3. CÓDIGO SKU (Mova para cá ou deixe logo abaixo do Nome da Peça) -->
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Código (SKU)</label>
+                <input type="text" name="sku" value="<%= editing ? product.sku : '' %>" placeholder="Ex: VEST-001">
+            </div>
+
+            <!-- 2. PREÇOS (COM MÁSCARA) -->
+            <div class="form-section">
+                <span class="section-title">💰 Valores</span>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Preço Original (De)</label>
+                        <input type="text" name="originalPrice" class="money-mask" placeholder="R$ 0,00" required
+                               value="<%= editing ? 'R$ ' + parseFloat(product.originalPrice || product.price).toFixed(2).replace('.', ',') : '' %>" 
+                               oninput="mascaraMoeda(this)">
+                    </div>
+                    <div class="form-group">
+                        <label>Preço Promocional (Por)</label>
+                        <input type="text" name="promoPrice" class="money-mask" placeholder="Opcional"
+                               value="<%= (editing && product.promoPrice) ? 'R$ ' + parseFloat(product.promoPrice).toFixed(2).replace('.', ',') : '' %>"
+                               oninput="mascaraMoeda(this)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. VARIAÇÕES (CORES E TAMANHOS) -->
+            <div class="form-section">
+                <span class="section-title">🎨 Cores e Tamanhos</span>
+                
+                <div class="form-group">
+                <label>Cores Disponíveis (Selecione na tabela)</label>
+                
+                <div class="color-wrapper">
+                    <div class="color-grid">
+                        <% 
+                        // GRANDE PALETA DE CORES (Baseada na referência)
+                        const palette = [
+                            // Escala de Cinza
+                            {c:'#FFFFFF', n:'Branco'}, {c:'#F0F0F0', n:'Gelo'}, {c:'#CCCCCC', n:'Cinza Claro'}, {c:'#808080', n:'Cinza'}, {c:'#404040', n:'Chumbo'}, {c:'#000000', n:'Preto'},
+                            // Vermelhos/Rosas
+                            {c:'#FFCDD2', n:'Rosa Bebê'}, {c:'#F48FB1', n:'Rosa Claro'}, {c:'#EC407A', n:'Pink'}, {c:'#D81B60', n:'Magenta'}, {c:'#FF0000', n:'Vermelho Vivo'}, {c:'#B71C1C', n:'Bordo'},
+                            // Laranjas/Amarelos
+                            {c:'#FFE0B2', n:'Pêssego'}, {c:'#FFB74D', n:'Laranja Claro'}, {c:'#FF9800', n:'Laranja'}, {c:'#E65100', n:'Terracota'}, {c:'#FFEB3B', n:'Amarelo'}, {c:'#FBC02D', n:'Mostarda'},
+                            // Verdes
+                            {c:'#C8E6C9', n:'Verde Água'}, {c:'#81C784', n:'Verde Claro'}, {c:'#4CAF50', n:'Verde'}, {c:'#388E3C', n:'Verde Bandeira'}, {c:'#1B5E20', n:'Verde Musgo'}, {c:'#004D40', n:'Verde Militar'},
+                            // Azuis
+                            {c:'#B3E5FC', n:'Azul Bebê'}, {c:'#4FC3F7', n:'Azul Céu'}, {c:'#2196F3', n:'Azul Royal'}, {c:'#1976D2', n:'Azul Bic'}, {c:'#0D47A1', n:'Azul Marinho'}, {c:'#303F9F', n:'Índigo'},
+                            // Roxos
+                            {c:'#E1BEE7', n:'Lilás'}, {c:'#BA68C8', n:'Roxo Claro'}, {c:'#9C27B0', n:'Roxo'}, {c:'#7B1FA2', n:'Violeta'}, {c:'#4A148C', n:'Uva'},
+                            // Marrons/Nudes
+                            {c:'#FFF3E0', n:'Nude'}, {c:'#D7CCC8', n:'Bege'}, {c:'#A1887F', n:'Taupe'}, {c:'#795548', n:'Marrom'}, {c:'#3E2723', n:'Café'}
+                        ];
+                        %>
+
+                        <!-- Loop que cria os quadradinhos -->
+                        <% palette.forEach(cor => { %>
+                            <label class="color-option" title="<%= cor.n %>">
+                                <!-- O valor enviado será o código HEX para usarmos no visual do site depois -->
+                                <input type="checkbox" name="colors" value="<%= cor.c %>" 
+                                    onchange="updateSelectedColors()"
+                                    <%= (editing && product.colors && product.colors.includes(cor.c)) ? 'checked' : '' %>>
+                                <span class="color-swatch" style="background-color: <%= cor.c %>;"></span>
+                            </label>
+                        <% }) %>
+                    </div>
+
+                    <!-- Seletor Manual (Para cores muito específicas) -->
+                    <div style="display: flex; align-items: center; gap: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                        <input type="color" id="customColorPicker" style="width: 40px; height: 40px; cursor: pointer; border: none; background: none;">
+                        <span style="font-size: 12px;">Não achou? Escolha manual &rarr;</span>
+                        <button type="button" onclick="addCustomColor()" style="background: black; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px;">+ Adicionar</button>
+                    </div>
+
+                    <!-- Visualização do que foi escolhido -->
+                    <div style="margin-top: 10px; font-size: 12px; font-weight: bold;">Selecionadas:</div>
+                    <div class="selected-colors-preview" id="selectedPreview"></div>
+                    <!-- Área escondida para inputs customizados -->
+                    <div id="customColorsInputs"></div>
+                </div>
+            </div>
+
+                <div class="form-group">
+                    <label>Tamanhos</label>
+                    <div class="size-group">
+                        <% ['PP', 'P', 'M', 'G', 'GG', 'U'].forEach(s => { %>
+                            <label class="size-item">
+                                <input type="checkbox" name="sizes" value="<%= s %>" 
+                                    <%= (editing && product.sizes && product.sizes.includes(s)) ? 'checked' : '' %>>
+                                <span><%= s %></span>
+                            </label>
+                        <% }) %>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:15px;">
+                    <label>Estoque Total</label>
+                    <input type="number" name="stock" value="<%= editing ? product.stock : 1 %>" style="width: 100px;">
+                </div>
+            </div>
+
+            <!-- 4. DESCRIÇÃO E DETALHES -->
+            <div class="form-section">
+                <span class="section-title">📝 Detalhes</span>
+                <div class="form-group">
+                    <label>Descrição (Clique para expandir no celular)</label>
+                    <textarea name="description" rows="5" class="fullscreen-focus" required style="width: 100%; padding: 10px;"><%= editing ? product.description : '' %></textarea>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <label style="font-weight: bold;">Produto Ativo no Site?</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="isActive" value="true" <%= (!editing || product.isActive) ? 'checked' : '' %>>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 5. FRETE -->
+            <div class="form-section">
+                <span class="section-title">📦 Frete</span>
+                <div class="form-grid">
+                    <div class="form-group"><label>Peso (kg)</label><input type="number" name="weight" step="0.001" value="<%= editing ? product.weight : '0.3' %>"></div>
+                    <div class="form-group"><label>L / A / C (cm)</label>
+                        <div style="display:flex; gap:5px;">
+                            <input type="number" name="width" value="20" placeholder="L">
+                            <input type="number" name="height" value="5" placeholder="A">
+                            <input type="number" name="length" value="20" placeholder="C">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-auth" style="background: black; width: 100%; padding: 15px; font-size: 16px;">
                 <%= editing ? 'Salvar Alterações' : 'Cadastrar Produto' %>
             </button>
         </form>
     </main>
 
-    <!-- Script para mostrar/esconder o campo de nova categoria -->
-    <script>
-        function checkNewCat(select) {
-            const input = document.getElementById('newCatInput');
-            if (select.value === 'new') {
-                input.style.display = 'block';
-                input.required = true;
-                input.focus();
-            } else {
-                input.style.display = 'none';
-                input.required = false;
-                input.value = '';
+   <script>
+        // --- 1. LÓGICA DE FOTOS (COM BOTÃO DE REMOVER) ---
+        const dt = new DataTransfer(); // Armazena a lista de arquivos atualizada
+
+        function previewImages() {
+            const imageInput = document.getElementById('imageInput');
+            const previewContainer = document.getElementById('previewContainer');
+            const files = imageInput.files;
+
+            // Para cada arquivo selecionado AGORA
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Evita duplicatas (opcional, mas bom)
+                let isDuplicate = false;
+                for (let j = 0; j < dt.items.length; j++) {
+                    if (dt.items[j].getAsFile().name === file.name && dt.items[j].getAsFile().size === file.size) {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+                if (isDuplicate) continue; // Pula se já estiver na lista
+
+                // Adiciona na lista oficial
+                dt.items.add(file);
+
+                // Cria o visual
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function(e) {
+                    const div = document.createElement('div');
+                    div.className = 'preview-box';
+                    
+                    // A Imagem
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    
+                    // O Botão X (Das fotos novas)
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-remove-preview'; // Classe que criamos no CSS
+                    btn.innerHTML = '&times;';
+                    btn.type = 'button'; // Importante para não enviar formulário
+                    
+                    // Clique no X
+                    btn.onclick = function() {
+                        div.remove(); // Remove da tela
+                        
+                        // Remove da lista interna (dt)
+                        for(let j = 0; j < dt.items.length; j++){
+                            if(file.name === dt.items[j].getAsFile().name && file.size === dt.items[j].getAsFile().size){
+                                dt.items.remove(j);
+                                break;
+                            }
+                        }
+                        // Atualiza o input para o envio
+                        imageInput.files = dt.files;
+                    };
+
+                    div.appendChild(img);
+                    div.appendChild(btn);
+                    previewContainer.appendChild(div);
+                }
+            }
+            // Atualiza o input com a lista acumulada
+            imageInput.files = dt.files;
+        }
+
+        // Função para remover foto QUE JÁ EXISTIA (Do banco de dados)
+        function removePhoto(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.remove();
             }
         }
-        
-        // Verifica ao carregar a página (caso esteja editando uma categoria customizada)
-        window.onload = function() {
+
+        // --- 2. NOVA CATEGORIA ---
+        function toggleNewCat() {
             const select = document.getElementById('catSelect');
-            const editingCategory = "<%= editing ? product.category : '' %>";
+            const input = document.getElementById('newCatInput');
             
-            // Se a categoria salva não estiver na lista padrão, marcamos como "Nova" ou ajustamos (lógica simples)
-            // Para simplificar, mantemos o select padrão. Se quiser algo avançado, teríamos que popular o select dinamicamente.
-        };
+            if (select.value === 'new') {
+                input.style.display = 'block'; 
+                input.required = true;         
+                input.focus();                 
+            } else {
+                input.style.display = 'none';  
+                input.required = false;
+                input.value = '';              
+            }
+        }
+
+        // --- 3. MÁSCARA DE MOEDA ---
+        function mascaraMoeda(i) {
+            let v = i.value.replace(/\D/g, '');
+            v = (v / 100).toFixed(2) + '';
+            v = v.replace(".", ",");
+            v = v.replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,");
+            v = v.replace(/(\d)(\d{3}),/g, "$1.$2,");
+            i.value = 'R$ ' + v;
+        }
+
+        // --- 4. CORES (ATUALIZADA) ---
+        function updateSelectedColors() {
+            const checkboxes = document.querySelectorAll('input[name="colors"]:checked');
+            const previewDiv = document.getElementById('selectedPreview');
+            
+            if (!previewDiv) return; // Segurança caso o elemento não exista
+
+            previewDiv.innerHTML = ''; 
+
+            if (checkboxes.length === 0) {
+                previewDiv.innerHTML = '<span style="font-size:12px; color:#999;">Nenhuma</span>';
+                return;
+            }
+
+            checkboxes.forEach(chk => {
+                const bubble = document.createElement('div');
+                bubble.className = 'selected-bubble';
+                bubble.style.backgroundColor = chk.value;
+                bubble.title = chk.value; 
+                previewDiv.appendChild(bubble);
+            });
+        }
+
+        function addCustomColor() {
+            const colorVal = document.getElementById('customColorPicker').value;
+            const container = document.getElementById('customColorsInputs');
+            
+            // Cria um input checkbox escondido já marcado
+            const label = document.createElement('label');
+            label.innerHTML = `
+                <input type="checkbox" name="colors" value="${colorVal}" checked onchange="this.parentElement.remove(); updateSelectedColors();">
+            `;
+            container.appendChild(label);
+
+            updateSelectedColors();
+        }
+
+        // Inicializa as cores ao carregar a página
+        window.addEventListener('load', updateSelectedColors);
+
+        
     </script>
 
     <%- include('../partials/footer.ejs') %>

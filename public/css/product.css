@@ -1,72 +1,99 @@
+/* --- LAYOUT GERAL --- */
 .product-container {
     display: flex;
     max-width: 1200px;
     margin: 40px auto;
     padding: 0 20px;
-    gap: 50px;
+    gap: 60px;
 }
 
-/* Coluna Imagem */
+/* --- GALERIA DE FOTOS (NOVO) --- */
 .product-image { flex: 1; }
-.product-image img { width: 100%; border-radius: 4px; }
 
-/* Coluna Info */
-.product-info { flex: 1; padding-top: 20px; }
+.main-image-container {
+    width: 100%;
+    height: 500px; /* Altura fixa para destaque */
+    overflow: hidden;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+}
+.main-image-container img {
+    width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s;
+}
+.main-image-container:hover img { transform: scale(1.1); cursor: zoom-in; }
 
-.breadcrumbs { font-size: 12px; color: #888; text-transform: uppercase; margin-bottom: 20px; }
-h1 { font-family: 'Playfair Display', serif; font-size: 36px; line-height: 1.2; margin-bottom: 20px; }
-
-.price-box { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
-.price { display: block; font-size: 28px; font-weight: 600; }
-.installment { display: block; font-size: 14px; color: #666; margin-top: 5px; }
-
-/* Seletor de Tamanho (Visual Bolinhas) */
-.size-selector { margin-bottom: 30px; }
-.size-selector p { font-weight: bold; margin-bottom: 10px; }
-.sizes { display: flex; gap: 10px; margin-bottom: 10px; }
-
-/* Esconde o botão de rádio padrão feio */
-.sizes input[type="radio"] { display: none; }
-
-/* O Label vira o botão */
-.sizes label {
-    display: flex; align-items: center; justify-content: center;
-    width: 45px; height: 45px;
-    border: 1px solid #ccc;
+/* Miniaturas */
+.thumbnails { display: flex; gap: 10px; overflow-x: auto; }
+.thumb-box {
+    width: 80px; height: 80px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    overflow: hidden;
+    opacity: 0.7;
+    transition: 0.3s;
+}
+.thumb-box.active, .thumb-box:hover { opacity: 1; border-color: black; }
+.thumb-box img { width: 100%; height: 100%; object-fit: cover; }
+
+/* --- COLUNA DA DIREITA --- */
+.product-info { flex: 1; }
+
+.product-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.sku { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; display: block; }
+
+/* PREÇOS (DE/POR) */
+.price-container { margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+.old-price { text-decoration: line-through; color: #999; font-size: 16px; margin-right: 10px; }
+.current-price { font-size: 28px; font-weight: 600; color: #000; }
+.promo-tag { background: #000; color: white; padding: 2px 8px; font-size: 10px; border-radius: 4px; vertical-align: middle; margin-left: 10px; }
+.installments { display: block; margin-top: 5px; color: #666; font-size: 13px; }
+
+/* SELETORES (CORES E TAMANHOS) */
+.variation-group { margin-bottom: 25px; }
+.variation-label { font-weight: bold; display: block; margin-bottom: 10px; font-size: 14px; }
+
+/* Cores */
+.color-options { display: flex; gap: 10px; }
+.color-option { cursor: pointer; position: relative; }
+.color-option input { display: none; }
+.color-circle {
+    width: 35px; height: 35px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    display: block;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     transition: 0.2s;
 }
-
-/* Quando selecionado */
-.sizes input[type="radio"]:checked + label {
-    background-color: black;
-    color: white;
-    border-color: black;
+.color-option input:checked + .color-circle {
+    border: 2px solid #fff;
+    outline: 2px solid #000; /* Anel preto em volta */
+    transform: scale(1.1);
 }
 
-.size-guide { font-size: 12px; text-decoration: underline; color: #555; }
-
-/* Botão Comprar */
-.btn-add-cart {
-    width: 100%;
-    background-color: #2ecc71; /* Verde compra */
-    color: white;
-    border: none;
-    padding: 18px;
-    font-size: 16px;
-    font-weight: bold;
-    text-transform: uppercase;
+/* Tamanhos */
+.size-options { display: flex; gap: 10px; flex-wrap: wrap; }
+.size-option input { display: none; }
+.size-box {
+    min-width: 45px; height: 45px;
+    border: 1px solid #ddd;
+    display: flex; align-items: center; justify-content: center;
     cursor: pointer;
-    transition: 0.3s;
-    margin-bottom: 30px;
+    font-size: 13px; font-weight: 600;
+    transition: 0.2s;
 }
-.btn-add-cart:hover { background-color: #27ae60; }
+.size-option input:checked + .size-box {
+    background: black; color: white; border-color: black;
+}
 
-.description-box h3 { font-size: 18px; margin-bottom: 10px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
-.description-box p { font-size: 14px; color: #555; line-height: 1.8; white-space: pre-wrap; }
-
-/* Mobile */
+/* RESPONSIVO */
 @media (max-width: 768px) {
-    .product-container { flex-direction: column; }
+    .product-container { flex-direction: column; gap: 30px; }
+    .main-image-container { height: 400px; }
 }

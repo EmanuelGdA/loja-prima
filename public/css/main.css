@@ -7,6 +7,8 @@
     --white: #ffffff;
     --font-main: 'Montserrat', sans-serif;
     --font-title: 'Playfair Display', serif;
+    --rose-bg: #FCF4F3;   /* Um rosinha bem claro para o fundo do texto */
+    --rose-dark: #C08985; /* Um rosé queimado para os botões */
 }
 
 /* --- Reset Básico --- */
@@ -118,6 +120,56 @@ ul { list-style: none; }
 .btn-hero:hover { background-color: transparent; color: white; }
 
 /* --- VITRINE PRODUTOS (DESIGN NOVO) --- */
+
+/* Caixa de Preços (Para alinhar o De/Por) */
+.price-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Preço Antigo (Riscado) */
+.old-price {
+    font-size: 13px;
+    color: #999;
+    text-decoration: line-through; /* O risco no meio */
+    font-weight: 400;
+}
+
+/* Preço Novo (Destaque) */
+.current-price {
+    font-family: var(--font-title);
+    font-size: 16px;
+    color: var(--black);
+    font-weight: 600;
+}
+/* Se for promoção, pintamos o preço de vermelho chique */
+.current-price.promo { color: #c4a47c; }
+
+/* Etiquetas (Badges em cima da foto) */
+.product-badges {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 2;
+}
+
+.badge-tag {
+    font-size: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    color: white;
+    border-radius: 2px;
+    letter-spacing: 1px;
+}
+
+.badge-new { background-color: black; }
+.badge-sale { background-color: #c4a47c; } /* Dourado */
+
 .products-section { padding: 50px 5%; max-width: 1400px; margin: 0 auto; }
 .section-title { 
     text-align: center; font-family: var(--font-title); font-size: 42px; margin-bottom: 60px; position: relative;
@@ -130,13 +182,78 @@ ul { list-style: none; }
     display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 40px;
 }
 
-.product-card { transition: transform 0.4s; cursor: pointer; text-align: center; }
-.product-card:hover { transform: translateY(-10px); }
+.product-card { 
+     border-radius: 20px; /* Bordas bem redondas */
+    overflow: hidden;    /* Corta tudo que sair da borda (importante pro fundo rosa) */
+    background-color: var(--white);
+    border: 1px solid #f0f0f0;
+    display: flex;       /* Garante estrutura em coluna */
+    flex-direction: column;
+    transition: transform 0.3s, box-shadow 0.3s; }
+
+    /* Área dos Botões */
+.card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+}
+
+/* Estilo Básico do Botão */
+.btn-card {
+    flex: 1;
+    padding: 10px 0;
+    border-radius: 30px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: center;
+    text-decoration: none;
+    font-family: 'Montserrat', sans-serif;
+    transition: 0.2s;
+}
+
+/* Botão Comprar (Preenchido) */
+.btn-buy {
+    background-color: var(--rose-dark);
+    color: white;
+    border: 1px solid var(--rose-dark);
+}
+.btn-buy:hover { background-color: #a87672; }
+
+/* Botão Espiar (Borda) */
+.btn-spy {
+    background-color: transparent;
+    color: var(--rose-dark);
+    border: 1px solid var(--rose-dark);
+}
+.btn-spy:hover { background-color: white; }
+
+.product-card:hover { transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+
 
 .card-image {
-    width: 100%; height: 450px; overflow: hidden; position: relative; background-color: #f4f4f4; margin-bottom: 20px;
+    height: 380px; /* Altura fixa (pode aumentar se quiser fotos mais altas) */
+    width: 100%;
+    margin: 0;     /* Remove margens para colar no fundo rosa */
+    position: relative;
+    background-color: #fff;
 }
-.card-image img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s; }
+.card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;      /* O SEGREDO: Corta a foto para preencher sem esticar */
+    object-position: top center; /* Garante que o rosto apareça */}
+
+.card-content-rose {
+    background-color: var(--rose-bg); /* Fundo rosa cobre tudo */
+    padding: 15px 15px 20px 15px;     /* Espaçamento interno */
+    flex-grow: 1;                     /* Ocupa todo o espaço restante */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
 .product-card:hover .card-image img { transform: scale(1.1); }
 
 .btn-quick-view {
@@ -145,7 +262,16 @@ ul { list-style: none; }
 }
 .card-image:hover .btn-quick-view { bottom: 0; }
 
-.card-info h3 { font-family: var(--font-title); font-size: 18px; margin-bottom: 5px; color: #111; }
+.card-info {
+    text-align: center;
+    margin-bottom: 15px;}
+
+.card-info h3 { 
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #000;
+    font-weight: 600; }
+
 .card-info .category { color: #999; font-size: 11px; text-transform: uppercase; margin-bottom: 10px; }
 .card-info .price { font-weight: 600; font-size: 16px; color: #111; }
 .btn-cta { display: inline-block; background: black; color: white; padding: 10px 20px; margin-top: 10px; }
@@ -169,6 +295,11 @@ ul { list-style: none; }
 .social-links a { margin-right: 15px; }
 .payment-icons { font-size: 24px; margin-bottom: 20px; display: flex; gap: 10px; }
 .footer-bottom { border-top: 1px solid #333; text-align: center; padding: 20px; font-size: 12px; }
+
+/* --- ESCONDE CABEÇALHO MOBILE NO PC --- */
+.mobile-nav-header {
+    display: none;
+}
 
 /* ========================================= */
 /*      RESPONSIVIDADE (CELULAR) - FINAL     */
@@ -214,26 +345,87 @@ ul { list-style: none; }
     }
     .hero-content { display: none; }
 
-    /* 3. MENU E OUTROS */
-    /* Menu Gaveta (Escondido por padrão) */
+    /* --- MENU LATERAL (DRAWER) --- */
+    
+    /* Fundo Escuro (Overlay) */
+    .menu-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.5); /* Preto meio transparente */
+        z-index: 1999; /* Atrás do menu, na frente do site */
+        display: none; /* Começa escondido */
+        backdrop-filter: blur(2px); /* Efeito de desfoque chique */
+    }
+    .menu-overlay.active { display: block; }
+
+    /* A Gaveta Branca */
     .main-nav {
-        display: none; 
-        position: absolute; 
-        top: 100%; left: 0; width: 100%;
-        background: white; 
-        z-index: 9999; /* Z-Index bem alto para ficar na frente de tudo */
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        display: block !important; /* Sempre existe, mas fica fora da tela */
+        position: fixed;
+        top: 0;
+        left: -100%; /* Escondido totalmente na esquerda */
+        width: 80%; /* Ocupa 80% da tela (não tudo) */
+        height: 100vh; /* Altura total */
+        background-color: white;
+        z-index: 2000; /* Na frente de tudo */
+        transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Animação suave */
+        box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+        padding: 0;
     }
 
-    /* ESSA PARTE É A QUE FAZ ELE APARECER */
-    .main-nav.active { 
-        display: block !important; 
+    /* Quando ativa, desliza para a tela */
+    .main-nav.active {
+        left: 0;
     }
-    .main-nav ul { flex-direction: column; text-align: center; margin: 0; padding: 20px; }
-    .main-nav li { border-bottom: 1px solid #f4f4f4; padding: 15px 0; }
+
+    /* Cabeçalho de dentro do Menu */
+    .mobile-nav-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        background: #f9f9f9;
+        border-bottom: 1px solid #eee;
+    }
     
-    .product-grid { grid-template-columns: 1fr; padding: 0 20px; }
-    .checkout-form { flex-direction: column-reverse; }
+    .close-menu-btn {
+        font-size: 30px;
+        cursor: pointer;
+        line-height: 20px;
+    }
+
+    /* Lista de Links */
+    .main-nav ul {
+        flex-direction: column;
+        text-align: left;
+        margin: 0;
+        padding: 10px 0;
+    }
+
+    .main-nav li {
+        border-bottom: 1px solid #f4f4f4;
+        padding: 0;
+        width: 100%;
+    }
+
+    .main-nav a {
+        display: block;
+        padding: 15px 25px;
+        font-size: 14px;
+        color: #333;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .main-nav a:hover {
+        background-color: #fafafa;
+        color: var(--accent-color);
+        padding-left: 30px; /* Efeito de deslizar ao tocar */
+    }
+
+    /* Destaque para links Admin */
+    .admin-link a { color: var(--accent-color) !important; font-weight: bold; }
     
     .product-grid {
         /* Transforma em 2 colunas iguais */
@@ -254,9 +446,11 @@ ul { list-style: none; }
 
     .card-image {
         /* Altura ajustada para ficar proporcional em 2 colunas */
-        height: 280px; 
-        margin-bottom: 8px;
-        border-radius: 4px; /* Cantos levemente arredondados */
+        height: 260px; 
+        font-size: 0;
+        line-height: 0;
+        margin: 0;
+        display: block;
     }
 
     .card-info h3 {
@@ -284,4 +478,102 @@ ul { list-style: none; }
     /* Esconde a categoria e o botão "Ver Detalhes" no celular para limpar o visual */
     .card-info .category { display: none; }
     .btn-quick-view { display: none !important; }
+
+    .dropdown-content {
+        position: static; /* No celular, ele empurra o menu pra baixo */
+        box-shadow: none;
+        display: none; /* JS controlaria clique aqui, mas hover funciona +- */
+        border: none;
+        padding-left: 20px; /* Indentação */
+        background: #f9f9f9;
+    }
+    .dropdown:hover .dropdown-content { display: block; } /* Simples para mobile */
+}
+
+/* --- MENU DROPDOWN (DESKTOP) --- */
+.dropdown { position: relative; display: inline-block; }
+
+/* A caixa que abre */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: white;
+    min-width: 250px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.1);
+    z-index: 1000;
+    padding: 15px;
+    top: 100%;
+    left: 0;
+    border-top: 3px solid var(--accent-color);
+}
+
+/* Mostra ao passar o mouse */
+.dropdown:hover .dropdown-content { display: block; }
+
+/* Estilo dos itens dentro */
+.dropdown-item { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+.dropdown-item:last-child { border: none; margin: 0; }
+
+.cat-title { 
+    font-weight: bold; 
+    color: var(--primary-color) !important; 
+    display: block; 
+    margin-bottom: 5px;
+}
+
+.sub-links a {
+    display: block;
+    font-size: 12px !important;
+    color: #666 !important;
+    padding: 2px 0;
+    text-transform: capitalize !important; /* Primeira letra maiúscula */
+}
+.sub-links a:hover { color: var(--accent-color) !important; padding-left: 5px; }
+
+/* --- BOTÃO WHATSAPP FLUTUANTE (GLOBAL) --- */
+.whatsapp-float {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #25d366;
+    color: white;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 35px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+    z-index: 10000; /* Fica na frente de tudo */
+    transition: transform 0.3s;
+}
+
+.whatsapp-float:hover {
+    transform: scale(1.1); /* Cresce um pouco ao passar o mouse */
+    color: white;
+}
+
+/* --- BOTÃO WHATSAPP NO PRODUTO --- */
+.btn-whatsapp-product {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    border: 1px solid #25d366;
+    color: #25d366;
+    background: transparent;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.btn-whatsapp-product:hover {
+    background-color: #e9fdf0;
 }

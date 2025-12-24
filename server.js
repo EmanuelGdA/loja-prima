@@ -77,6 +77,13 @@ app.use((req, res, next) => {
     next();
 });
 
+// Importa o Middleware
+const menuMiddleware = require('./src/middlewares/menuMiddleware');
+
+// Usa o Middleware (TEM QUE SER ANTES DAS ROTAS)
+app.use(menuMiddleware);
+
+
 // 8. Usar as Rotas
 app.use('/admin', adminRoutes); // Tudo que começa com /admin
 app.use(shopRoutes);            // Home, produtos, carrinho

@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const db = require('../config/firebase');
+const { db } = require('../config/firebase');
 
 // --- EXIBIR FORMULÁRIOS (GET) ---
 
