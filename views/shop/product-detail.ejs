@@ -117,20 +117,24 @@
             <!-- Script para montar a mensagem automática -->
             <script>
                 function openProductZap() {
-                    // SEU NÚMERO AQUI (Apenas números, com DDD e 55 na frente)
+                    
                     const phone = "5541996813385"; 
                     
-                    // Pega o nome do produto que está na tela
                     const productName = "<%= product.title %>";
-                    
-                    // Pega o link atual do navegador
                     const productLink = window.location.href;
+                    const msg = `Olá! Estou vendo o produto *${productName}* e tenho uma dúvida.\nLink: ${productLink}`;
+                    const encodedMsg = encodeURIComponent(msg);
 
-                    // Monta a mensagem
-                    const msg = `Olá! Estou vendo o produto *${productName}* e tenho uma dúvida. \nLink: ${productLink}`;
+                    // VERIFICA SE É CELULAR
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-                    // Abre o WhatsApp
-                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+                    if (isMobile) {
+                        // Protocolo que FORÇA o App abrir no celular
+                        window.location.href = `whatsapp://send?phone=${phone}&text=${encodedMsg}`;
+                    } else {
+                        // No PC, abre o WhatsApp Web em nova aba
+                        window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodedMsg}`, '_blank');
+                    }
                 }
             </script>
 
