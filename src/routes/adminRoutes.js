@@ -19,8 +19,18 @@ router.post('/excluir-produto', isAdmin, adminController.postDeleteProduct);
 
 router.get('/editar-produto/:productId', isAdmin, adminController.getEditProduct);
 
-// POST: Edição também recebe foto -> AQUI TAMBÉM PRECISA
+// POST: Edição também recebe foto 
 router.post('/editar-produto', isAdmin, upload.array('images', 5), adminController.postEditProduct);
+
+
+// ROTA DA FAXINA 
+router.post('/sincronizar-menu', isAdmin, adminController.postRefreshMenu);
+
+// ROTAS DE CUPONS (NOVAS)
+router.get('/cupons', isAdmin, adminController.getCoupons);
+router.post('/criar-cupom', isAdmin, adminController.postAddCoupon);
+router.post('/excluir-cupom', isAdmin, adminController.postDeleteCoupon);
+
 
 // Rotas de Pedidos (Protegidas)
 router.get('/pedidos', isAdmin, adminController.getOrders);

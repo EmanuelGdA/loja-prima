@@ -144,24 +144,37 @@
                     <% } %>
                     <hr>
                     <div class="totals">
-    <!-- Linha 1: Subtotal -->
-    <div class="row">
-        <span>Subtotal</span> 
-        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
-    </div>
-    
-    <!-- Linha 2: Frete (O JavaScript procura essa linha para atualizar) -->
-    <div class="row">
-        <span>Frete</span> 
-        <span>-</span> 
-    </div>
+                        <!-- Subtotal -->
+                        <div class="row">
+                            <span>Subtotal</span> 
+                            <span>R$ <%= parseFloat(cart.totalPrice).toFixed(2).replace('.', ',') %></span>
+                        </div>
+                        
+                        <!-- Linha de Desconto (Se tiver cupom) -->
+                        <% if (cart.coupon && cart.totalWithDiscount) { %>
+                            <div class="row" style="color: #2ecc71;">
+                                <span>Desconto (<%= cart.coupon.code %>)</span>
+                                <span>- R$ <%= (cart.totalPrice - cart.totalWithDiscount).toFixed(2).replace('.', ',') %></span>
+                            </div>
+                        <% } %>
 
-    <!-- Linha 3: Total Final -->
-    <div class="row total" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
-        <span>Total</span> 
-        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
-    </div>
-</div>
+                        <!-- Frete (COM ID NOVO) -->
+                        <div class="row">
+                            <span>Frete</span> 
+                            <!-- Aqui é onde o valor vai aparecer -->
+                            <span id="valorFreteVisual">-</span> 
+                        </div>
+                        
+                        <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
+
+                        <!-- Total Final (COM ID NOVO) -->
+                        <div class="row total" style="margin-top: 5px;">
+                            <span>Total</span> 
+                            <span id="totalFinalDisplay">
+                                R$ <%= (cart.totalWithDiscount || cart.totalPrice).toFixed(2).replace('.', ',') %>
+                            </span>
+                        </div>
+                    </div>
                     <button type="submit" class="btn-finish">Finalizar Pedido</button>
                     <p class="secure-info"><i class="fas fa-shield-alt"></i> Ambiente Seguro</p>
                 </div>
@@ -170,8 +183,8 @@
     </main>
 
     <script>
-    // Variável para guardar o subtotal original (vindo do servidor)
-    const cartSubtotal = parseFloat('<%= cart.totalPrice %>');
+    // Se tiver desconto, usa ele. Se não, usa o total normal.
+    const cartSubtotal = parseFloat('<%= (cart.totalWithDiscount || cart.totalPrice) %>');
 
     function buscarCep() {
         const cep = document.getElementById('cep').value.replace(/\D/g, '');
@@ -252,24 +265,23 @@
     }
 
     function selecionarFrete(valor, nome) {
-        // 1. Atualiza os inputs escondidos
+        // 1. Atualiza os inputs escondidos (para o backend)
         document.getElementById('shippingCostInput').value = valor;
         document.getElementById('shippingMethodInput').value = nome;
 
-        // 2. Atualiza o visual do Total
-        const totalVisual = document.querySelector('.row.total span:last-child');
-        const freteVisual = document.querySelector('.row span:nth-child(2)'); // Campo onde estava "Grátis"
-        
-        // Atualiza texto do frete
-        // Procura a div de resumo onde diz "Frete"
-        const linhasResumo = document.querySelectorAll('.totals .row');
-        if(linhasResumo[1]) {
-            linhasResumo[1].querySelector('span:last-child').innerText = 'R$ ' + valor.toFixed(2).replace('.', ',');
+        // 2. Atualiza o visual do FRETE (Usando o ID novo)
+        const freteVisual = document.getElementById('valorFreteVisual');
+        if (freteVisual) {
+            freteVisual.innerText = 'R$ ' + valor.toFixed(2).replace('.', ',');
         }
 
-        // Soma Subtotal + Frete
-        const novoTotal = cartSubtotal + valor;
-        totalVisual.innerText = 'R$ ' + novoTotal.toFixed(2).replace('.', ',');
+        // 3. Atualiza o TOTAL
+        const totalVisual = document.getElementById('totalFinalDisplay');
+        if (totalVisual) {
+            // Soma o (Produto com ou sem desconto) + Frete
+            const novoTotal = cartSubtotal + valor;
+            totalVisual.innerText = 'R$ ' + novoTotal.toFixed(2).replace('.', ',');
+        }
     }
 
     // ... (Mantenha a função togglePayment aqui também) ...

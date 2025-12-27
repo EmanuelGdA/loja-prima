@@ -52,26 +52,61 @@
                     </table>
                 </div>
 
+               
                 <!-- Resumo do Pedido -->
-                <div class="cart-summary">
-                    <h3>Resumo do Pedido</h3>
-                    <div class="summary-row">
-                        <span>Subtotal</span>
-                        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Frete</span>
-                        <span>Calculado no Checkout</span>
-                    </div>
-                    <hr>
-                    <div class="summary-row total">
-                        <span>Total</span>
-                        <span>R$ <%= cart.totalPrice.toFixed(2).replace('.', ',') %></span>
+            <div class="cart-summary">
+                <h3>Resumo do Pedido</h3>
+                
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span>R$ <%= parseFloat(cart.totalPrice).toFixed(2).replace('.', ',') %></span>
+                </div>
+
+                <!-- === LÓGICA DO CUPOM (AQUI ESTÁ O QUE FALTAVA) === -->
+                <% if (cart.coupon) { %>
+                    <!-- SE TIVER CUPOM APLICADO -->
+                    <div class="summary-row" style="color: #2ecc71; font-weight: bold;">
+                        <span>Desconto (<%= cart.coupon.code %>)</span>
+                        <span>- R$ <%= (cart.totalPrice - cart.totalWithDiscount).toFixed(2).replace('.', ',') %></span>
                     </div>
                     
-                    <a href="/checkout" class="btn-checkout">Finalizar Compra</a>
-                    <a href="/" class="btn-continue">Continuar Comprando</a>
+                    <!-- Botão para Remover -->
+                    <form action="/carrinho/remover-cupom" method="POST" style="margin-bottom: 15px; text-align: right;">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" style="background: none; border: none; font-size: 11px; color: red; text-decoration: underline; cursor: pointer;">
+                            Remover cupom
+                        </button>
+                    </form>
+
+                <% } else { %>
+                    <!-- SE NÃO TIVER CUPOM: MOSTRA O CAMPO -->
+                    <div style="margin: 15px 0;">
+                        <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Possui Cupom?</label>
+                        <form action="/carrinho/cupom" method="POST" style="display: flex; gap: 5px;">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="text" name="couponCode" placeholder="Ex: PRIMA10" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; text-transform: uppercase;">
+                            <button type="submit" style="background: black; color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">OK</button>
+                        </form>
+                    </div>
+                <% } %>
+                <!-- ================================================= -->
+
+                <div class="summary-row">
+                    <span>Frete</span>
+                    <span style="font-size: 12px; color: #666;">Calculado no Checkout</span>
                 </div>
+                
+                <hr>
+                
+                <div class="summary-row total">
+                    <span>Total</span>
+                    <!-- Se tiver desconto, mostra o preço com desconto, senão o normal -->
+                    <span>R$ <%= (cart.totalWithDiscount || cart.totalPrice).toFixed(2).replace('.', ',') %></span>
+                </div>
+                
+                <a href="/checkout" class="btn-checkout">Finalizar Compra</a>
+                <a href="/" class="btn-continue">Continuar Comprando</a>
+            </div>
             </div>
         <% } else { %>
             <div class="empty-cart">

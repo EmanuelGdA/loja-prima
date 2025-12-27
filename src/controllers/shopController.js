@@ -159,26 +159,38 @@ exports.postOrder = async (req, res) => {
         const paymentMethod = req.body.paymentMethod;
         const cpf = req.body.cpf ? req.body.cpf.trim() : '';
         
-        // --- NOVO: PEGAR DADOS DO FRETE ---
+        // 1. DADOS DE FRETE E PREÇO
         const shippingCost = parseFloat(req.body.shippingCost) || 0;
         const shippingMethod = req.body.shippingMethod || 'A combinar';
 
         if (!cart || cart.items.length === 0) return res.redirect('/carrinho');
         if (!cpf) {
-            req.flash('error', 'CPF Obrigatório.');
+            req.flash('error', 'CPF Obrigatório para pagamento.');
             return res.redirect('/checkout');
         }
 
-        // CÁLCULO DO TOTAL FINAL (Produtos + Frete)
-        const finalTotalPrice = cart.totalPrice + shippingCost;
+        // --- CORREÇÃO DO CÁLCULO (IMPORTANTE) ---
+        // Verifica se existe valor com desconto (cupom), senão usa o total normal
+        const priceBase = cart.totalWithDiscount || cart.totalPrice;
+        
+        // Soma o frete ao preço base correto
+        const finalTotalPrice = priceBase + shippingCost;
+        // ----------------------------------------
 
+        // 2. MONTA DADOS DO PEDIDO
         const orderData = {
             user: { id: user.id, email: user.email, name: user.name, cpf: cpf },
             items: cart.items,
-            subtotal: cart.totalPrice, // Guardamos o subtotal
-            shippingCost: shippingCost, // Guardamos o valor do frete
-            shippingMethod: shippingMethod, // Ex: "Loggi Express"
-            totalPrice: finalTotalPrice, // TOTAL COM FRETE
+            
+            // Detalhamento de valores
+            subtotal: cart.totalPrice, // Valor original dos produtos
+            discountTotal: cart.totalWithDiscount || cart.totalPrice, // Valor dos produtos com desconto
+            shippingCost: shippingCost,
+            shippingMethod: shippingMethod,
+            couponUsed: cart.coupon ? cart.coupon.code : null, // Salva qual cupom usou
+            
+            totalPrice: finalTotalPrice, // Valor final a pagar
+            
             address: {
                 cep: req.body.cep, rua: req.body.rua, numero: req.body.numero,
                 bairro: req.body.bairro, cidade: req.body.cidade, estado: req.body.estado
@@ -191,30 +203,71 @@ exports.postOrder = async (req, res) => {
         const orderRef = await db.collection('orders').add(orderData);
         const orderId = orderRef.id;
 
-        // Agora passamos o 'totalPrice' atualizado (com frete) para o PagSeguro
+        // 3. PROCESSA PAGAMENTO (Pix ou Cartão)
         if (paymentMethod === 'pix') {
+            
+            // --- PIX ---
             const pixData = await paymentService.gerarPixPagSeguro(
-                { id: orderId, totalPrice: finalTotalPrice }, // <--- Valor atualizado
-                user, cpf
+                { id: orderId, totalPrice: finalTotalPrice }, // Usa o valor corrigido
+                user, 
+                cpf
             );
-            // ... resto do código igual ...
+
+            // Gera a imagem
             const qrCodeImage = await QRCode.toDataURL(pixData.qrCodeText);
-            await orderRef.update({ pagseguroId: pixData.id, pixCode: pixData.qrCodeText, status: 'Aguardando Pagamento' });
-            req.session.cart = null;
-            return res.render('shop/success-pix', { pageTitle: 'Pagar com PIX', path: '', qrCodeImage, pixCode: pixData.qrCodeText, total: finalTotalPrice });
+
+            await orderRef.update({ 
+                pagseguroId: pixData.id, 
+                pixCode: pixData.qrCodeText, 
+                status: 'Aguardando Pagamento' 
+            });
+
+            req.session.cart = null; // Limpa carrinho
+            
+            return res.render('shop/success-pix', { 
+                pageTitle: 'Pagar com PIX', 
+                path: '', 
+                qrCodeImage: qrCodeImage, 
+                pixCode: pixData.qrCodeText, 
+                total: finalTotalPrice 
+            });
 
         } else {
-            // Cartão
-            const cardData = { /* ... */ }; // (pegue do código anterior)
-            // Lembre de passar 'finalTotalPrice' para o serviço do cartão também!
-            // ...
+            
+            // --- CARTÃO DE CRÉDITO ---
+            const cardData = {
+                number: req.body.cardNumber,
+                holder: req.body.cardHolder,
+                expiration: req.body.cardExpiration,
+                cvv: req.body.cardCvv,
+                installments: req.body.installments || 1
+            };
+
+            const cardResult = await paymentService.processarCartaoPagSeguro(
+                { id: orderId, totalPrice: finalTotalPrice }, // Usa o valor corrigido
+                user, 
+                cpf, 
+                cardData
+            );
+
+            if (cardResult.status === 'PAID') {
+                await orderRef.update({ 
+                    status: 'Pago / Aprovado', 
+                    pagseguroId: cardResult.id 
+                });
+                req.session.cart = null;
+                return res.render('shop/success', { pageTitle: 'Compra Aprovada!', path: '' });
+            } else {
+                await orderRef.update({ status: 'Recusado (' + cardResult.status + ')' });
+                req.flash('error', 'Pagamento Recusado: ' + (cardResult.message || 'Verifique os dados'));
+                return res.redirect('/checkout');
+            }
         }
-        
-        // ... (resto do código igual) ...
 
     } catch (error) {
         console.error("ERRO CHECKOUT:", error);
-        // ...
+        req.flash('error', 'Erro ao processar pagamento. Verifique os dados e o CPF.');
+        res.redirect('/checkout');
     }
 };
 
@@ -274,24 +327,47 @@ exports.postReview = async (req, res) => {
 // 6. FILTROS E BUSCA
 // ==========================================
 
-// Filtrar por Categoria (Ex: /colecao/vestidos)
+// Filtrar por Categoria (COM FILTROS AVANÇADOS)
 exports.getCategory = async (req, res) => {
-    const categoryName = req.params.categoryName; // Pega 'vestidos' da URL
+    const categoryName = req.params.categoryName;
+    
+    // 1. Pega os filtros da URL (ex: ?ordem=menor&tamanho=M)
+    const { ordem, tamanho } = req.query;
 
     try {
         const snapshot = await db.collection('products')
             .where('category', '==', categoryName)
             .get();
 
-        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        let products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        res.render('shop/home', { // Reutilizamos o visual da Home
-            pageTitle: categoryName.charAt(0).toUpperCase() + categoryName.slice(1), // Capitaliza (Vestidos)
+        // 2. FILTRO DE TAMANHO (Javascript puro)
+        if (tamanho) {
+            // Só deixa passar produtos que tenham o tamanho escolhido na lista de sizes
+            products = products.filter(p => p.sizes && p.sizes.includes(tamanho));
+        }
+
+        // 3. ORDENAÇÃO DE PREÇO
+        if (ordem === 'menor') {
+            products.sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+        } else if (ordem === 'maior') {
+            products.sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
+        } else {
+            // Padrão: Mais recentes primeiro (se tiver data)
+            products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+
+        res.render('shop/home', { 
+            pageTitle: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
             products: products,
-            path: '/colecao'
+            path: '/colecao',
+            
+            // 4. IMPORTANTE: Envia os filtros de volta para a tela 
+            // (para o select continuar marcado na opção certa)
+            activeFilters: { ordem, tamanho }
         });
     } catch (error) {
-        console.log(error);
+        console.log("Erro na categoria:", error);
         res.redirect('/');
     }
 };
@@ -324,6 +400,73 @@ exports.getSearch = async (req, res) => {
         console.log(error);
         res.redirect('/');
     }
+};
+
+// ==========================================
+// 7. CUPONS DE DESCONTO (LÓGICA)
+// ==========================================
+
+exports.postApplyCoupon = async (req, res) => {
+    // Garante que o código venha limpo e maiúsculo
+    const code = req.body.couponCode ? req.body.couponCode.trim().toUpperCase() : '';
+    const cart = req.session.cart;
+
+    if (!cart) return res.redirect('/carrinho');
+
+    try {
+        // Busca o cupom no banco
+        const doc = await db.collection('coupons').doc(code).get();
+
+        // 1. Verifica se existe
+        if (!doc.exists) {
+            req.flash('error', 'Cupom inválido.');
+            return res.redirect('/carrinho');
+        }
+
+        const couponData = doc.data();
+
+        // 2. Verifica Validade (Data)
+        const now = new Date();
+        const expiresAt = new Date(couponData.expiresAt); 
+
+        if (now > expiresAt) {
+            req.flash('error', `Este cupom venceu em ${expiresAt.toLocaleDateString('pt-BR')}.`);
+            return res.redirect('/carrinho');
+        }
+
+        // 3. Aplica o Desconto
+        const discountPercent = couponData.discount; 
+        const discountFactor = (100 - discountPercent) / 100;
+        
+        cart.coupon = {
+            code: code,
+            percent: discountPercent
+        };
+        
+        // Calcula o novo total com desconto
+        cart.totalWithDiscount = cart.totalPrice * discountFactor;
+
+        req.session.save(() => {
+            req.flash('success', `Cupom ${code} aplicado (-${discountPercent}%)!`);
+            res.redirect('/carrinho');
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.redirect('/carrinho');
+    }
+};
+
+exports.postRemoveCoupon = (req, res) => {
+    const cart = req.session.cart;
+    if (cart) {
+        delete cart.coupon;
+        delete cart.totalWithDiscount;
+    }
+    req.session.save(() => {
+        req.flash('success', 'Cupom removido.');
+        res.redirect('/carrinho');
+    });
 };
 
 // --- CÁLCULO DE FRETE (API) ---
@@ -368,4 +511,107 @@ exports.postCalculateShipping = async (req, res) => {
         console.log("Erro Frete:", error.message);
         res.status(500).json({ error: 'Erro ao calcular frete' });
     }
+};
+
+// ==========================================
+// 8. PÁGINA DE LANÇAMENTOS (ÚLTIMOS 7 DIAS)
+// ==========================================
+
+exports.getNewArrivals = async (req, res) => {
+    try {
+        // 1. Calcula a data de 7 dias atrás
+        const dateLimit = new Date();
+        dateLimit.setDate(dateLimit.getDate() - 7); // Hoje menos 7 dias
+
+        // 2. Busca todos os produtos
+        // (Fazemos o filtro no JavaScript para evitar erros de índice no Firebase)
+        const snapshot = await db.collection('products').get();
+        const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // 3. Filtra: Só passa quem tem data de criação maior que a data limite
+        const newProducts = allProducts.filter(p => {
+            if (!p.createdAt) return false; // Se for produto antigo sem data, ignora
+            const productDate = new Date(p.createdAt);
+            return productDate >= dateLimit;
+        });
+        
+        // Ordena do mais recente para o mais antigo
+        newProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // 4. Renderiza usando o visual da Home
+        res.render('shop/home', {
+            pageTitle: 'Lançamentos da Semana',
+            products: newProducts,
+            path: '/colecao/lancamentos' // Para o menu saber onde estamos
+        });
+
+    } catch (error) {
+        console.log("Erro Lançamentos:", error);
+        res.redirect('/');
+    }
+};
+
+// ==========================================
+// 9. PÁGINA DE PROMOÇÕES
+// ==========================================
+
+exports.getPromotions = async (req, res) => {
+    try {
+        const snapshot = await db.collection('products').get();
+        const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Filtra apenas produtos que têm preço promocional válido
+        // E o preço promo tem que ser menor que o original (senão não é promoção!)
+        const promoProducts = allProducts.filter(p => {
+            const promo = parseFloat(p.promoPrice);
+            const original = parseFloat(p.originalPrice);
+            return promo > 0 && promo < original;
+        });
+
+        res.render('shop/home', {
+            pageTitle: 'Ofertas Imperdíveis', // Título que vai aparecer na página
+            products: promoProducts,
+            path: '/colecao/promocao'
+        });
+
+    } catch (error) {
+        console.log("Erro Promoções:", error);
+        res.redirect('/');
+    }
+};
+
+// ==========================================
+// 10. PÁGINAS INSTITUCIONAIS (Texto)
+// ==========================================
+
+exports.getInstitucional = (req, res) => {
+    const page = req.params.page; // Pega o nome da página da URL
+    
+    let title = '';
+    let content = '';
+
+    // Define o conteúdo baseado no link
+    switch(page) {
+        case 'trocas':
+            title = 'Trocas e Devoluções';
+            content = '<p>Aqui na Maely Cristina, queremos que você ame sua peça! <br> Se precisar trocar, você tem até 7 dias após o recebimento...</p>';
+            break;
+        case 'entrega':
+            title = 'Política de Entrega';
+            content = '<p>Enviamos para todo o Brasil via Correios e Transportadoras...</p>';
+            break;
+        case 'contato':
+            title = 'Fale Conosco';
+            content = '<p>WhatsApp: (41) 99681-3385 <br> E-mail: contato@maelycristina.com.br</p>';
+            break;
+        default:
+            return res.redirect('/');
+    }
+
+    res.render('shop/text-page', {
+        pageTitle: title,
+        path: '/' + page,
+        title: title,
+        content: content
+    });
 };

@@ -9,18 +9,24 @@ router.get('/', shopController.getIndex);
 router.get('/produto/:productId', shopController.getProduct);
 router.post('/produto/avaliar', shopController.postReview);
 
-// --- NOVAS ROTAS DO CARRINHO ---
+// --- ROTAS DO CARRINHO ---
 router.get('/carrinho', shopController.getCart);
 router.post('/carrinho', shopController.postCart); // Quando clica em "Comprar"
 router.post('/carrinho-delete', shopController.postCartDeleteProduct); // Remover item
-router.get('/login', (req, res) => res.render('user/login', { pageTitle: 'Login' }));
+router.post('/carrinho/cupom', shopController.postApplyCoupon);
+router.post('/carrinho/remover-cupom', shopController.postRemoveCoupon);
 
-// ...
+// Rotas de Usuário/Checkout
+router.get('/login', (req, res) => res.render('user/login', { pageTitle: 'Login' }));
 router.get('/checkout', shopController.getCheckout);
 router.post('/criar-pedido', shopController.postOrder); // Botão "Pagar"
 router.get('/pedidos', shopController.getOrders);
 
+// ROTA DE LANÇAMENTOS
+router.get('/colecao/lancamentos', shopController.getNewArrivals);
 
+// ROTA DE PROMOÇÕES 
+router.get('/colecao/promocao', shopController.getPromotions);
 
 // Rota de Categoria (Ex: /colecao/vestidos)
 router.get('/colecao/:categoryName', shopController.getCategory);
@@ -31,5 +37,8 @@ router.get('/search', shopController.getSearch);
 
 // rota api/frete 
 router.post('/api/frete', shopController.postCalculateShipping);
+
+// Rota Genérica para páginas de texto (trocas, entrega, contato)
+router.get('/institucional/:page', shopController.getInstitucional);
 
 module.exports = router;

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .text-container { max-width: 800px; margin: 60px auto; padding: 0 20px; }
+        .text-title { font-family: 'Playfair Display', serif; font-size: 36px; text-align: center; margin-bottom: 40px; }
+        .text-content { font-family: 'Montserrat', sans-serif; font-size: 16px; line-height: 1.8; color: #444; }
+        .text-content p { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="text-container">
+        <h1 class="text-title"><%= title %></h1>
+        <div class="text-content">
+            <!-- O comando <%- %> permite imprimir HTML (parágrafos, negritos) -->
+            <%- content %>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

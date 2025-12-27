@@ -106,10 +106,30 @@ exports.getOrders = async (req, res) => {
         const snapshot = await db.collection('orders').orderBy('date', 'desc').get();
         const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+        // Cálculos do Dashboard
+        const stats = {
+            totalSales: 0,
+            pending: 0,
+            paid: 0,
+            shipped: 0
+        };
+
+        orders.forEach(o => {
+            // Soma vendas apenas de pedidos pagos/enviados/entregues
+            if (!o.status.includes('Cancelado') && !o.status.includes('Aguardando')) {
+                stats.totalSales += parseFloat(o.totalPrice || 0);
+            }
+            
+            if (o.status.includes('Aguardando')) stats.pending++;
+            if (o.status.includes('Pago') || o.status.includes('Preparando')) stats.paid++;
+            if (o.status.includes('Enviado')) stats.shipped++;
+        });
+
         res.render('admin/orders', {
-            pageTitle: 'Gerenciar Vendas',
+            pageTitle: 'Gestão de Vendas',
             path: '/admin/pedidos',
-            orders: orders
+            orders: orders,
+            stats: stats // Envia os números para a tela
         });
     } catch (error) {
         console.log("Erro ao buscar pedidos:", error);
@@ -118,9 +138,10 @@ exports.getOrders = async (req, res) => {
 };
 
 exports.postUpdateStatus = async (req, res) => {
-    const { orderId, status } = req.body;
+    const { orderId, status, trackingCode } = req.body;
     try {
-        await db.collection('orders').doc(orderId).update({ status: status });
+        await db.collection('orders').doc(orderId).update({ status: status, trackingCode: trackingCode || '' // Salva o código ou vazio se não tiver 
+        });
         console.log(`Pedido ${orderId} atualizado para ${status}`);
         res.redirect('/admin/pedidos');
     } catch (error) {
@@ -150,13 +171,31 @@ exports.getProducts = async (req, res) => {
     }
 };
 
-// 6. EXCLUIR PRODUTO
+// 6. EXCLUIR PRODUTO (ATUALIZADO COM LIMPEZA DE MENU)
 exports.postDeleteProduct = async (req, res) => {
     const prodId = req.body.productId;
+    
     try {
+        // 1. Primeiro, buscamos o produto para saber qual era a categoria dele
+        const doc = await db.collection('products').doc(prodId).get();
+        
+        if (!doc.exists) {
+            return res.redirect('/admin/produtos');
+        }
+
+        const prodData = doc.data();
+
+        // 2. Deleta o produto
         await db.collection('products').doc(prodId).delete();
-        console.log('Produto Excluído');
+
+        // 3. Roda a limpeza do menu (Verifica se a categoria ficou vazia)
+        if (prodData.category) {
+            await cleanUpCategories(prodData.category, prodData.subcategory);
+        }
+
+        console.log('Produto Excluído e Menu verificado.');
         res.redirect('/admin/produtos');
+
     } catch (error) {
         console.log(error);
         res.redirect('/admin/produtos');
@@ -262,6 +301,122 @@ exports.postEditProduct = async (req, res) => {
         console.log("Dados recebidos:", JSON.stringify(body, null, 2)); 
         res.redirect('/admin/produtos');
     }
+    
+};
+
+
+// --- FUNÇÃO AUXILIAR PARA LIMPAR CATEGORIAS VAZIAS ---
+async function cleanUpCategories(category, subcategory) {
+    if (!category) return;
+    
+    // Normaliza ID (igual usamos para criar)
+    const catId = category.toLowerCase().trim();
+
+    try {
+        // 1. Verifica se ainda existe ALGUM produto nessa categoria principal
+        const catSnapshot = await db.collection('products')
+            .where('category', '==', category) // Busca pelo nome original (Ex: "Vestidos")
+            .get();
+
+        if (catSnapshot.empty) {
+            // Se não sobrou nenhum produto, APAGA A CATEGORIA INTEIRA do menu
+            await db.collection('categories').doc(catId).delete();
+            console.log(`Categoria ${category} removida do menu (vazia).`);
+            return; // Se apagou a principal, não precisa checar subcategoria
+        }
+
+        // 2. Se a categoria principal ainda existe, verifica a SUBCATEGORIA
+        if (subcategory) {
+            const subSnapshot = await db.collection('products')
+                .where('category', '==', category)
+                .where('subcategory', '==', subcategory)
+                .get();
+
+            if (subSnapshot.empty) {
+                // Se não sobrou produto nessa subcategoria, remove ela da lista
+                const catRef = db.collection('categories').doc(catId);
+                const doc = await catRef.get();
+                
+                if (doc.exists) {
+                    const currentSubs = doc.data().subcategories || [];
+                    // Filtra removendo a subcategoria vazia
+                    const newSubs = currentSubs.filter(sub => sub !== subcategory);
+                    
+                    await catRef.update({ subcategories: newSubs });
+                    console.log(`Subcategoria ${subcategory} removida de ${category}.`);
+                }
+            }
+        }
+
+    } catch (error) {
+        console.error("Erro na limpeza de categorias:", error);
+    }
+};
+
+// ==========================================
+// 9. GERENCIAMENTO DE CUPONS
+// ==========================================
+
+// Listar Cupons
+exports.getCoupons = async (req, res) => {
+    try {
+        const snapshot = await db.collection('coupons').get();
+        const coupons = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        res.render('admin/coupons', {
+            pageTitle: 'Gerenciar Cupons',
+            path: '/admin/cupons',
+            coupons: coupons
+        });
+    } catch (error) {
+        console.log(error);
+        res.redirect('/admin/produtos');
+    }
+};
+
+// Criar Cupom (Com validade)
+exports.postAddCoupon = async (req, res) => {
+    try {
+        const code = req.body.code.trim().toUpperCase();
+        const discount = parseInt(req.body.discount);
+        const expiryDateRaw = req.body.expiryDate; // Vem como "2025-12-31"
+
+        if (!code || !discount || !expiryDateRaw) {
+            return res.redirect('/admin/cupons');
+        }
+
+        // Configura a data para vencer no FINAL do dia escolhido (23:59:59)
+        const expiryDate = new Date(expiryDateRaw);
+        expiryDate.setHours(23, 59, 59, 999);
+
+        // Usamos o código como ID
+        await db.collection('coupons').doc(code).set({
+            code: code,
+            discount: discount,
+            expiresAt: expiryDate.toISOString(), // Salva data padrão
+            active: true,
+            createdAt: new Date().toISOString()
+        });
+
+        console.log('Cupom criado:', code);
+        res.redirect('/admin/cupons');
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).send("Erro ao criar cupom");
+    }
+};
+
+// Excluir Cupom
+exports.postDeleteCoupon = async (req, res) => {
+    const code = req.body.couponCode;
+    try {
+        await db.collection('coupons').doc(code).delete();
+        res.redirect('/admin/cupons');
+    } catch (error) {
+        console.log(error);
+        res.redirect('/admin/cupons');
+    }
 };
 
 // --- FUNÇÃO AUXILIAR PARA ATUALIZAR O MENU (COM LOGS DE DEBUG) ---
@@ -308,4 +463,42 @@ async function updateCategoryList(category, subcategory) {
     } catch (error) {
         console.error(">>> ERRO GRAVE AO SALVAR CATEGORIA:", error);
     }
-}
+};
+
+// 10. SINCRONIZAR MENU (Limpar categorias vazias antigas)
+exports.postRefreshMenu = async (req, res) => {
+    console.log("--- INICIANDO LIMPEZA DO MENU ---");
+    try {
+        // 1. Pega todas as categorias cadastradas no menu
+        const categoriesSnap = await db.collection('categories').get();
+        
+        if (categoriesSnap.empty) {
+            console.log("Nenhuma categoria para limpar.");
+            return res.redirect('/admin/produtos');
+        }
+
+        // 2. Verifica uma por uma
+        for (const doc of categoriesSnap.docs) {
+            const catId = doc.id; // Ex: "vestidos"
+            
+            // Busca se existe algum produto com essa categoria
+            const productsSnap = await db.collection('products')
+                .where('category', '==', catId)
+                .limit(1) // Basta achar 1 para saber que não está vazia
+                .get();
+
+            if (productsSnap.empty) {
+                // Se não achou nenhum produto, APAGA A CATEGORIA
+                console.log(`Categoria '${catId}' está vazia. Apagando...`);
+                await db.collection('categories').doc(catId).delete();
+            }
+        }
+
+        console.log("Limpeza concluída!");
+        res.redirect('/admin/produtos');
+
+    } catch (error) {
+        console.log("Erro ao limpar menu:", error);
+        res.redirect('/admin/produtos');
+    }
+};

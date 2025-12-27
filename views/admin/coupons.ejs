@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .admin-container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        
+        .create-box {
+            background: #f9f9f9; padding: 25px; border-radius: 12px; border: 1px solid #eee;
+            margin-bottom: 30px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 15px;
+            align-items: end; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+        
+        .form-group label { font-weight: bold; font-size: 12px; display: block; margin-bottom: 5px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .form-group input:focus { border-color: black; outline: none; }
+        
+        .btn-add { background: black; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; height: 42px; transition: 0.2s; }
+        .btn-add:hover { background: #333; }
+
+        .coupon-list { display: flex; flex-direction: column; gap: 10px; }
+        .coupon-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: white; border: 1px solid #eee; padding: 20px; border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        
+        .coupon-code { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 20px; color: #2ecc71; letter-spacing: 1px; }
+        .coupon-meta { font-size: 13px; color: #666; margin-top: 4px; display: flex; gap: 15px; align-items: center; }
+        .coupon-tag { background: #eee; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .expired { color: red; background: #fee2e2; }
+
+        .btn-delete { background: #fff0f0; color: #cc0000; border: 1px solid #ffcccc; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; transition: 0.2s; }
+        .btn-delete:hover { background: #ffcccc; }
+
+        @media (max-width: 768px) {
+            .create-box { grid-template-columns: 1fr; }
+            .btn-add { width: 100%; }
+            .coupon-item { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .btn-delete { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="admin-container">
+        <h1 style="text-align: center; margin-bottom: 30px;">Gerenciar Cupons</h1>
+
+        <!-- FORMULÁRIO COM MÁSCARAS -->
+        <form action="/admin/criar-cupom" method="POST" class="create-box">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            
+            <div class="form-group">
+                <label>Código (Ex: CUPOM10)</label>
+                <!-- oninput: Força Maiúscula e remove espaços -->
+                <input type="text" name="code" placeholder="CUPOM10" required 
+                       oninput="this.value = this.value.toUpperCase().replace(/\s/g, '')">
+            </div>
+            
+            <div class="form-group">
+                <label>Desconto (%)</label>
+                <!-- oninput: Aceita apenas números e limita a 100 -->
+                <input type="number" name="discount" placeholder="10" min="1" max="100" required
+                       oninput="if(this.value > 100) this.value = 100; if(this.value < 0) this.value = 0;">
+            </div>
+
+            <div class="form-group">
+                <label>Válido Até</label>
+                <!-- date input: O calendário nativo é a melhor máscara -->
+                <input type="date" name="expiryDate" required>
+            </div>
+
+            <button type="submit" class="btn-add">+ Criar</button>
+        </form>
+
+        <h3 style="margin-bottom: 15px;">Cupons Ativos</h3>
+        
+        <div class="coupon-list">
+            <% if (coupons.length > 0) { %>
+                <% coupons.forEach(c => { %>
+                    <!-- Lógica para verificar visualmente se venceu -->
+                    <% 
+                        const today = new Date();
+                        const expireDate = new Date(c.expiresAt);
+                        const isExpired = today > expireDate;
+                    %>
+
+                    <div class="coupon-item" style="<%= isExpired ? 'opacity: 0.6;' : '' %>">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span class="coupon-code" style="<%= isExpired ? 'color: #999;' : '' %>">
+                                    <%= c.code %>
+                                </span>
+                                <% if(isExpired) { %>
+                                    <span class="coupon-tag expired">VENCIDO</span>
+                                <% } %>
+                            </div>
+                            
+                            <div class="coupon-meta">
+                                <span><i class="fas fa-percent"></i> <%= c.discount %>% OFF</span>
+                                <span><i class="far fa-calendar-alt"></i> Vence: <%= expireDate.toLocaleDateString('pt-BR') %></span>
+                            </div>
+                        </div>
+                        
+                        <form action="/admin/excluir-cupom" method="POST" onsubmit="return confirm('Apagar este cupom?');" style="<%= isExpired ? 'width: 100%; margin-top: 10px;' : '' %>">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="couponCode" value="<%= c.id %>">
+                            <button type="submit" class="btn-delete">Excluir</button>
+                        </form>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div style="text-align: center; padding: 40px; color: #999;">
+                    <i class="fas fa-ticket-alt" style="font-size: 40px; margin-bottom: 10px; opacity: 0.3;"></i>
+                    <p>Nenhum cupom ativo no momento.</p>
+                </div>
+            <% } %>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

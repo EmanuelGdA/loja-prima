@@ -1,152 +1,310 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
+  <head>
     <!-- Inclui o Head (Meta tags, CSS, Fontes) -->
     <%- include('../partials/head.ejs') %>
-</head>
-<body>
-    
+
+  </head>
+  <body>
     <!-- Inclui o Header (Menu, Logo) -->
     <%- include('../partials/header.ejs') %>
 
     <main>
-        
-        <!-- === LÓGICA DO BANNER === -->
-        <% if (path === '/') { %>
-            <!-- Adicionei id="heroBanner" aqui para o Script funcionar -->
-            <section class="hero-banner" id="heroBanner" onclick="window.location.href='#destaques'" style="cursor: pointer;">
-                <div class="hero-content">
-                    <h2>Nova Coleção</h2>
-                    <h1>Elegância &<br>Sofisticação</h1>
-                    <p>Peças exclusivas selecionadas para você.</p>
-                    <a href="#destaques" class="btn-hero">Ver Coleção</a>
-                </div>
-            </section>
+      <!-- === LÓGICA DO BANNER === -->
+      <% if (path === '/') { %>
+      <!-- Adicionei id="heroBanner" aqui para o Script funcionar -->
+      <section
+        class="hero-banner"
+        id="heroBanner"
+        onclick="window.location.href='#destaques'"
+        style="cursor: pointer"
+      >
+        <div class="hero-content">
+          <h2>Nova Coleção</h2>
+          <h1>Elegância &<br />Sofisticação</h1>
+          <p>Peças exclusivas selecionadas para você.</p>
+          <a href="#destaques" class="btn-hero">Ver Coleção</a>
+        </div>
+      </section>
+      <% } %>
+      <!-- ======================== -->
+
+      <!-- Conteúdo específico da Home -->
+      <section class="products-section" id="destaques">
+        <!-- TÍTULO DINÂMICO CORRIGIDO -->
+        <% if (typeof path !== 'undefined' && path === '/') { %>
+
+        <!-- CASO 1: É A HOME (Mostra o título chique com estrela) -->
+        <div class="special-header">
+          <div class="header-decoration">
+            <span class="header-star">✦</span>
+          </div>
+          <h2 class="main-title-text">SELEÇÃO ESPECIAL</h2>
+          <p class="subtitle-text">Peças escolhidas pra você</p>
+        </div>
+
+        <% } else { %>
+
+        <!-- CASO 2: QUALQUER OUTRA PÁGINA (Lançamentos, Promoção, Busca...) -->
+        <!-- Mostra o título que veio do servidor (ex: "Ofertas Imperdíveis") -->
+        <h2
+          class="section-title"
+          style="
+            text-align: center;
+            font-family: 'Playfair Display';
+            margin-bottom: 40px;
+            margin-top: 40px;
+            font-size: 32px;
+          "
+        >
+          <%= pageTitle %>
+        </h2>
+
         <% } %>
-        <!-- ======================== -->
 
-        <!-- Conteúdo específico da Home -->
-        <section class="products-section" id="destaques">
-            
-            <h2 class="section-title">
-                <%= (typeof path !== 'undefined' && (path === '/colecao' || path === '/search')) ? pageTitle : 'Destaques' %>
-            </h2>
-            
-            <div class="product-grid">
-                <% if (products.length > 0) { %>
-                    <% products.forEach(p => { %>
-                        <article class="product-card">
-    
-    <!-- PARTE DE CIMA: IMAGEM (Clicável) -->
-    <a href="/produto/<%= p.id %>" style="display: block; text-decoration: none;">
-        <div class="card-image">
-            <img src="<%= p.imageUrl %>" alt="<%= p.title %>">
-            
-            <!-- Etiquetas (New / Off) -->
-            <div class="product-badges">
-                <% if (p.isNew) { %> <span class="badge-tag badge-new">New</span> <% } %>
-                <% if (p.promoPrice) { %> 
-                    <% let desc = 0; try { desc = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100); } catch(e){} %>
-                    <% if(desc > 0) { %><span class="badge-tag badge-sale"><%= desc %>% OFF</span><% } %>
-                <% } %>
-            </div>
-        </div>
-    </a>
-
-    <!-- PARTE DE BAIXO: FUNDO ROSA TOTAL (Texto + Botões) -->
-    <div class="card-content-rose">
-        
-        <!-- Texto (Clicável) -->
-        <a href="/produto/<%= p.id %>" style="text-decoration: none;">
-            <div class="card-info">
-                <h3><%= p.title %></h3>
+        <!-- === BARRA DE FILTROS BOUTIQUE (CSS + HTML) === -->
+            <% if (typeof path !== 'undefined' && path === '/colecao') { %>
                 
-                <div class="price-container">
-                    <% if (p.promoPrice && p.originalPrice > p.promoPrice) { %>
-                        <span class="old-price" style="font-size: 12px; margin-bottom: -3px;">
-                            De: R$ <%= parseFloat(p.originalPrice).toFixed(2).replace('.', ',') %>
-                        </span>
-                        <span class="current-price promo" style="font-size: 18px;">
-                            Por: R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %>
-                        </span>
-                    <% } else { %>
-                        <span class="current-price" style="font-size: 18px;">
-                            R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %>
-                        </span>
-                    <% } %>
+                <!-- 1. ESTILO FORÇADO (Para garantir que fique bonito) -->
+                <style>
+                    /* Estilos Gerais (Desktop) */
+                    .boutique-select {
+                        -webkit-appearance: none !important;
+                        -moz-appearance: none !important;
+                        appearance: none !important;
+                        
+                        background-color: white !important;
+                        border: 1px solid #e0e0e0 !important;
+                        border-radius: 50px !important;
+                        padding: 8px 35px 8px 15px !important;
+                        font-family: 'Montserrat', sans-serif !important;
+                        font-size: 12px !important;
+                        font-weight: 600 !important;
+                        color: #333 !important;
+                        cursor: pointer !important;
+                        outline: none !important;
+                        
+                        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") !important;
+                        background-repeat: no-repeat !important;
+                        background-position: right 12px center !important;
+                        min-width: 140px; /* Garante um tamanho mínimo no PC */
+                    }
+
+                    .boutique-select:hover { border-color: #000 !important; background-color: #fafafa !important; }
+
+                    .filter-wrapper {
+                        display: flex;
+                        justify-content: flex-end;
+                        align-items: center;
+                        gap: 15px;
+                        margin-bottom: 30px;
+                        border-bottom: 1px solid #f9f9f9;
+                        padding-bottom: 15px;
+                    }
+
+                    .filter-text { font-size: 11px; text-transform: uppercase; color: #888; font-weight: bold; }
+
+                    /* --- CORREÇÃO PARA O CELULAR --- */
+                    @media (max-width: 768px) {
+                        .filter-wrapper {
+                            /* Transforma em Grade (2 colunas iguais) */
+                            display: grid !important;
+                            grid-template-columns: 1fr 1fr; 
+                            gap: 10px;
+                            justify-content: stretch;
+                        }
+                        
+                        /* As divs que seguram os selects ocupam 100% da coluna */
+                        .filter-wrapper > div {
+                            width: 100%;
+                        }
+                        
+                        .boutique-select {
+                            width: 100% !important; /* Botão enche a coluna */
+                            min-width: 0 !important;
+                            background-position: right 10px center !important;
+                            padding: 8px 25px 8px 10px !important; /* Ajuste para não cortar texto */
+                        }
+
+                        .filter-text { display: none; } /* Esconde o texto "Ordenar" */
+                        
+                        /* Esconde o botão limpar no mobile para não quebrar o layout, ou joga pro final */
+                        a[href="?"] { grid-column: 1 / -1; text-align: center; margin-top: 5px; }
+                    }
+                </style>
+                <!-- 2. O FORMULÁRIO -->
+                <form method="GET" class="filter-wrapper" id="filterForm">
                     
-                    <small style="font-size: 10px; color: #888; margin-top: 4px;">
-                        ou 3x de R$ <%= (p.price / 3).toFixed(2).replace('.', ',') %>
-                    </small>
-                </div>
-            </div>
-        </a>
-
-        <!-- Botões -->
-        <div class="card-actions">
-            <a href="/produto/<%= p.id %>" class="btn-card btn-spy">ESPIAR</a>
-            <a href="/produto/<%= p.id %>" class="btn-card btn-buy">COMPRAR</a>
-        </div>
-    </div>
-
-</article>
-                    <% }) %>
-                <% } else { %>
-                    <div class="no-products" style="grid-column: 1 / -1; text-align: center;">
-                        <p>Nenhum produto encontrado.</p>
-                        <% if (typeof path !== 'undefined' && path !== '/') { %>
-                            <a href="/" class="btn-cta" style="margin-top: 10px; display: inline-block;">Voltar para o Início</a>
-                        <% } else { %>
-                            <a href="/admin/adicionar-produto" class="btn-cta">Cadastrar Primeiro Produto</a>
-                        <% } %>
+                    <!-- Tamanho -->
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="filter-text">Tamanho:</span>
+                        <select name="tamanho" onchange="this.form.submit()" class="boutique-select">
+                            <option value="">Todos</option>
+                            <% ['PP','P','M','G','GG','U'].forEach(tam => { %>
+                                <option value="<%= tam %>" 
+                                    <%= (typeof activeFilters !== 'undefined' && activeFilters.tamanho === tam) ? 'selected' : '' %>>
+                                    <%= tam %>
+                                </option>
+                            <% }) %>
+                        </select>
                     </div>
-                <% } %>
+
+                    <!-- Ordenação -->
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="filter-text">Ordenar:</span>
+                        <select name="ordem" onchange="this.form.submit()" class="boutique-select">
+                            <option value="">Novidades</option>
+                            <option value="menor" <%= (typeof activeFilters !== 'undefined' && activeFilters.ordem === 'menor') ? 'selected' : '' %>>Menor Preço</option>
+                            <option value="maior" <%= (typeof activeFilters !== 'undefined' && activeFilters.ordem === 'maior') ? 'selected' : '' %>>Maior Preço</option>
+                        </select>
+                    </div>
+
+                    <!-- Limpar -->
+                    <% if (typeof activeFilters !== 'undefined' && (activeFilters.ordem || activeFilters.tamanho)) { %>
+                        <a href="?" style="font-size: 11px; color: #d9534f; text-decoration: underline; font-weight: bold;">LIMPAR</a>
+                    <% } %>
+                </form>
+            <% } %>
+            <!-- ============================================== -->
+
+        <div class="product-grid">
+          <% if (products.length > 0) { %> <% products.forEach(p => { %>
+          <article class="product-card">
+            <!-- PARTE DE CIMA: IMAGEM (Clicável) -->
+            <a
+              href="/produto/<%= p.id %>"
+              style="display: block; text-decoration: none"
+            >
+              <div class="card-image">
+                <img src="<%= p.imageUrl %>" alt="<%= p.title %>" />
+
+                <!-- Etiquetas (New / Off) -->
+                <div class="product-badges">
+                  <% if (p.isNew) { %>
+                  <span class="badge-tag badge-new">New</span> <% } %> <% if
+                  (p.promoPrice) { %> <% let desc = 0; try { desc =
+                  Math.round(((p.originalPrice - p.price) / p.originalPrice) *
+                  100); } catch(e){} %> <% if(desc > 0) { %><span
+                    class="badge-tag badge-sale"
+                    ><%= desc %>% OFF</span
+                  ><% } %> <% } %>
+                </div>
+              </div>
+            </a>
+
+            <!-- PARTE DE BAIXO: FUNDO ROSA TOTAL (Texto + Botões) -->
+            <div class="card-content-rose">
+              <!-- Texto (Clicável) -->
+              <a href="/produto/<%= p.id %>" style="text-decoration: none">
+                <div class="card-info">
+                  <h3><%= p.title %></h3>
+
+                  <div class="price-container">
+                    <% if (p.promoPrice && p.originalPrice > p.promoPrice) { %>
+                    <span
+                      class="old-price"
+                      style="font-size: 12px; margin-bottom: -3px"
+                    >
+                      De: R$ <%=
+                      parseFloat(p.originalPrice).toFixed(2).replace('.', ',')
+                      %>
+                    </span>
+                    <span class="current-price promo" style="font-size: 18px">
+                      Por: R$ <%= parseFloat(p.price).toFixed(2).replace('.',
+                      ',') %>
+                    </span>
+                    <% } else { %>
+                    <span class="current-price" style="font-size: 18px">
+                      R$ <%= parseFloat(p.price).toFixed(2).replace('.', ',') %>
+                    </span>
+                    <% } %>
+
+                    <small
+                      style="font-size: 10px; color: #888; margin-top: 4px"
+                    >
+                      ou 3x de R$ <%= (p.price / 3).toFixed(2).replace('.', ',')
+                      %>
+                    </small>
+                  </div>
+                </div>
+              </a>
+
+              <!-- Botões -->
+              <div class="card-actions">
+                <a href="/produto/<%= p.id %>" class="btn-card btn-spy"
+                  >ESPIAR</a
+                >
+                <a href="/produto/<%= p.id %>" class="btn-card btn-buy"
+                  >COMPRAR</a
+                >
+              </div>
             </div>
-        </section>
+          </article>
+          <% }) %> <% } else { %>
+          <div
+            class="no-products"
+            style="grid-column: 1 / -1; text-align: center"
+          >
+            <p>Nenhum produto encontrado.</p>
+            <% if (typeof path !== 'undefined' && path !== '/') { %>
+            <a
+              href="/"
+              class="btn-cta"
+              style="margin-top: 10px; display: inline-block"
+              >Voltar para o Início</a
+            >
+            <% } else { %>
+            <a href="/admin/adicionar-produto" class="btn-cta"
+              >Cadastrar Primeiro Produto</a
+            >
+            <% } %>
+          </div>
+          <% } %>
+        </div>
+      </section>
     </main>
 
     <%- include('../partials/footer.ejs') %>
 
     <!-- === SCRIPT PARA TROCAR OS BANNERS (CARROSSEL) === -->
     <script>
-        // 1. Lista de imagens para CELULAR (Verticais)
-        // Certifique-se de que esses arquivos existem na pasta public/img
-        const bannersMobile = [
-            '/img/banner-mobile.png',  // Foto Principal
-            '/img/banner-mobile.png',  // (Coloque outras fotos aqui quando tiver, ex: banner2.jpg)
-        ];
+      // 1. Lista de imagens para CELULAR (Verticais)
+      // Certifique-se de que esses arquivos existem na pasta public/img
+      const bannersMobile = [
+        "/img/banner-mobile.png", // Foto Principal
+        "/img/banner-mobile.png", // (Coloque outras fotos aqui quando tiver, ex: banner2.jpg)
+      ];
 
-        // 2. Lista de imagens para COMPUTADOR (Horizontais)
-        const bannersDesktop = [
-            'https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=2073', // Foto 1
-            'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070'  // Foto 2
-        ];
+      // 2. Lista de imagens para COMPUTADOR (Horizontais)
+      const bannersDesktop = [
+        "https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=2073", // Foto 1
+        "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070", // Foto 2
+      ];
 
-        let currentBannerIndex = 0;
-        const heroBanner = document.getElementById('heroBanner');
+      let currentBannerIndex = 0;
+      const heroBanner = document.getElementById("heroBanner");
 
-        function changeBanner() {
-            if (!heroBanner) return;
+      function changeBanner() {
+        if (!heroBanner) return;
 
-            // Verifica se a tela é de celular (menor que 768px)
-            const isMobile = window.innerWidth <= 768;
-            
-            // Escolhe qual lista de fotos usar
-            const images = isMobile ? bannersMobile : bannersDesktop;
+        // Verifica se a tela é de celular (menor que 768px)
+        const isMobile = window.innerWidth <= 768;
 
-            // Troca a imagem de fundo
-            heroBanner.style.backgroundImage = `url('${images[currentBannerIndex]}')`;
+        // Escolhe qual lista de fotos usar
+        const images = isMobile ? bannersMobile : bannersDesktop;
 
-            // Prepara o índice para a próxima foto (loop infinito)
-            currentBannerIndex = (currentBannerIndex + 1) % images.length;
-        }
+        // Troca a imagem de fundo
+        heroBanner.style.backgroundImage = `url('${images[currentBannerIndex]}')`;
 
-        // Só roda o script se o banner existir na página (para não dar erro na busca)
-        if (heroBanner) {
-            changeBanner(); // Carrega a primeira imediatamente
-            setInterval(changeBanner, 4000); // Troca a cada 4 segundos
-        }
+        // Prepara o índice para a próxima foto (loop infinito)
+        currentBannerIndex = (currentBannerIndex + 1) % images.length;
+      }
+
+      // Só roda o script se o banner existir na página (para não dar erro na busca)
+      if (heroBanner) {
+        changeBanner(); // Carrega a primeira imediatamente
+        setInterval(changeBanner, 4000); // Troca a cada 4 segundos
+      }
     </script>
-
-</body>
+  </body>
 </html>

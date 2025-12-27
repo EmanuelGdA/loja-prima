@@ -113,11 +113,23 @@
     <main class="admin-list">
         <div class="header-actions">
             <h1>Gerenciar Produtos</h1>
-            <a href="/admin/adicionar-produto" class="btn-new">
-                <i class="fas fa-plus"></i> Novo Produto
-            </a>
-        </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <!-- BOTÃO DE FAXINA (NOVO) -->
+                <form action="/admin/sincronizar-menu" method="POST" onsubmit="return confirm('Isso vai apagar do menu todas as categorias que não têm produtos. Continuar?');">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="btn-new" style="background: white; color: red; border: 1px solid red;">
+                        <i class="fas fa-sync"></i> Limpar Menu
+                    </button>
+                </form>
 
+                <!-- BOTÃO NOVO PRODUTO (JÁ EXISTIA) -->
+                <a href="/admin/adicionar-produto" class="btn-new">
+                    <i class="fas fa-plus"></i> Novo Produto
+                </a>
+            </div>
+        </div>
+        
         <div class="product-list">
             <% if (products.length > 0) { %>
                 <% products.forEach(prod => { %>
