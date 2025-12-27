@@ -12,15 +12,27 @@
 
 .main-image-container {
     width: 100%;
-    height: 500px; /* Altura fixa para destaque */
+    /* Aumentei a altura para ficar mais vertical (retrato), ideal para vestidos */
+    height: 600px; 
     overflow: hidden;
     margin-bottom: 15px;
     border-radius: 8px;
     border: 1px solid #f0f0f0;
+    cursor: zoom-in; /* Ícone de lupa ao passar o mouse */
+    background-color: #f9f9f9;
 }
+
 .main-image-container img {
-    width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s;
+    width: 100%; 
+    height: 100%; 
+    object-fit: cover; /* Preenche tudo */
+    
+    /* O SEGREDO: Foca no TOPO da imagem (rosto), não no centro (barriga) */
+    object-position: top center; 
+    
+    transition: transform 0.5s;
 }
+
 .main-image-container:hover img { transform: scale(1.1); cursor: zoom-in; }
 
 /* Miniaturas */
@@ -95,5 +107,46 @@
 /* RESPONSIVO */
 @media (max-width: 768px) {
     .product-container { flex-direction: column; gap: 30px; }
-    .main-image-container { height: 400px; }
+    .main-image-container {
+        height: 450px; 
+    }
 }
+
+/* --- ZOOM TELA CHEIA (LIGHTBOX) --- */
+.lightbox-overlay {
+    display: none; /* Começa escondido */
+    position: fixed;
+    z-index: 10000; /* Fica na frente de TUDO */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95); /* Fundo preto quase total */
+    justify-content: center;
+    align-items: center;
+    animation: fadeIn 0.3s;
+}
+
+.lightbox-content {
+    max-width: 95%;
+    max-height: 90vh; /* Ocupa 90% da altura da tela */
+    border-radius: 4px;
+    box-shadow: 0 0 20px rgba(255,255,255,0.1);
+    object-fit: contain; /* Mostra a foto inteira sem cortar nada */
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    color: white;
+    font-size: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    background: rgba(0,0,0,0.5);
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

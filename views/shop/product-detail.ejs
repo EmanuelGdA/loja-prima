@@ -18,7 +18,7 @@
                    // Pega a primeira imagem disponível ou a capa
                    let mainImg = (product.images && product.images.length > 0) ? product.images[0] : product.imageUrl; 
                 %>
-                <img src="<%= mainImg %>" id="zoomImage" alt="<%= product.title %>">
+                <img src="<%= mainImg %>" id="zoomImage" alt="<%= product.title %>" onclick="openFullscreen(this.src)">
             </div>
 
             <!-- Miniaturas (Só aparece se tiver mais de 1 foto) -->
@@ -283,6 +283,13 @@
         </section>
     <% } %>
 
+    <!-- JANELA DE ZOOM (LIGHTBOX) -->
+    <div id="fullscreenModal" class="lightbox-overlay" onclick="closeFullscreen()">
+        <span class="lightbox-close">&times;</span>
+        <img class="lightbox-content" id="fullscreenImg">
+    </div>
+
+
     <%- include('../partials/footer.ejs') %>
 
     <script>
@@ -358,6 +365,33 @@
             resultadoDiv.innerHTML = '<span style="color: red;">Erro ao calcular. Tente mais tarde.</span>';
         }
     }
+
+        // Abre a foto em tela cheia
+        function openFullscreen(src) {
+            const modal = document.getElementById('fullscreenModal');
+            const img = document.getElementById('fullscreenImg');
+            
+            img.src = src; // Pega a foto que foi clicada
+            modal.style.display = "flex"; // Mostra a tela preta
+            
+            // Trava a rolagem da página de trás
+            document.body.style.overflow = "hidden";
+        }
+
+        // Fecha a foto
+        function closeFullscreen() {
+            const modal = document.getElementById('fullscreenModal');
+            modal.style.display = "none";
+            document.body.style.overflow = "auto"; // Destrava a rolagem
+        }
+        
+        // Mantém sua função de trocar miniaturas
+        function changeImage(element, src) {
+            document.getElementById('zoomImage').src = src;
+            document.querySelectorAll('.thumb-box').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+    
 </script>
 </body>
 </html>
