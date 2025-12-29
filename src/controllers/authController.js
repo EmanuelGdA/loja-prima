@@ -19,11 +19,11 @@ exports.getSignup = (req, res) => {
 
 // --- PROCESSAR DADOS (POST) ---
 
-// 1. CADASTRAR NOVO USUÁRIO
+// 1. CADASTRAR NOVO USUÁRIO (COM TELEFONE)
 exports.postSignup = async (req, res) => {
-    const { name, email, password, confirmPassword } = req.body;
+    // Pegamos também o 'phone' agora
+    const { name, email, phone, password, confirmPassword } = req.body;
 
-    // Validação básica (ideal é usar Joi aqui depois)
     if (password !== confirmPassword) {
         req.flash('error', 'As senhas não conferem.');
         return res.redirect('/cadastro');
@@ -39,22 +39,25 @@ exports.postSignup = async (req, res) => {
             return res.redirect('/cadastro');
         }
 
-        // Criptografa a senha (Hash) - O '12' é a força da criptografia
+        // Criptografa a senha
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Salva no Firebase
+        // Salva no Firebase com o TELEFONE
         await userRef.add({
             name: name,
             email: email,
+            phone: phone, 
             password: hashedPassword,
+            isAdmin: false, // Padrão não é admin
             createdAt: new Date().toISOString()
         });
 
-        req.flash('success', 'Conta criada! Faça login.');
+        req.flash('success', 'Conta criada com sucesso! Faça login.');
         res.redirect('/login');
 
     } catch (err) {
         console.log(err);
+        req.flash('error', 'Erro ao criar conta.');
         res.redirect('/cadastro');
     }
 };

@@ -8,43 +8,63 @@
     <%- include('../partials/header.ejs') %>
 
     <main class="auth-container">
-        <div class="auth-box">
-            <h1>Criar Conta</h1>
-            <p>Junte-se a nós para ter acesso a promoções exclusivas.</p>
-            
+        <div class="auth-card">
+            <h2 class="auth-title">Crie sua Conta</h2>
+            <p class="auth-subtitle">Preencha seus dados para acessar ofertas exclusivas.</p>
+
             <% if (errorMessage.length > 0) { %>
-                <div class="alert error"><%= errorMessage %></div>
+                <div class="alert error"><i class="fas fa-exclamation-circle"></i> <%= errorMessage %></div>
             <% } %>
 
-            <form action="/cadastro" method="POST">
+            <form action="/cadastro" method="POST" class="auth-form">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                
-                <div class="form-group">
+
+                <div class="input-group">
                     <label>Nome Completo</label>
-                    <input type="text" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label>E-mail</label>
-                    <input type="email" name="email" required>
-                </div>
-                <div class="form-group">
-                    <label>Senha</label>
-                    <input type="password" name="password" required minlength="6">
-                </div>
-                <div class="form-group">
-                    <label>Confirmar Senha</label>
-                    <input type="password" name="confirmPassword" required minlength="6">
+                    <input type="text" name="name" required placeholder="Seu nome">
                 </div>
 
-                <button type="submit" class="btn-auth">Criar Conta</button>
+                <div class="input-group">
+                    <label>E-mail</label>
+                    <input type="email" name="email" required placeholder="seu@email.com">
+                </div>
+
+                <!-- CAMPO DE TELEFONE NOVO -->
+                <div class="input-group">
+                    <label>Celular / WhatsApp</label>
+                    <input type="text" name="phone" id="phone" required placeholder="(99) 99999-9999" maxlength="15" onkeyup="maskPhone(this)">
+                </div>
+
+                <div class="input-group">
+                    <label>Senha</label>
+                    <input type="password" name="password" required placeholder="********" minlength="6">
+                </div>
+
+                <div class="input-group">
+                    <label>Confirmar Senha</label>
+                    <input type="password" name="confirmPassword" required placeholder="********">
+                </div>
+
+                <button type="submit" class="btn-black">CADASTRAR</button>
             </form>
 
-            <div class="auth-footer">
-                <a href="/login">Já tem conta? Faça login</a>
+            <div class="auth-links">
+                <p>Já é cliente?</p>
+                <a href="/login" class="link-bold">Fazer Login</a>
             </div>
         </div>
     </main>
 
     <%- include('../partials/footer.ejs') %>
+
+    <script>
+        // Máscara simples para celular
+        function maskPhone(input) {
+            let v = input.value.replace(/\D/g,'');
+            v = v.replace(/^(\d{2})(\d)/g,"($1) $2");
+            v = v.replace(/(\d)(\d{4})$/,"$1-$2");
+            input.value = v;
+        }
+    </script>
 </body>
 </html>

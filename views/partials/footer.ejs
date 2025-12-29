@@ -5,7 +5,7 @@
             <h3>Sobre a Marca</h3>
             <p>Moda atemporal e elegante para mulheres que buscam conforto e sofisticação.</p>
             <div class="social-links">
-                <a href="https://www.instagram.com/maelycristinabrand?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="><i class="fab fa-instagram"></i></a>
+                <a href="https://www.instagram.com/maelycristinabrand?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank"><i class="fab fa-instagram"></i></a>
                 <a href="#"><i class="fab fa-facebook-f"></i></a>
                 <a href="#"><i class="fab fa-tiktok"></i></a>
             </div>
@@ -48,6 +48,51 @@
     <i class="fab fa-whatsapp"></i>
 </a>
 
+<!-- === NOVO: MODAL DE LOGIN (APARECE SE NÃO TIVER LOGADO) === -->
+<% if (typeof isAuthenticated !== 'undefined' && !isAuthenticated) { %>
+    <div id="login-modal-overlay" style="
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+        z-index: 99999; display: flex; justify-content: center; align-items: center;
+        animation: fadeIn 0.5s;
+    ">
+        <div style="
+            background: white; padding: 30px; border-radius: 12px; text-align: center; 
+            width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            position: relative;
+        ">
+            <!-- Botão Fechar (X) -->
+            <span onclick="document.getElementById('login-modal-overlay').style.display='none'" 
+                  style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999;">
+                  &times;
+            </span>
+
+            <h2 style="font-family: 'Playfair Display'; margin-bottom: 10px; color: #000;">Bem-vinda!</h2>
+            <p style="color: #666; margin-bottom: 25px; font-size: 14px; line-height: 1.5;">
+                Entre na sua conta para ver preços exclusivos, acompanhar pedidos e receber novidades.
+            </p>
+            
+            <a href="/login" style="
+                display: block; width: 100%; background: black; color: white; 
+                padding: 12px; border-radius: 6px; font-weight: bold; text-decoration: none; margin-bottom: 10px; font-size: 14px;">
+                FAZER LOGIN
+            </a>
+            
+            <a href="/cadastro" style="
+                display: block; width: 100%; border: 1px solid black; color: black; 
+                padding: 12px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 14px;">
+                CRIAR CONTA
+            </a>
+
+            <p style="margin-top: 20px; font-size: 12px; color: #888; cursor: pointer; text-decoration: underline;" 
+               onclick="document.getElementById('login-modal-overlay').style.display='none'">
+                Agora não, só quero dar uma olhadinha
+            </p>
+        </div>
+    </div>
+<% } %>
+<!-- ========================================================== -->
+
 <!-- SCRIPT OBRIGATÓRIO PARA O MENU FUNCIONAR -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -62,7 +107,7 @@
             if (nav) nav.classList.toggle('active');
             if (overlay) overlay.classList.toggle('active');
             
-            // Trava a rolagem da página quando o menu está aberto para não ficar estranho
+            // Trava a rolagem da página quando o menu está aberto
             if (document.body.style.overflow === 'hidden') {
                 document.body.style.overflow = 'auto';
             } else {
@@ -94,3 +139,11 @@
         }
     });
 </script>
+
+<!-- Animação simples para o modal -->
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
