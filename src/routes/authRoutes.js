@@ -3,10 +3,17 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 
 router.get('/login', authController.getLogin);
-router.get('/cadastro', authController.getSignup);
-
 router.post('/login', authController.postLogin);
-router.post('/cadastro', authController.postSignup);
 router.post('/logout', authController.postLogout);
+
+router.get('/cadastro', authController.getSignup);
+router.post('/cadastro', authController.postSignup);
+
+// NOVAS ROTAS (Recuperar Senha)
+router.get('/esqueci-senha', authController.getForgotPassword);
+router.post('/esqueci-senha', authController.postForgotPassword);
+
+router.get('/redefinir-senha/:token', authController.getResetPassword);
+router.post('/redefinir-senha', authController.postResetPassword);
 
 module.exports = router;
