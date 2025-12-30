@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .favorites-container { max-width: 1400px; margin: 40px auto; padding: 0 5%; }
+        .page-header { text-align: center; margin-bottom: 50px; }
+        .page-header h1 { font-family: 'Playfair Display'; font-size: 36px; margin-bottom: 10px; }
+        .page-header p { color: #666; font-size: 14px; }
+
+        /* Estilo de Carregamento */
+        .loading { text-align: center; font-size: 14px; color: #999; margin-top: 50px; }
+        
+        /* Estado Vazio */
+        .empty-fav { text-align: center; padding: 60px 20px; }
+        .empty-fav i { font-size: 50px; color: #eee; margin-bottom: 20px; }
+        .btn-go-shop { background: black; color: white; padding: 12px 30px; border-radius: 30px; text-decoration: none; font-size: 12px; font-weight: bold; display: inline-block; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="favorites-container">
+        <div class="page-header">
+            <h1>Meus Favoritos</h1>
+            <p>Sua lista de desejos</p>
+        </div>
+
+        <div id="favorites-grid" class="product-grid">
+            <!-- Os produtos vão aparecer aqui via JavaScript -->
+            <div class="loading">Carregando seus favoritos...</div>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const grid = document.getElementById('favorites-grid');
+            
+            // 1. Ler IDs do LocalStorage
+            const favoritesIds = JSON.parse(localStorage.getItem('myFavorites')) || [];
+
+            if (favoritesIds.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-fav" style="grid-column: 1 / -1;">
+                        <i class="far fa-heart"></i>
+                        <h3>Sua lista está vazia</h3>
+                        <p>Salve seus looks preferidos para ver depois.</p>
+                        <a href="/" class="btn-go-shop">VER COLEÇÃO</a>
+                    </div>
+                `;
+                return;
+            }
+
+            // 2. Pedir os dados ao Servidor
+            try {
+                const response = await fetch('/api/favoritos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'CSRF-Token': '<%= csrfToken %>' },
+                    body: JSON.stringify({ ids: favoritesIds })
+                });
+
+                const products = await response.json();
+
+                if (products.length === 0) {
+                    grid.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Produtos indisponíveis.</p>';
+                    return;
+                }
+
+                // 3. Montar os Cards (Igual na Home)
+                let html = '';
+                products.forEach(p => {
+                    // Lógica de Preço
+                    let priceHtml = '';
+                    if (p.promoPrice && p.originalPrice > p.promoPrice) {
+                        priceHtml = `
+                            <span class="old-price" style="font-size:11px; text-decoration:line-through; color:#999;">De: R$ ${parseFloat(p.originalPrice).toFixed(2).replace('.', ',')}</span>
+                            <span class="current-price promo" style="font-size:16px; color:#c4a47c; font-weight:600;">Por: R$ ${parseFloat(p.price).toFixed(2).replace('.', ',')}</span>
+                        `;
+                    } else {
+                        priceHtml = `<span class="current-price" style="font-size:16px; font-weight:600;">R$ ${parseFloat(p.price).toFixed(2).replace('.', ',')}</span>`;
+                    }
+
+                    // Etiquetas
+                    let badgesHtml = '';
+                    if (p.isNew) badgesHtml += '<span class="badge-tag badge-new">New</span> ';
+                    if (p.promoPrice) badgesHtml += '<span class="badge-tag badge-sale">OFF</span>';
+
+                    html += `
+                        <article class="product-card">
+                            <a href="/produto/${p.id}" style="text-decoration:none;">
+                                <div class="card-image">
+                                    <img src="${p.imageUrl}" alt="${p.title}">
+                                    <div class="product-badges">${badgesHtml}</div>
+                                </div>
+                                <div class="card-content-rose">
+                                    <div class="card-info">
+                                        <h3>${p.title}</h3>
+                                        <div class="price-container" style="flex-direction:column; gap:0;">
+                                            ${priceHtml}
+                                        </div>
+                                    </div>
+                                    <div class="card-actions">
+                                        <button onclick="removeFavorite('${p.id}')" class="btn-card" style="border:1px solid #ccc; color:#666; background:transparent;">REMOVER</button>
+                                        <a href="/produto/${p.id}" class="btn-card btn-buy">COMPRAR</a>
+                                    </div>
+                                </div>
+                            </a>
+                        </article>
+                    `;
+                });
+                
+                grid.innerHTML = html;
+
+            } catch (error) {
+                console.error(error);
+                grid.innerHTML = '<p style="text-align:center;">Erro ao carregar favoritos.</p>';
+            }
+        });
+
+        // Função para remover e atualizar a tela
+        function removeFavorite(id) {
+            event.preventDefault(); // Não abre o link do produto
+            let favorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
+            favorites = favorites.filter(favId => favId !== id);
+            localStorage.setItem('myFavorites', JSON.stringify(favorites));
+            location.reload(); // Recarrega a página para atualizar
+        }
+    </script>
+</body>
+</html>

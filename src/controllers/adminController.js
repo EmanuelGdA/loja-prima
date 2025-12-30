@@ -25,8 +25,7 @@ exports.postAddProduct = async (req, res) => {
     try {
         const body = req.body;
         
-        // 1. Multifotos (Cloudinary)
-        // req.files contém o array de arquivos enviados
+        // 1. Multifotos (Cloudinary) - MANTIDO
         let images = [];
         if (req.files && req.files.length > 0) {
             images = req.files.map(f => f.path);
@@ -34,10 +33,39 @@ exports.postAddProduct = async (req, res) => {
             return res.status(422).send("Pelo menos uma foto é obrigatória.");
         }
 
-        // 2. Categoria Dinâmica
+        // --- LÓGICA NOVA: GUIA DE MEDIDAS DINÂMICO ---
+        let measureList = [];
+        
+        // Verifica se o usuário adicionou alguma linha de medida
+        if (body.measure_names) {
+            // Garante que sejam Arrays (se vier só 1 linha, o HTML manda string, aí convertemos)
+            const names = Array.isArray(body.measure_names) ? body.measure_names : [body.measure_names];
+            const pp = Array.isArray(body.measure_PP) ? body.measure_PP : [body.measure_PP];
+            const p = Array.isArray(body.measure_P) ? body.measure_P : [body.measure_P];
+            const m = Array.isArray(body.measure_M) ? body.measure_M : [body.measure_M];
+            const g = Array.isArray(body.measure_G) ? body.measure_G : [body.measure_G];
+            const gg = Array.isArray(body.measure_GG) ? body.measure_GG : [body.measure_GG];
+            
+            // Loop para montar o objeto de cada linha
+            for (let i = 0; i < names.length; i++) {
+                if (names[i].trim() !== '') { // Só salva se tiver nome
+                    measureList.push({
+                        name: names[i],
+                        PP: pp[i] || '-',
+                        P: p[i] || '-',
+                        M: m[i] || '-',
+                        G: g[i] || '-',
+                        GG: gg[i] || '-'
+                    });
+                }
+            }
+        }
+        // ----------------------------------------------
+
+        // 2. Categoria Dinâmica - MANTIDO
         const finalCategory = (body.categorySelect === 'new' && body.newCategory) ? body.newCategory : body.categorySelect;
 
-        // 3. Cores e Tamanhos (Garante que sejam Arrays)
+        // 3. Cores e Tamanhos - MANTIDO
         let sizes = body.sizes || [];
         if (!Array.isArray(sizes)) sizes = [sizes];
 
@@ -53,15 +81,13 @@ exports.postAddProduct = async (req, res) => {
             category: finalCategory,
             subcategory: body.subcategory || '',
             
-            // Imagens (Salva o Array)
+            // Imagens
             images: images, 
-            imageUrl: images[0], // Mantemos esse campo para compatibilidade na Home (pega a primeira foto)
+            imageUrl: images[0], 
 
-            // Preços (Convertidos da Máscara)
-            price: parseCurrency(body.originalPrice), // Preço Base
-            promoPrice: body.promoPrice ? parseCurrency(body.promoPrice) : null, // Preço Promo
-
-            // Se tiver promo, o preço oficial de venda é o promo
+            // Preços (Função parseCurrency deve estar no topo do arquivo)
+            price: parseCurrency(body.originalPrice), 
+            promoPrice: body.promoPrice ? parseCurrency(body.promoPrice) : null,
             finalPrice: body.promoPrice ? parseCurrency(body.promoPrice) : parseCurrency(body.originalPrice),
 
             // Detalhes
@@ -70,9 +96,9 @@ exports.postAddProduct = async (req, res) => {
             
             // Arrays
             sizes: sizes,
-            colors: colors, // Novo campo de cores
+            colors: colors, 
 
-            // Visibilidade (Só Ativo)
+            // Visibilidade
             isActive: body.isActive === 'true',
 
             // Frete
@@ -81,6 +107,9 @@ exports.postAddProduct = async (req, res) => {
             width: parseInt(body.width) || 20,
             length: parseInt(body.length) || 20,
 
+            // NOVA PROPRIEDADE: Salva a lista dinâmica que criamos acima
+            measures: measureList, 
+
             createdAt: new Date().toISOString()
         };
         
@@ -88,7 +117,7 @@ exports.postAddProduct = async (req, res) => {
         await updateCategoryList(finalCategory, body.subcategory);
         
         await db.collection('products').add(newProduct);
-        console.log('Produto Criado!');
+        console.log('Produto Criado com Sucesso!');
         res.redirect('/admin/produtos');
 
     } catch (error) {
@@ -224,13 +253,13 @@ exports.getEditProduct = async (req, res) => {
     }
 };
 
-// 8. SALVAR A EDIÇÃO (CORRIGIDO E BLINDADO)
+// 8. SALVAR A EDIÇÃO (COM MEDIDAS DINÂMICAS)
 exports.postEditProduct = async (req, res) => {
     const prodId = req.body.productId;
     const body = req.body;
 
     try {
-        // 1. LÓGICA DE IMAGENS
+        // 1. LÓGICA DE IMAGENS (MANTIDA)
         let keptImages = body.keptImages || [];
         if (!Array.isArray(keptImages)) keptImages = [keptImages];
 
@@ -242,7 +271,35 @@ exports.postEditProduct = async (req, res) => {
         let finalImages = [...keptImages, ...newImages];
         if (finalImages.length === 0 && body.oldImageUrl) finalImages = [body.oldImageUrl];
 
-        // 2. Arrays e Lógicas
+        // 2. LÓGICA DE MEDIDAS DINÂMICAS (NOVA)
+        // Substituímos o bloco antigo fixo por este que lê as linhas criadas
+        let measureList = [];
+        
+        if (body.measure_names) {
+            // Garante que sejam Arrays, mesmo se vier só uma linha
+            const names = Array.isArray(body.measure_names) ? body.measure_names : [body.measure_names];
+            const pp = Array.isArray(body.measure_PP) ? body.measure_PP : [body.measure_PP];
+            const p = Array.isArray(body.measure_P) ? body.measure_P : [body.measure_P];
+            const m = Array.isArray(body.measure_M) ? body.measure_M : [body.measure_M];
+            const g = Array.isArray(body.measure_G) ? body.measure_G : [body.measure_G];
+            const gg = Array.isArray(body.measure_GG) ? body.measure_GG : [body.measure_GG];
+            
+            // Percorre os arrays e monta os objetos
+            for (let i = 0; i < names.length; i++) {
+                if (names[i] && names[i].trim() !== '') {
+                    measureList.push({
+                        name: names[i],
+                        PP: pp[i] || '-',
+                        P: p[i] || '-',
+                        M: m[i] || '-',
+                        G: g[i] || '-',
+                        GG: gg[i] || '-'
+                    });
+                }
+            }
+        }
+
+        // 3. OUTRAS LÓGICAS (CATEGORIA, ARRAYS, PREÇOS - MANTIDAS)
         const finalCategory = (body.categorySelect === 'new' && body.newCategory) ? body.newCategory : body.categorySelect;
 
         let sizes = body.sizes || []; if (!Array.isArray(sizes)) sizes = [sizes];
@@ -251,10 +308,9 @@ exports.postEditProduct = async (req, res) => {
         const price = parseCurrency(body.originalPrice);
         const promo = body.promoPrice ? parseCurrency(body.promoPrice) : null;
 
-        // 3. Monta o Objeto (AQUI ESTÁ A CORREÇÃO: || '')
+        // 4. MONTA O OBJETO FINAL
         const updatedProduct = {
             title: body.title || '',
-            // Proteção: Se sku for undefined, salva vazio
             sku: body.sku || '', 
             description: body.description || '',
             category: finalCategory,
@@ -268,14 +324,15 @@ exports.postEditProduct = async (req, res) => {
             promoPrice: promo,
 
             stock: parseInt(body.stock) || 0,
-            
-            // Proteção: Se material for undefined, salva vazio (Isso corrige seu erro)
             material: body.material || '', 
             
             sizes: sizes,
             colors: colors,
             
-            // Botões (Switches) - Faltavam no seu código anterior
+            // AQUI ENTRA A LISTA NOVA DE MEDIDAS
+            measures: measureList, 
+            
+            // Botões e Frete (Mantidos)
             isActive: body.isActive === 'true',
             isNew: body.isNew === 'true',
             isFeatured: body.isFeatured === 'true',
@@ -288,20 +345,18 @@ exports.postEditProduct = async (req, res) => {
             updatedAt: new Date().toISOString()
         };
 
-        // 4. Salvar
+        // 5. SALVAR NO BANCO
         await updateCategoryList(finalCategory, body.subcategory);
         await db.collection('products').doc(prodId).update(updatedProduct);
         
-        console.log('Produto Editado com sucesso!');
+        console.log('Produto Editado com Medidas Dinâmicas!');
         res.redirect('/admin/produtos');
 
     } catch (error) {
         console.log("Erro Edit:", error);
-        // Dica: Adicione isso para saber QUAL campo está dando erro no terminal
         console.log("Dados recebidos:", JSON.stringify(body, null, 2)); 
         res.redirect('/admin/produtos');
     }
-    
 };
 
 

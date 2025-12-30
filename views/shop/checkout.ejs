@@ -17,10 +17,21 @@
 </head>
 <body>
     <header class="simple-header">
-        <div class="logo">
-            <a href="/"><span>.</span></a>
+        
+        <!-- 1. SETA VOLTAR (Fica na Esquerda) -->
+        <a href="/carrinho" class="back-link">
+            <i class="fas fa-arrow-left"></i> 
+            <span class="back-text">Voltar</span>
+        </a>
+
+        <!-- (LOGO FOI REMOVIDA DAQUI) -->
+
+        <!-- 2. CADEADO (Fica na Direita) -->
+        <div class="secure-badge">
+            <i class="fas fa-lock"></i> 
+            <span>Checkout Seguro</span>
         </div>
-        <div class="secure-badge"><i class="fas fa-lock"></i> Checkout Seguro</div>
+
     </header>
 
     <main class="checkout-container">
@@ -41,6 +52,28 @@
                 </div>
 
                 <h2>1. Entrega</h2>
+                <!-- ESCOLHA DO TIPO DE ENTREGA -->
+                <div class="delivery-type-group">
+                    <label>
+                        <input type="radio" name="deliveryType" value="ship" class="delivery-radio" checked onchange="toggleDeliveryMode('ship')">
+                        <span class="delivery-label"><i class="fas fa-truck"></i> Receber em Casa</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="deliveryType" value="pickup" class="delivery-radio" onchange="toggleDeliveryMode('pickup')">
+                        <span class="delivery-label"><i class="fas fa-store"></i> Retirar na Loja</span>
+                    </label>
+                </div>
+
+                <!-- BLOCO QUE APARECE SE FOR RETIRADA -->
+                <div id="pickup-box" class="pickup-info">
+                    <strong><i class="fas fa-map-marker-alt"></i> Ponto de Retirada:</strong><br>
+                    Loja Maely Cristina<br>
+                    Rua Exemplo, 123 - Portão, Curitiba<br>
+                    <small>Horário: Seg-Sex 09h às 18h</small>
+                </div>
+
+                <div id="shipping-address-form">
+
                 <div class="form-group">
                     <label>CEP</label>
                     <input type="text" name="cep" id="cep" placeholder="00000-000" maxlength="9" required onblur="buscarCep()">
@@ -77,6 +110,7 @@
                  <h3>Opções de Entrega</h3>
                 <div id="lista-frete">
         <!-- O JavaScript vai preencher aqui -->
+                </div>
                 </div>
                 </div>
                 
@@ -167,11 +201,12 @@
                         
                         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
 
-                        <!-- Total Final (COM ID NOVO) -->
+                        <!-- Total Final  -->
                         <div class="row total" style="margin-top: 5px;">
                             <span>Total</span> 
                             <span id="totalFinalDisplay">
-                                R$ <%= (cart.totalWithDiscount || cart.totalPrice).toFixed(2).replace('.', ',') %>
+                                <!-- CORREÇÃO AQUI TAMBÉM -->
+                                R$ <%= (cart.coupon ? cart.totalWithDiscount : cart.totalPrice).toFixed(2).replace('.', ',') %>
                             </span>
                         </div>
                     </div>
@@ -183,6 +218,7 @@
     </main>
 
     <script>
+        
     // Se tiver desconto, usa ele. Se não, usa o total normal.
     const cartSubtotal = parseFloat('<%= (cart.totalWithDiscount || cart.totalPrice) %>');
 
@@ -297,6 +333,53 @@
             // Se escolheu Pix: Esconde o formulário e tira a obrigatoriedade
             cardForm.style.display = 'none';
             inputs.forEach(i => i.removeAttribute('required'));
+        }
+    }
+
+    function toggleDeliveryMode(mode) {
+        const addressForm = document.getElementById('shipping-address-form');
+        const pickupBox = document.getElementById('pickup-box');
+        const freteOptions = document.getElementById('frete-options'); 
+        
+        // Pega todos os inputs de endereço para tirar o 'required'
+        const addressInputs = addressForm.querySelectorAll('input');
+
+        const costInput = document.getElementById('shippingCostInput');
+        const methodInput = document.getElementById('shippingMethodInput');
+        const freteVisual = document.getElementById('valorFreteVisual');
+        const totalVisual = document.getElementById('totalFinalDisplay');
+
+        if (mode === 'pickup') {
+            // --- MODO RETIRADA ---
+            addressForm.style.display = 'none';
+            if(freteOptions) freteOptions.style.display = 'none';
+            pickupBox.style.display = 'block';
+            
+            // O PULO DO GATO: Remove a obrigatoriedade dos campos escondidos
+            addressInputs.forEach(input => input.removeAttribute('required'));
+
+            // Zera o frete
+            costInput.value = 0;
+            methodInput.value = 'Retirar na Loja';
+            
+            if(freteVisual) freteVisual.innerText = 'Grátis';
+            
+            const novoTotal = cartSubtotal + 0;
+            if(totalVisual) totalVisual.innerText = 'R$ ' + novoTotal.toFixed(2).replace('.', ',');
+            
+        } else {
+            // --- MODO ENTREGA ---
+            addressForm.style.display = 'block';
+            pickupBox.style.display = 'none';
+            if(document.getElementById('lista-frete').innerHTML !== '') {
+                 if(freteOptions) freteOptions.style.display = 'block';
+            }
+
+            // Devolve a obrigatoriedade para o navegador validar
+            addressInputs.forEach(input => input.setAttribute('required', 'true'));
+            
+            // (Opcional) Zera o frete visualmente até a pessoa calcular de novo
+            // ou mantém o último cálculo se quiser.
         }
     }
 </script>

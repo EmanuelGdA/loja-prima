@@ -34,6 +34,13 @@ router.get('/colecao/:categoryName', shopController.getCategory);
 // Rota de Busca
 router.get('/search', shopController.getSearch);
 
+// ROTAS DE FAVORITOS
+router.get('/favoritos', shopController.getFavoritesPage); // Abre a página
+router.post('/api/favoritos', shopController.postGetFavoriteProducts); // Busca os dados
+
+// NOVAS ROTAS DE SINCRONIZAÇÃO
+router.post('/api/toggle-favorite', shopController.postToggleFavoriteAPI); // Clica no coração
+router.get('/api/get-user-favorites', shopController.getUserFavoritesAPI); // Carrega ao entrar
 
 // rota api/frete 
 router.post('/api/frete', shopController.postCalculateShipping);

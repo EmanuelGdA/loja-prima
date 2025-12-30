@@ -1,37 +1,70 @@
 const nodemailer = require('nodemailer');
 
-// Configuração do "Carteiro"
+// 1. Configuração do "Carteiro"
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'emanuelgomesalmeida@gmail.com', // COLOQUE SEU EMAIL AQUI
-        pass: 'hecn klaw ormh ahcq'       // SENHA DE APP DO GOOGLE (Não é a senha normal)
+        user: 'emanuelgomesalmeida@gmail.com', // Seu e-mail
+        pass: 'frim grxf pkpl sgcg'            // A SENHA NOVA QUE VOCÊ GEROU
     }
 });
 
+// 2. Função para "Esqueci Minha Senha" (Link)
 exports.sendResetEmail = async (toEmail, token) => {
-    const resetLink = `https://loja-da-prima.onrender.com/redefinir-senha/${token}`;
-    // Se estiver testando no PC, use: `http://localhost:3000/redefinir-senha/${token}`
+    const baseUrl = process.env.NODE_ENV === 'production' 
+        ? 'https://loja-da-prima.onrender.com' 
+        : 'http://localhost:3000';
+        
+    const resetLink = `${baseUrl}/redefinir-senha/${token}`;
 
     const mailOptions = {
-        from: '"Maely Cristina Store" <seu.email.da.loja@gmail.com>',
+        from: '"Maely Cristina Store" <emanuelgomesalmeida@gmail.com>',
         to: toEmail,
-        subject: 'Recuperação de Senha - Maely Cristina',
+        subject: 'Recuperação de Senha',
         html: `
-            <div style="font-family: Arial, sans-serif; color: #333;">
-                <h2>Esqueceu sua senha?</h2>
-                <p>Não se preocupe! Clique no botão abaixo para criar uma nova senha:</p>
-                <a href="${resetLink}" style="background: black; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a>
-                <p style="margin-top: 20px; font-size: 12px; color: #888;">Se não foi você, ignore este e-mail. O link expira em 1 hora.</p>
+            <div style="font-family: Arial, sans-serif; color: #333; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #000;">Esqueceu sua senha?</h2>
+                <p>Clique no botão abaixo para criar uma nova:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="${resetLink}" style="background: black; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Redefinir Senha</a>
+                </div>
+                <p style="font-size: 12px; color: #999;">Link válido por 1 hora.</p>
             </div>
         `
     };
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log("E-mail de recuperação enviado para:", toEmail);
+        console.log(">> Link de senha enviado para:", toEmail);
     } catch (error) {
-        console.error("Erro ao enviar e-mail:", error);
-        throw new Error("Falha no envio de e-mail.");
+        console.error(">> Erro ao enviar link de senha:", error.message);
+    }
+};
+
+// 3. Função para "Confirmar Conta" (Código de 6 dígitos)
+exports.sendVerificationEmail = async (toEmail, code) => {
+    const mailOptions = {
+        from: '"Maely Cristina Store" <emanuelgomesalmeida@gmail.com>',
+        to: toEmail,
+        subject: 'Seu código de acesso - Maely Cristina',
+        html: `
+            <div style="font-family: sans-serif; text-align: center; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 500px; margin: 0 auto;">
+                <h2 style="color: #000;">Bem-vindo(a)!</h2>
+                <p style="color: #666;">Use o código abaixo para confirmar sua conta e entrar no site:</p>
+                
+                <div style="background: #f4f4f4; padding: 15px; font-size: 28px; font-weight: 800; letter-spacing: 5px; margin: 20px 0; color: #000; border-radius: 5px;">
+                    ${code}
+                </div>
+                
+                <p style="color: #999; font-size: 12px;">Se você não solicitou este código, ignore este e-mail.</p>
+            </div>
+        `
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(">> Código de verificação enviado para:", toEmail);
+    } catch (error) {
+        console.error(">> Erro ao enviar código por e-mail:", error.message);
     }
 };

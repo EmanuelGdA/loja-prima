@@ -42,11 +42,14 @@
 </footer>
 
 <!-- Botão WhatsApp (Seu número correto) -->
+ <% if (typeof path === 'undefined' || !path.includes('/admin')) { %>
 <a href="https://wa.me/5541996813385?text=Olá,%20vim%20pelo%20site%20e%20gostaria%20de%20ajuda!" 
    class="whatsapp-float"
    target="_blank">
     <i class="fab fa-whatsapp"></i>
 </a>
+
+<% } %>
 
 <!-- === MODAL DE LOGIN (DELAY + INTELIGENTE) === -->
 <% if (!locals.isAuthenticated) { %>
@@ -127,6 +130,52 @@
 <% } %>
 <!-- ========================================================== -->
 
+<!-- === MENU DE NAVEGAÇÃO INFERIOR (MOBILE) === -->
+ <% if (typeof path !== 'undefined' && path === '/') { %>
+<div class="mobile-bottom-nav">
+    <a href="/" class="nav-item">
+        <i class="fas fa-home"></i>
+        <span>Início</span>
+    </a>
+    
+    <!-- Link Inteligente: Se logado vai pro perfil, se não vai pro login -->
+    <a href="<%= (typeof isAuthenticated !== 'undefined' && isAuthenticated) ? '/pedidos' : '/login' %>" class="nav-item">
+        <i class="far fa-user"></i>
+        <span>Conta</span>
+    </a>
+
+    <a href="/favoritos" class="nav-item">
+        <div class="icon-container">
+            <i class="far fa-heart"></i>
+            <!-- O número de favoritos será preenchido via JS -->
+            <span class="nav-badge" id="mobileFavBadge" style="display:none;">0</span>
+        </div>
+        <span>Favoritos</span>
+    </a>
+
+    <a href="/carrinho" class="nav-item">
+        <div class="icon-container">
+            <i class="fas fa-shopping-bag"></i>
+            <% if (typeof cartCount !== 'undefined' && cartCount > 0) { %>
+                <span class="nav-badge"><%= cartCount %></span>
+            <% } %>
+        </div>
+        <span>Sacola</span>
+    </a>
+</div>
+<% } %>
+<!-- Script para atualizar o número de favoritos no menu -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const favs = JSON.parse(localStorage.getItem('myFavorites')) || [];
+        const badge = document.getElementById('mobileFavBadge');
+        if (favs.length > 0) {
+            badge.innerText = favs.length;
+            badge.style.display = 'flex';
+        }
+    });
+</script>
+
 
 <!-- SCRIPT OBRIGATÓRIO PARA O MENU FUNCIONAR -->
 <script>
@@ -175,6 +224,8 @@
     });
 </script>
 
+
+
 <!-- Animação simples para o modal -->
 <style>
     @keyframes fadeIn {
@@ -182,3 +233,49 @@
         to { opacity: 1; transform: translateY(0); }
     }
 </style>
+
+<!-- SCRIPT PARA LIMPAR DADOS AO SAIR -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Pega todos os formulários de logout (do menu PC e Mobile)
+        const logoutForms = document.querySelectorAll('form[action="/logout"]');
+
+        logoutForms.forEach(form => {
+            form.addEventListener('submit', () => {
+                // Limpa os favoritos do navegador ao sair
+                localStorage.removeItem('myFavorites');
+                // Limpa o controle do modal de login para aparecer pro próximo usuário
+                sessionStorage.removeItem('modalClosed');
+            });
+        });
+    });
+</script>
+
+<!-- SCRIPT DE SINCRONIZAÇÃO DE FAVORITOS -->
+<% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        // Só roda se não tivermos sincronizado ainda nesta sessão para economizar dados
+        // (Ou roda sempre para garantir, como é leve, vamos rodar sempre por segurança)
+        try {
+            const response = await fetch('/api/get-user-favorites');
+            const cloudFavorites = await response.json();
+            
+            if (cloudFavorites && Array.isArray(cloudFavorites)) {
+                // Mescla com o que já tem no local ou substitui. 
+                // Vamos substituir para garantir que o banco é a verdade absoluta.
+                localStorage.setItem('myFavorites', JSON.stringify(cloudFavorites));
+                
+                // Atualiza a bolinha do menu (mobile) se existir
+                const badge = document.getElementById('mobileFavBadge');
+                if (badge && cloudFavorites.length > 0) {
+                    badge.innerText = cloudFavorites.length;
+                    badge.style.display = 'flex';
+                }
+            }
+        } catch (e) {
+            console.log("Erro ao sincronizar favoritos");
+        }
+    });
+</script>
+<% } %>

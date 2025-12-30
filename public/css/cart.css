@@ -1,42 +1,76 @@
-.cart-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; min-height: 60vh; }
+/* --- ESTILO GERAL DO CARRINHO --- */
+.cart-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
 .cart-container h1 { font-family: 'Playfair Display'; text-align: center; margin-bottom: 40px; }
 
 .cart-content { display: flex; gap: 40px; }
 .cart-items { flex: 2; }
-.cart-summary { flex: 1; background: #f9f9f9; padding: 30px; border-radius: 8px; height: fit-content; }
+.cart-summary { flex: 1; background: #f9f9f9; padding: 30px; border-radius: 12px; height: fit-content; }
 
-/* Tabela */
+/* Tabela Desktop */
 .cart-table { width: 100%; border-collapse: collapse; }
-.cart-table th { text-align: left; padding-bottom: 20px; border-bottom: 1px solid #ddd; color: #888; font-size: 14px; font-weight: 400; }
+.cart-table th { text-align: left; padding-bottom: 20px; border-bottom: 1px solid #ddd; color: #888; font-size: 13px; text-transform: uppercase; }
 .cart-table td { padding: 20px 0; border-bottom: 1px solid #eee; vertical-align: middle; }
 
-.product-col { display: flex; align-items: center; gap: 15px; }
-.product-col img { width: 60px; height: 80px; object-fit: cover; border-radius: 4px; }
-.product-col strong { display: block; font-size: 14px; }
-.product-col p { font-size: 12px; color: #666; margin: 0; }
+/* Detalhes do Produto */
+.product-wrapper { display: flex; align-items: center; gap: 15px; }
+.product-wrapper img { width: 70px; height: 90px; object-fit: cover; border-radius: 6px; }
 
-.btn-remove { background: none; border: none; color: #cc0000; cursor: pointer; transition: 0.2s; }
-.btn-remove:hover { transform: scale(1.2); }
+.item-details strong { display: block; font-size: 14px; margin-bottom: 4px; color: #333; }
 
-/* Resumo */
+/* Bolinha de Cor e Tamanho */
+.variant-info { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; }
+.color-dot { 
+    display: inline-block; width: 15px; height: 15px; 
+    border-radius: 50%; border: 1px solid #ccc; 
+}
+
+.mobile-price { display: none; } /* Esconde preço mobile no desktop */
+
+.btn-remove { background: none; border: none; color: #cc0000; cursor: pointer; font-size: 16px; transition: 0.2s; padding: 5px; }
+.btn-remove:hover { transform: scale(1.1); }
+
+/* --- RESPONSIVIDADE (TRANSFORMA TABELA EM CARDS) --- */
+@media (max-width: 768px) {
+    .cart-content { flex-direction: column; }
+    
+    .cart-table thead { display: none; } /* Esconde cabeçalho */
+    
+    .cart-item-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #f0f0f0;
+        padding: 15px 0;
+        position: relative;
+    }
+
+    .product-col { width: 100%; padding: 0 !important; border: none !important; }
+    
+    .desktop-only { display: none; } /* Esconde colunas repetidas */
+    
+    .mobile-price { 
+        display: block; 
+        margin-top: 5px; 
+        font-weight: bold; 
+        color: #000; 
+        font-size: 14px;
+    }
+
+    .action-col {
+        padding: 0 !important; border: none !important;
+        display: flex; align-items: center;
+    }
+    
+    .product-wrapper img { width: 80px; height: 100px; } /* Foto maior no celular */
+}
+
+/* Resumo do Pedido */
 .summary-row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 14px; }
-.summary-row.total { font-weight: bold; font-size: 18px; margin-top: 20px; }
+.total { font-weight: 800; font-size: 18px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; }
 
 .btn-checkout { 
     display: block; width: 100%; background: black; color: white; 
     text-align: center; padding: 15px; text-transform: uppercase; 
-    font-weight: bold; margin-bottom: 10px; 
+    font-weight: bold; margin-bottom: 10px; border-radius: 30px; text-decoration: none;
 }
-.btn-continue { 
-    display: block; width: 100%; text-align: center; font-size: 12px; text-decoration: underline; 
-}
-
-/* Carrinho Vazio */
-.empty-cart { text-align: center; padding: 50px; }
-.empty-cart i { font-size: 60px; color: #ddd; margin-bottom: 20px; }
-.empty-cart h2 { margin-bottom: 10px; }
-
-@media (max-width: 768px) {
-    .cart-content { flex-direction: column; }
-    .cart-table thead { display: none; } /* Esconde cabeçalho no mobile */
-}
+.btn-continue { display: block; width: 100%; text-align: center; font-size: 12px; text-decoration: underline; }

@@ -26,24 +26,48 @@
                         </thead>
                         <tbody>
                             <% cart.items.forEach(item => { %>
-                                <tr>
+                                <tr class="cart-item-row">
+                                    <!-- 1. Imagem e Detalhes -->
                                     <td class="product-col">
-                                        <img src="<%= item.imageUrl %>" alt="<%= item.title %>">
-                                        <div>
-                                            <strong><%= item.title %></strong>
-                                            <p>Tamanho: <%= item.size %></p>
+                                        <div class="product-wrapper">
+                                            <a href="/produto/<%= item.productId %>">
+                                                <img src="<%= item.imageUrl %>" alt="<%= item.title %>">
+                                            </a>
+                                            <div class="item-details">
+                                                <strong><%= item.title %></strong>
+                                                
+                                                <div class="variant-info">
+                                                    <span>Tam: <%= item.size %></span>
+                                                    <% if(item.color && item.color !== 'Única') { %>
+                                                        <!-- Mostra a bolinha da cor em vez do código -->
+                                                        <span class="color-dot" style="background-color: <%= item.color %>;" title="Cor selecionada"></span>
+                                                    <% } %>
+                                                </div>
+                                                
+                                                <!-- Preço aparece aqui no Mobile -->
+                                                <div class="mobile-price">
+                                                    <%= item.qty %>x R$ <%= item.price.toFixed(2).replace('.', ',') %>
+                                                </div>
+                                            </div>
                                         </div>
                                     </td>
-                                    <td>R$ <%= item.price.toFixed(2).replace('.', ',') %></td>
-                                    <td><%= item.qty %></td>
-                                    <td>R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %></td>
-                                    <td>
-                                        <!-- Botão Remover -->
+
+                                    <!-- 2. Colunas Desktop (Escondidas no Mobile) -->
+                                    <td class="desktop-only">R$ <%= item.price.toFixed(2).replace('.', ',') %></td>
+                                    <td class="desktop-only"><%= item.qty %></td>
+                                    <td class="desktop-only"><strong>R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %></strong></td>
+                                    
+                                    <!-- 3. Botão Remover -->
+                                    <td class="action-col">
                                         <form action="/carrinho-delete" method="POST">
                                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                             <input type="hidden" name="productId" value="<%= item.productId %>">
                                             <input type="hidden" name="size" value="<%= item.size %>">
-                                            <button type="submit" class="btn-remove"><i class="fas fa-trash"></i></button>
+                                            <input type="hidden" name="color" value="<%= item.color || '' %>">
+                                            
+                                            <button type="submit" class="btn-remove">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </form>
                                     </td>
                                 </tr>
@@ -99,10 +123,10 @@
                 <hr>
                 
                 <div class="summary-row total">
-                    <span>Total</span>
-                    <!-- Se tiver desconto, mostra o preço com desconto, senão o normal -->
-                    <span>R$ <%= (cart.totalWithDiscount || cart.totalPrice).toFixed(2).replace('.', ',') %></span>
-                </div>
+                        <span>Total</span>
+                        <!-- CORREÇÃO: Se tem cupom, usa o valor com desconto. Se não, usa o cheio. -->
+                        <span>R$ <%= (cart.coupon ? cart.totalWithDiscount : cart.totalPrice).toFixed(2).replace('.', ',') %></span>
+                    </div>
                 
                 <a href="/checkout" class="btn-checkout">Finalizar Compra</a>
                 <a href="/" class="btn-continue">Continuar Comprando</a>

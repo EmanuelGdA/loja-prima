@@ -4,139 +4,111 @@
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/auth.css">
     <style>
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; }
         
-        /* CSS para o Preview de NOVAS fotos */
-        .preview-box { 
-            width: 80px; height: 80px; border: 1px solid #ddd; 
-            border-radius: 4px; overflow: hidden; position: relative; 
+        /* CARD PRINCIPAL */
+        .form-section { 
+            background: #fff; padding: 25px; border-radius: 12px; 
+            border: 1px solid #eee; margin-bottom: 25px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
         }
-        .preview-box img { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Botão X para as novas fotos */
-        .btn-remove-preview {
-            position: absolute; top: 0; right: 0;
-            background: rgba(255, 0, 0, 0.8); color: white; border: none;
-            width: 20px; height: 20px; font-size: 14px; 
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-        }
-        .btn-remove-preview:hover { background: red; }
 
-        /* FOTOS EXISTENTES */
-        .existing-photos-container {
-            display: flex; gap: 10px; flex-wrap: wrap;
-            padding: 10px; background: #f0f0f0; border-radius: 6px;
-        }
-        .photo-item {
-            position: relative; width: 80px; height: 80px;
-            border: 1px solid #ccc; border-radius: 4px; overflow: hidden;
-        }
-        .photo-item img {
-            width: 100%; height: 100%; object-fit: cover;
-        }
-        .btn-remove-photo {
-            position: absolute; top: 0; right: 0;
-            background: red; color: white; border: none;
-            width: 20px; height: 20px; font-size: 16px; line-height: 16px;
-            cursor: pointer; font-weight: bold;
-        }
-        .btn-remove-photo:hover { background: darkred; }
-
-        /* --- TABELA DE CORES (PALETA) --- */
-        .color-wrapper {
-            background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px;
+        .section-title { 
+            font-weight: 800; font-family: 'Playfair Display'; font-size: 18px; 
+            margin-bottom: 20px; display: block; border-bottom: 2px solid #f9f9f9; 
+            padding-bottom: 10px; color: #111; letter-spacing: 0.5px;
         }
         
-        .color-grid {
-            display: grid;
-            /* Cria colunas pequenas automaticamente (tipo a imagem que vc mandou) */
-            grid-template-columns: repeat(auto-fill, minmax(25px, 1fr)); 
-            gap: 4px;
-            max-height: 200px; /* Se tiver muitas, cria rolagem */
-            overflow-y: auto;
-            margin-bottom: 10px;
-        }
-
-        .color-option { position: relative; cursor: pointer; }
-        .color-option input { display: none; } /* Esconde a checkbox real */
-        
-        .color-swatch {
-            display: block;
-            width: 100%;
-            padding-bottom: 100%; /* Faz ficar quadrado */
-            border-radius: 4px;
-            border: 1px solid rgba(0,0,0,0.1);
-            transition: transform 0.1s, border 0.1s;
-        }
-
-        /* Efeito quando passa o mouse */
-        .color-option:hover .color-swatch { transform: scale(1.1); z-index: 2; border: 1px solid #666; }
-
-        /* Efeito quando SELECIONADO (Borda preta grossa e check) */
-        .color-option input:checked + .color-swatch {
-            border: 2px solid black;
-            box-shadow: 0 0 5px rgba(0,0,0,0.3);
-            transform: scale(0.9); /* Diminui um pouco para mostrar a seleção */
-        }
-        /* Pequeno check no centro */
-        .color-option input:checked + .color-swatch::after {
-            content: '✓'; color: white; position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%); font-size: 14px; font-weight: bold;
-            text-shadow: 0 0 2px black;
-        }
-
-        /* Cores Selecionadas (Resumo) */
-        .selected-colors-preview {
-            display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; min-height: 30px;
-        }
-        .selected-bubble { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ccc; }
-
-        .container { max-width: 800px; margin: 50px auto; padding: 20px; }
-        .form-section { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-        .section-title { font-weight: bold; font-size: 16px; margin-bottom: 15px; display: block; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; color: #333; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
-        /* PREVIEW DE FOTOS */
-        .image-preview-container { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-        .preview-box { width: 80px; height: 80px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; position: relative; }
-        .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { 
+            font-weight: 600; font-size: 13px; color: #555; 
+            margin-bottom: 6px; display: block; text-transform: uppercase;
+        }
+        
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; 
+            border-radius: 6px; font-size: 14px; background-color: #fff;
+        }
 
-        /* CORES */
-        .color-options { display: flex; gap: 10px; flex-wrap: wrap; }
-        .color-checkbox { display: none; }
-        .color-label { 
-            width: 35px; height: 35px; border-radius: 50%; border: 2px solid #eee; cursor: pointer; 
-            display: inline-block; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        /* --- AQUI ESTÁ A CORREÇÃO: TABELA DE CORES --- */
+        .color-wrapper {
+            background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 6px;
         }
-        .color-checkbox:checked + .color-label { border: 3px solid black; transform: scale(1.1); }
-        .color-checkbox:checked + .color-label::after {
-            content: '✔'; color: white; position: absolute; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%); font-size: 14px; text-shadow: 0 0 2px black;
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); 
+            gap: 5px;
+            max-height: 200px; overflow-y: auto; margin-bottom: 10px;
         }
+        .color-option { position: relative; cursor: pointer; margin: 0; padding: 0; }
+        .color-option input { display: none; } /* O Segredo: Esconde a caixa feia */
+        
+        .color-swatch {
+            display: block; width: 100%; padding-bottom: 100%; border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.1); transition: transform 0.1s;
+        }
+        .color-option:hover .color-swatch { transform: scale(1.1); z-index: 2; border: 1px solid #666; }
+        
+        .color-option input:checked + .color-swatch {
+            border: 2px solid black; transform: scale(0.9);
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        
+        .selected-colors-preview { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; min-height: 25px; }
+        .selected-bubble { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ccc; }
+        /* --------------------------------------------- */
+
+        /* PREVIEW FOTOS */
+        .image-preview-container { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .preview-box { width: 80px; height: 80px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; position: relative; }
+        .preview-box img { width: 100%; height: 100%; object-fit: cover; }
+        .btn-remove-preview {
+            position: absolute; top: 0; right: 0; background: red; color: white; border: none;
+            width: 20px; height: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer;
+        }
+
+        /* FOTOS EXISTENTES */
+        .existing-photos-container { display: flex; gap: 10px; flex-wrap: wrap; padding: 10px; background: #f9f9f9; border-radius: 6px; }
+        .photo-item { position: relative; width: 80px; height: 80px; border-radius: 4px; overflow: hidden; }
+        .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+        .btn-remove-photo { position: absolute; top: 0; right: 0; background: red; color: white; border: none; width: 20px; height: 20px; cursor: pointer; }
 
         /* TAMANHOS */
-        .size-group { display: flex; gap: 10px; }
+        .size-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .size-item input { display: none; }
-        .size-item span { display: inline-block; width: 40px; height: 40px; line-height: 40px; text-align: center; border: 1px solid #ccc; cursor: pointer; font-weight: bold; background: white; }
+        .size-item span { 
+            display: inline-block; width: 45px; height: 40px; line-height: 40px;
+            text-align: center; border: 1px solid #ddd; cursor: pointer; border-radius: 4px; font-weight: bold;
+        }
         .size-item input:checked + span { background: black; color: white; border-color: black; }
 
-        /* SWITCH ATIVO */
-        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        /* FRETE */
+        .frete-section { background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .frete-title { font-weight: bold; margin-bottom: 10px; display: block; border-bottom: 1px solid #ddd; padding-bottom: 5px; font-size: 13px; }
+        .frete-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        /* SWITCHES */
+        .switch-group { display: flex; gap: 20px; flex-wrap: wrap; margin: 20px 0; background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        .switch-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
+        .toggle-switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #2ecc71; }
-        input:checked + .slider:before { transform: translateX(26px); }
+        input:checked + .slider:before { transform: translateX(20px); }
 
-        /* DESCRIÇÃO FULLSCREEN MOBILE */
+        .btn-auth { background: black; color: white; border: none; width: 100%; padding: 15px; border-radius: 30px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+
+        /* RESPONSIVO */
         @media (max-width: 768px) {
-            .fullscreen-focus:focus {
-                position: fixed; top: 0; left: 0; width: 100%; height: 50vh; z-index: 9999;
-                padding: 20px; font-size: 16px; border-radius: 0; border-bottom: 2px solid black;
-            }
-            .form-grid { grid-template-columns: 1fr; }
+            .container { padding: 10px; margin: 10px auto; }
+            .form-grid, .frete-grid { grid-template-columns: 1fr; gap: 10px; }
+            .switch-group { flex-direction: column; gap: 15px; }
+            .size-group { gap: 5px; }
+            .size-item span { width: 38px; height: 35px; line-height: 35px; font-size: 12px; }
         }
-
-        
     </style>
 </head>
 <body>
@@ -370,6 +342,23 @@
                 </div>
             </div>
 
+            <!-- === GUIA DE MEDIDAS TOTALMENTE PERSONALIZÁVE === -->
+            <div class="form-section">
+                <span class="section-title">📏 Guia de Medidas Personalizado</span>
+                <p style="font-size: 12px; color: #666; margin-bottom: 15px;">
+                    Adicione as linhas de medida específicas para esta peça (Ex: "Manga", "Cintura", "Comprimento").
+                </p>
+
+                <div id="measures-container">
+                    <!-- As linhas de medida vão aparecer aqui via JavaScript -->
+                </div>
+
+                <button type="button" onclick="addMeasureRow()" style="background: #eee; border: 1px dashed #999; padding: 10px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 13px; margin-top: 10px;">
+                    <i class="fas fa-plus"></i> Adicionar Nova Linha de Medida
+                </button>
+            </div>
+            <!-- ======================================== -->
+
             <button type="submit" class="btn-auth" style="background: black; width: 100%; padding: 15px; font-size: 16px;">
                 <%= editing ? 'Salvar Alterações' : 'Cadastrar Produto' %>
             </button>
@@ -378,18 +367,17 @@
 
    <script>
         // --- 1. LÓGICA DE FOTOS (COM BOTÃO DE REMOVER) ---
-        const dt = new DataTransfer(); // Armazena a lista de arquivos atualizada
+        const dt = new DataTransfer(); 
 
         function previewImages() {
             const imageInput = document.getElementById('imageInput');
             const previewContainer = document.getElementById('previewContainer');
             const files = imageInput.files;
 
-            // Para cada arquivo selecionado AGORA
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 
-                // Evita duplicatas (opcional, mas bom)
+                // Evita duplicatas
                 let isDuplicate = false;
                 for (let j = 0; j < dt.items.length; j++) {
                     if (dt.items[j].getAsFile().name === file.name && dt.items[j].getAsFile().size === file.size) {
@@ -397,40 +385,32 @@
                         break;
                     }
                 }
-                if (isDuplicate) continue; // Pula se já estiver na lista
+                if (isDuplicate) continue;
 
-                // Adiciona na lista oficial
                 dt.items.add(file);
 
-                // Cria o visual
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
                 reader.onload = function(e) {
                     const div = document.createElement('div');
                     div.className = 'preview-box';
                     
-                    // A Imagem
                     const img = document.createElement('img');
                     img.src = e.target.result;
                     
-                    // O Botão X (Das fotos novas)
                     const btn = document.createElement('button');
-                    btn.className = 'btn-remove-preview'; // Classe que criamos no CSS
+                    btn.className = 'btn-remove-preview';
                     btn.innerHTML = '&times;';
-                    btn.type = 'button'; // Importante para não enviar formulário
+                    btn.type = 'button';
                     
-                    // Clique no X
                     btn.onclick = function() {
-                        div.remove(); // Remove da tela
-                        
-                        // Remove da lista interna (dt)
+                        div.remove(); 
                         for(let j = 0; j < dt.items.length; j++){
                             if(file.name === dt.items[j].getAsFile().name && file.size === dt.items[j].getAsFile().size){
                                 dt.items.remove(j);
                                 break;
                             }
                         }
-                        // Atualiza o input para o envio
                         imageInput.files = dt.files;
                     };
 
@@ -439,31 +419,22 @@
                     previewContainer.appendChild(div);
                 }
             }
-            // Atualiza o input com a lista acumulada
             imageInput.files = dt.files;
         }
 
-        // Função para remover foto QUE JÁ EXISTIA (Do banco de dados)
         function removePhoto(elementId) {
             const element = document.getElementById(elementId);
-            if (element) {
-                element.remove();
-            }
+            if (element) element.remove();
         }
 
         // --- 2. NOVA CATEGORIA ---
         function toggleNewCat() {
             const select = document.getElementById('catSelect');
             const input = document.getElementById('newCatInput');
-            
             if (select.value === 'new') {
-                input.style.display = 'block'; 
-                input.required = true;         
-                input.focus();                 
+                input.style.display = 'block'; input.required = true; input.focus();
             } else {
-                input.style.display = 'none';  
-                input.required = false;
-                input.value = '';              
+                input.style.display = 'none'; input.required = false; input.value = '';
             }
         }
 
@@ -477,12 +448,11 @@
             i.value = 'R$ ' + v;
         }
 
-        // --- 4. CORES (ATUALIZADA) ---
+        // --- 4. CORES ---
         function updateSelectedColors() {
             const checkboxes = document.querySelectorAll('input[name="colors"]:checked');
             const previewDiv = document.getElementById('selectedPreview');
-            
-            if (!previewDiv) return; // Segurança caso o elemento não exista
+            if (!previewDiv) return;
 
             previewDiv.innerHTML = ''; 
 
@@ -503,21 +473,65 @@
         function addCustomColor() {
             const colorVal = document.getElementById('customColorPicker').value;
             const container = document.getElementById('customColorsInputs');
-            
-            // Cria um input checkbox escondido já marcado
             const label = document.createElement('label');
-            label.innerHTML = `
-                <input type="checkbox" name="colors" value="${colorVal}" checked onchange="this.parentElement.remove(); updateSelectedColors();">
-            `;
+            label.innerHTML = `<input type="checkbox" name="colors" value="${colorVal}" checked onchange="this.parentElement.remove(); updateSelectedColors();">`;
             container.appendChild(label);
-
             updateSelectedColors();
         }
 
-        // Inicializa as cores ao carregar a página
-        window.addEventListener('load', updateSelectedColors);
+        // --- 5. GUIA DE MEDIDAS DINÂMICO ---
+        function addMeasureRow(data = null) {
+            const container = document.getElementById('measures-container');
+            const row = document.createElement('div');
+            row.style.marginBottom = "15px";
+            row.style.borderBottom = "1px solid #eee";
+            row.style.paddingBottom = "10px";
+            
+            const name = data ? data.name : '';
+            const pp = (data && data.PP) ? data.PP : '';
+            const p  = (data && data.P)  ? data.P  : '';
+            const m  = (data && data.M)  ? data.M  : '';
+            const g  = (data && data.G)  ? data.G  : '';
+            const gg = (data && data.GG) ? data.GG : '';
 
-        
+            row.innerHTML = `
+                <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 5px;">
+                    <div style="flex: 2;">
+                        <label style="font-size: 11px; font-weight: bold;">Nome (Ex: Manga)</label>
+                        <input type="text" name="measure_names[]" value="${name}" required style="width: 100%; padding: 8px; border: 1px solid #333;">
+                    </div>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" style="background: #e74c3c; color: white; border: none; width: 30px; height: 30px; border-radius: 4px; cursor: pointer; font-weight:bold;">&times;</button>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
+                    <div><label style="font-size: 10px; font-weight:bold;">PP</label><input type="text" name="measure_PP[]" value="${pp}" style="width: 100%; padding: 5px; border: 1px solid #ccc;"></div>
+                    <div><label style="font-size: 10px; font-weight:bold;">P</label><input type="text" name="measure_P[]" value="${p}" style="width: 100%; padding: 5px; border: 1px solid #ccc;"></div>
+                    <div><label style="font-size: 10px; font-weight:bold;">M</label><input type="text" name="measure_M[]" value="${m}" style="width: 100%; padding: 5px; border: 1px solid #ccc;"></div>
+                    <div><label style="font-size: 10px; font-weight:bold;">G</label><input type="text" name="measure_G[]" value="${g}" style="width: 100%; padding: 5px; border: 1px solid #ccc;"></div>
+                    <div><label style="font-size: 10px; font-weight:bold;">GG</label><input type="text" name="measure_GG[]" value="${gg}" style="width: 100%; padding: 5px; border: 1px solid #ccc;"></div>
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        // --- INICIALIZAÇÃO AO CARREGAR A PÁGINA ---
+        window.addEventListener('load', () => {
+            // 1. Atualiza as cores (se estiver editando)
+            updateSelectedColors();
+
+            // 2. Carrega as Medidas salvas (usando JSON.stringify para segurança)
+            <% if (typeof editing !== 'undefined' && editing && product.measures && product.measures.length > 0) { %>
+                try {
+                    const savedMeasures = <%- JSON.stringify(product.measures) %>;
+                    if (Array.isArray(savedMeasures)) {
+                        savedMeasures.forEach(m => addMeasureRow(m));
+                    }
+                } catch(e) { console.error("Erro ao carregar medidas", e); }
+            <% } else { %>
+                // Se é novo ou não tem medidas, adiciona uma linha em branco para começar
+                addMeasureRow();
+            <% } %>
+        });
+
     </script>
 
     <%- include('../partials/footer.ejs') %>

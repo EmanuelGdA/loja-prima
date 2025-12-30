@@ -96,9 +96,29 @@
                                 </label>
                             <% }) %>
                         </div>
-                        <a href="#" style="font-size: 11px; text-decoration: underline; margin-top: 5px; display: block;">Guia de Medidas</a>
                     </div>
                 <% } %>
+
+                <!-- BARRA DE FERRAMENTAS (GUIA + AÇÕES) -->
+                <div class="product-tools">
+                    
+                    <!-- 1. Botão Guia de Medidas (Agora bonito) -->
+                    <button type="button" class="btn-tool-guide" onclick="toggleSizeGuide('open')">
+                        <i class="fas fa-ruler-horizontal"></i> Guia de Medidas
+                    </button>
+
+                    <div class="tools-actions">
+                        <!-- 2. Botão Compartilhar -->
+                        <button type="button" class="btn-icon-tool" onclick="shareProduct()" title="Compartilhar">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+
+                        <!-- 3. Botão Favoritar -->
+                        <button type="button" class="btn-icon-tool" id="favBtn" onclick="toggleFavorite('<%= product.id %>')" title="Amar">
+                            <i class="far fa-heart" id="favIcon"></i>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- BOTÃO COMPRAR -->
                 <button type="submit" class="btn-add-cart" 
@@ -324,7 +344,7 @@
                 headers: { 
                     'Content-Type': 'application/json',
                     // AQUI ESTÁ A CORREÇÃO: Enviamos o token de segurança junto
-                    'CSRF-Token': '<%= csrfToken %>' 
+                    'csrf-token': '<%= csrfToken %>' 
                 },
                 body: JSON.stringify({ cep, productId })
             });
@@ -393,5 +413,191 @@
         }
     
 </script>
+
+<!-- === MODAL GUIA DE MEDIDAS (ESTILO APP) === -->
+    <div id="sizeGuideModal" class="modal-overlay" onclick="toggleSizeGuide('close')">
+        
+        <div class="modal-content-app" onclick="event.stopPropagation()">
+            <span class="close-app-btn" onclick="toggleSizeGuide('close')">&times;</span>
+            
+            <div class="modal-header">
+                <h3>Tabela de Medidas</h3>
+            </div>
+
+            <% if (product.measures && product.measures.length > 0) { %>
+                
+                <span class="size-nav-label">Selecione um tamanho e verifique as medidas</span>
+
+                <!-- 1. Botões de Tamanho (P, M, G...) -->
+                <div class="size-scroller">
+                    <% 
+                        // Lógica Inteligente:
+                        // 1. Lista de todos os possíveis tamanhos
+                        const todosTamanhos = ['PP', 'P', 'M', 'G', 'GG', 'U'];
+                        
+                        // 2. Filtra apenas os que têm dados preenchidos (diferente de '-' e vazio)
+                        const tamanhosValidos = todosTamanhos.filter(tam => {
+                            // Verifica se ALGUMA linha de medida tem valor para esse tamanho
+                            return product.measures.some(linha => linha[tam] && linha[tam].trim() !== '-' && linha[tam].trim() !== '');
+                        });
+
+                        // Fallback: Se por acaso tudo estiver vazio (erro), mostra todos pra não quebrar
+                        const tamanhosFinais = tamanhosValidos.length > 0 ? tamanhosValidos : todosTamanhos;
+                    %>
+                    
+                    <% tamanhosFinais.forEach((tam, index) => { %>
+                        <!-- O clique chama a função para atualizar os números -->
+                        <button class="size-btn-app" 
+                                onclick="updateMeasuresApp('<%= tam %>', this)"
+                                data-size="<%= tam %>">
+                            <%= tam %>
+                        </button>
+                    <% }) %>
+                </div>
+
+                <div class="measure-title-bar">
+                    Medidas da peça
+                </div>
+
+                <!-- 2. Lista de Valores (Atualizada via JS) -->
+                <ul class="measure-list-app" id="measureListDisplay">
+                    <!-- O JavaScript vai preencher aqui -->
+                </ul>
+
+                <!-- Dados Escondidos (JSON) para o Javascript ler -->
+                <script>
+                    const medidasData = <%- JSON.stringify(product.measures) %>;
+                </script>
+
+            <% } else { %>
+                <p style="padding: 20px; color: #666;">Nenhuma medida específica cadastrada.</p>
+            <% } %>
+
+        </div>
+    </div>
+
+    <!-- SCRIPT DA TABELA INTERATIVA -->
+    <script>
+
+        // --- COMPARTILHAR ---
+        async function shareProduct() {
+            const data = {
+                title: '<%= product.title %>',
+                text: 'Olha que lindo este produto da Maely Cristina!',
+                url: window.location.href
+            };
+
+            // Se o navegador suportar compartilhamento nativo (Celular)
+            if (navigator.share) {
+                try {
+                    await navigator.share(data);
+                } catch (err) { console.log('Cancelou compartilhar'); }
+            } else {
+                // Se for PC, copia o link para a área de transferência
+                navigator.clipboard.writeText(window.location.href);
+                alert("Link copiado! Pode enviar para as amigas.");
+            }
+        }
+
+        // --- FAVORITAR (Coração) ---
+        const prodId = "<%= product.id %>"; // ID do produto atual
+
+        // Verifica se já deu like antes ao carregar a página
+        function checkFavorite() {
+            const favorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
+            const btn = document.getElementById('favBtn');
+            const icon = document.getElementById('favIcon');
+
+            if (favorites.includes(prodId)) {
+                btn.classList.add('loved'); // Fica vermelho
+                icon.classList.remove('far'); // Tira coração vazio
+                icon.classList.add('fas');    // Põe coração cheio
+            }
+        }
+
+        // Ação de clicar no coração (Atualizada)
+        async function toggleFavorite(id) {
+            // 1. Atualiza LocalStorage (Visual Imediato)
+            let favorites = JSON.parse(localStorage.getItem('myFavorites')) || [];
+            const btn = document.getElementById('favBtn');
+            const icon = document.getElementById('favIcon');
+
+            if (favorites.includes(id)) {
+                favorites = favorites.filter(favId => favId !== id);
+                btn.classList.remove('loved');
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+            } else {
+                favorites.push(id);
+                btn.classList.add('loved');
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+            }
+            localStorage.setItem('myFavorites', JSON.stringify(favorites));
+
+            // 2. Avisa o Servidor (Background)
+            // Se estiver logado, salva no banco também
+            try {
+                await fetch('/api/toggle-favorite', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'csrf-token': '<%= csrfToken %>' },
+                    body: JSON.stringify({ productId: id })
+                });
+            } catch (e) { console.log('Erro ao salvar no banco', e); }
+        }
+
+        // Roda a verificação ao entrar na página
+        window.addEventListener('load', checkFavorite);
+
+        // Função para abrir/fechar com Seleção Automática
+        function toggleSizeGuide(action) {
+            const modal = document.getElementById('sizeGuideModal');
+            if(action === 'open') {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                
+                // AJUSTE: Clica no PRIMEIRO botão de tamanho que estiver visível
+                const primeiroBotao = document.querySelector('.size-btn-app');
+                if(primeiroBotao) {
+                    primeiroBotao.click();
+                }
+            } else {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // Função que troca os números quando clica no tamanho
+        function updateMeasuresApp(tamanho, btnElement) {
+            // 1. Atualiza visual dos botões
+            document.querySelectorAll('.size-btn-app').forEach(b => b.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            // 2. Busca a lista onde vamos escrever
+            const lista = document.getElementById('measureListDisplay');
+            lista.innerHTML = '';
+
+            // 3. Varre os dados e cria as linhas (Ex: Busto: 88 cm)
+            if (typeof medidasData !== 'undefined') {
+                medidasData.forEach(item => {
+                    // Item.name é "Busto", Item[tamanho] é "88"
+                    let valor = item[tamanho];
+                    if (!valor || valor === '-') valor = '--'; 
+                    // Se não tiver "cm" no texto, adicionamos
+                    if (valor !== '--' && !valor.includes('cm')) valor += ' cm';
+
+                    const li = document.createElement('li');
+                    li.className = 'measure-item';
+                    li.innerHTML = `
+                        <span>${item.name}</span>
+                        <span class="measure-value">
+                            ${valor} <i class="fas fa-chevron-down"></i>
+                        </span>
+                    `;
+                    lista.appendChild(li);
+                });
+            }
+        }
+    </script>
 </body>
 </html>

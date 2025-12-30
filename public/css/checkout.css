@@ -38,5 +38,51 @@ body { background-color: #f4f4f4; }
 .secure-info { text-align: center; font-size: 12px; color: #888; margin-top: 15px; }
 
 @media (max-width: 768px) {
-    .checkout-form { flex-direction: column-reverse; } /* Resumo vai pro topo no mobile */
+    .checkout-form { flex-direction: column;  } /* Resumo vai pro topo no mobile */
+}
+
+/* --- BOTÕES DE TIPO DE ENTREGA --- */
+.delivery-type-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.delivery-radio {
+    display: none; /* Esconde a bolinha */
+}
+
+.delivery-label {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    color: #555;
+    transition: 0.2s;
+    background: white;
+}
+
+.delivery-label:hover { background: #f9f9f9; }
+
+/* Quando selecionado, fica preto */
+.delivery-radio:checked + .delivery-label {
+    background-color: black;
+    color: white;
+    border-color: black;
+}
+
+/* Caixa de Informação da Loja */
+.pickup-info {
+    display: none; /* Começa escondido */
+    background: #f0fff4;
+    border: 1px solid #c6f6d5;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    color: #2f855a;
+    font-size: 13px;
 }

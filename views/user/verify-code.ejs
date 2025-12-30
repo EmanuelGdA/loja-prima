@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="auth-container">
+        <div class="auth-card">
+            <h2 class="auth-title">Confirmação</h2>
+            <p class="auth-subtitle">Enviamos um código para <strong><%= email %></strong></p>
+
+            <% if (errorMessage) { %>
+                <div class="alert error"><%= errorMessage %></div>
+            <% } %>
+
+            <form action="/verificar-codigo" method="POST" class="auth-form">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="email" value="<%= email %>"> <!-- E-mail escondido -->
+
+                <div class="input-group">
+                    <label>Código de 6 dígitos</label>
+                    <input type="text" name="code" placeholder="000000" maxlength="6" 
+                           style="font-size: 24px; text-align: center; letter-spacing: 5px;" required>
+                </div>
+
+                <button type="submit" class="btn-black">CONFIRMAR E ENTRAR</button>
+            </form>
+            
+            <p style="text-align:center; font-size:12px; margin-top:15px; color:#888;">
+                Não recebeu? Verifique o Spam ou olhe o terminal (Dev).
+            </p>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

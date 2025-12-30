@@ -96,6 +96,31 @@
                     </li>
 
                 <% } %>
+
+                 <!-- BOTÃO DE SAIR (COM CLASSE PARA APARECER SÓ NO MOBILE) -->
+                <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
+                    <li class="mobile-only-item" style="margin-top: 20px; border-top: 1px solid #eee;">
+                        <form action="/logout" method="POST" style="width: 100%;">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button type="submit" style="
+                                background: none; border: none; width: 100%; text-align: left;
+                                padding: 15px 25px; color: #d9534f; font-weight: bold;
+                                font-family: 'Montserrat', sans-serif; font-size: 14px;
+                                text-transform: uppercase; cursor: pointer; letter-spacing: 1px;
+                                display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-sign-out-alt"></i> Sair da Conta
+                            </button>
+                        </form>
+                    </li>
+                <% } else { %>
+                    <!-- SE NÃO TIVER LOGADO, MOSTRA ENTRAR (SÓ NO MOBILE) -->
+                    <li class="mobile-only-item" style="margin-top: 20px; border-top: 1px solid #eee;">
+                        <a href="/login" style="color: black; font-weight: bold; display: block; padding: 15px 25px;">
+                            <i class="far fa-user"></i> Entrar / Cadastrar
+                        </a>
+                    </li>
+                <% } %>
+
             </ul>
         </nav>
 
@@ -110,6 +135,10 @@
                 <button type="submit"><i class="fas fa-search"></i></button>
             </form>
             
+            <a href="/favoritos" title="Meus Favoritos">
+                <i class="far fa-heart"></i>
+            </a>
+
             <% if (isAuthenticated) { %>
                 <!-- Link para Pedidos -->
                 <a href="/pedidos" title="Meus Pedidos"><i class="fas fa-user"></i></a>

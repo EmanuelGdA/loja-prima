@@ -3,163 +3,224 @@
 <head>
     <%- include('../partials/head.ejs') %>
     <style>
-        .orders-container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        .page-title { font-family: 'Playfair Display'; text-align: center; margin-bottom: 40px; }
-        
-        .orders-list { display: flex; flex-direction: column; gap: 20px; }
+        .page-container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        .page-title { 
+            font-family: 'Playfair Display', serif; 
+            text-align: center; 
+            margin-bottom: 40px; 
+            font-size: 32px;
+        }
 
-        .order-card { 
-            background: white; 
-            border: 1px solid #eee; 
-            border-radius: 12px; /* Mais arredondado */
+        .client-order-card {
+            background: white;
+            border: 1px solid #f0f0f0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            transition: 0.3s;
             overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+        
+        /* Efeito visual ao passar o mouse */
+        .card-header:hover { background: #fdfdfd; }
+
+        /* CABEÇALHO (CLICÁVEL) */
+        .card-header {
+            padding: 20px;
+            background: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer; /* Mãozinha do mouse */
+            border-bottom: 1px solid transparent;
             transition: 0.3s;
         }
+        /* Quando aberto, coloca borda */
+        .card-header.active { border-bottom-color: #eee; background: #fafafa; }
 
-        /* Cabeçalho do Card */
-        .order-header { 
-            background: #f9f9f9;
-            padding: 15px 20px; 
-            border-bottom: 1px solid #eee;
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center;
-        }
-
-        .order-info { font-size: 14px; color: #555; display: flex; flex-direction: column; gap: 2px; }
-        .order-id { font-weight: bold; color: #000; text-transform: uppercase; }
+        .header-left { display: flex; flex-direction: column; gap: 5px; }
+        .order-number { font-weight: 800; font-family: 'Montserrat', sans-serif; color: #000; font-size: 14px; }
         .order-date { font-size: 12px; color: #888; }
+
+        .header-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .order-total { display: block; font-weight: 700; font-size: 16px; color: var(--accent-color); }
         
         /* Badges de Status */
         .status-badge { 
-            padding: 6px 12px; 
-            border-radius: 20px; 
-            font-size: 11px; 
-            font-weight: bold; 
-            text-transform: uppercase;
-            white-space: nowrap; /* Não quebra linha */
+            padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 5px; display: inline-block;
         }
-        .status-aguardando { background: #fff3cd; color: #856404; }
-        .status-pago { background: #d1e7dd; color: #0f5132; }
-        .status-enviado { background: #cff4fc; color: #055160; }
-        .status-cancelado { background: #f8d7da; color: #842029; }
+        .st-pagar { background: #FFF4E5; color: #B76E00; }
+        .st-ok { background: #EDF7ED; color: #1E4620; }
+        .st-env { background: #E5F6FD; color: #014361; }
+        .st-cancel { background: #FFEBEE; color: #C62828; }
 
-        /* Lista de Itens */
-        .order-body { padding: 20px; }
-        .item-row { 
-            display: flex; justify-content: space-between; 
-            margin-bottom: 10px; font-size: 14px; 
-            border-bottom: 1px solid #f9f9f9; padding-bottom: 10px;
+        /* --- O INDICADOR VISUAL (SETA) --- */
+        .expand-indicator {
+            font-size: 11px;
+            color: #999;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
         }
-        .item-row:last-child { border: none; padding-bottom: 0; }
+        .toggle-icon { transition: transform 0.3s ease; font-size: 12px; }
         
-        .order-total { 
-            border-top: 1px solid #eee; 
-            padding-top: 15px; margin-top: 10px; 
-            text-align: right; font-size: 18px; font-weight: 700; color: var(--black); 
-        }
+        /* Gira a setinha quando ativo */
+        .card-header.active .toggle-icon { transform: rotate(180deg); color: var(--black); }
+        .card-header.active .expand-indicator { color: var(--black); }
 
-        .no-orders { text-align: center; color: #888; margin-top: 50px; padding: 40px; }
-        .btn-shop { background: black; color: white; padding: 10px 20px; border-radius: 30px; margin-top: 15px; display: inline-block; font-size: 13px; font-weight: bold; }
 
-        /* --- RESPONSIVIDADE (Correção do Bug) --- */
+        /* CORPO (DETALHES) */
+        .card-body { display: none; padding: 25px; animation: slideDown 0.3s; background: #fff; }
+        .card-body.open { display: block; }
+
+        /* GRID DE INFORMAÇÕES */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 25px; }
+        .info-box h4 { font-size: 11px; text-transform: uppercase; color: #999; margin-bottom: 8px; font-weight: 700; }
+        .info-box p { font-size: 13px; color: #333; line-height: 1.5; margin-bottom: 3px; }
+
+        /* PRODUTOS */
+        .product-item { display: flex; gap: 15px; padding: 15px 0; border-bottom: 1px solid #f5f5f5; align-items: center; }
+        .product-item:last-child { border: none; }
+        .product-thumb { width: 60px; height: 60px; border-radius: 6px; object-fit: cover; border: 1px solid #eee; }
+        .product-details { flex: 1; }
+        .product-name { font-weight: 600; font-size: 13px; display: block; }
+        .product-meta { font-size: 12px; color: #888; }
+        .product-price { font-weight: 700; font-size: 14px; }
+
+        .track-btn { display: block; margin-top: 15px; background: #2ecc71; color: white; text-align: center; padding: 12px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 13px; transition: 0.2s; }
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .btn-start { background: black; color: white; padding: 12px 30px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 12px; display: inline-block; margin-top: 15px; }
+
+        @keyframes slideDown { from {opacity:0; transform:translateY(-10px);} to {opacity:1; transform:translateY(0);} }
         @media (max-width: 600px) {
-            .order-header {
-                flex-direction: column; /* Empilha os itens */
-                align-items: flex-start; /* Alinha à esquerda */
-                gap: 10px;
-            }
-            
-            .order-info { width: 100%; }
-            
-            .status-badge {
-                align-self: flex-start; /* Badge fica na esquerda */
-                font-size: 10px;
-            }
-
-            .item-row { flex-direction: column; gap: 5px; }
-            .item-price { font-weight: bold; }
+            .info-grid { grid-template-columns: 1fr; gap: 15px; }
+            .order-number { font-size: 12px; }
         }
     </style>
 </head>
 <body>
     <%- include('../partials/header.ejs') %>
 
-    <main class="orders-container">
+    <main class="page-container">
         <h1 class="page-title">Meus Pedidos</h1>
 
         <% if (orders.length > 0) { %>
-            <div class="orders-list">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
                 <% orders.forEach(order => { %>
-                    <!-- Lógica de cores do status -->
                     <% 
-                        let sClass = 'status-aguardando';
-                        let sText = order.status || 'Pendente';
-                        if(sText.includes('Pago') || sText.includes('Aprovado')) sClass = 'status-pago';
-                        if(sText.includes('Enviado')) sClass = 'status-enviado';
-                        if(sText.includes('Cancelado') || sText.includes('Recusado')) sClass = 'status-cancelado';
+                        let sClass = 'st-pagar';
+                        let sIcon = 'fa-clock';
+                        if (order.status.includes('Pago') || order.status.includes('Preparando')) { sClass = 'st-ok'; sIcon = 'fa-check'; }
+                        if (order.status.includes('Enviado') || order.status.includes('Entregue')) { sClass = 'st-env'; sIcon = 'fa-truck'; }
+                        if (order.status.includes('Cancelado')) { sClass = 'st-cancel'; sIcon = 'fa-times'; }
                     %>
 
-                    <div class="order-card">
-                        <!-- Cabeçalho (Data, ID, Status) -->
-                        <div class="order-header">
-                            <div class="order-info">
-                                <span class="order-id">Pedido #<%= order.id.slice(0, 8) %>...</span>
-                                <span class="order-date"><%= new Date(order.date).toLocaleDateString('pt-BR') %> às <%= new Date(order.date).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) %></span>
-                                
-                               <!-- RASTREIO CLICÁVEL -->
-<% if (order.trackingCode) { %>
-    <a href="https://www.linkcorreios.com.br/<%= order.trackingCode %>" target="_blank" 
-       style="color: #2ecc71; font-weight: bold; font-size: 12px; margin-top: 5px; display: inline-block; text-decoration: underline;">
-        <i class="fas fa-search-location"></i> Rastrear: <%= order.trackingCode %>
-    </a>
-<% } %>
+                    <div class="client-order-card">
+                        
+                        <!-- CLIQUE AQUI (GATILHO) -->
+                        <div class="card-header" onclick="toggleOrder('<%= order.id %>')">
+                            
+                            <!-- Esquerda: Número e Data -->
+                            <div class="header-left">
+                                <span class="order-number">#<%= order.id.slice(0,6).toUpperCase() %></span>
+                                <span class="order-date"><%= new Date(order.date).toLocaleDateString('pt-BR') %></span>
+                                <span class="status-badge <%= sClass %>" style="margin-top: 5px; width: fit-content;">
+                                    <i class="fas <%= sIcon %>"></i> <%= order.status %>
+                                </span>
                             </div>
-                            <span class="status-badge <%= sClass %>"><%= sText %></span>
+
+                            <!-- Direita: Preço e Botão Expandir -->
+                            <div class="header-right">
+                                <span class="order-total">R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %></span>
+                                
+                                <!-- ELEMENTO VISUAL NOVO -->
+                                <span class="expand-indicator">
+                                    Ver detalhes <i class="fas fa-chevron-down toggle-icon" id="icon-<%= order.id %>"></i>
+                                </span>
+                            </div>
                         </div>
 
-                        <!-- Itens -->
-                        <div class="order-body">
-                            <% order.items.forEach(item => { %>
-                                <div class="item-row">
-                                    <span><%= item.qty %>x <%= item.title %> (Tam: <%= item.size %>)</span>
-                                    <span class="item-price">R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %></span>
-                                </div>
-                            <% }) %>
+                        <div class="card-body" id="body-<%= order.id %>">
                             
-                            <!-- Se tiver frete -->
-                            <% if (order.shippingCost > 0) { %>
-                                <div class="item-row" style="color: #666; font-size: 13px;">
-                                    <span>Frete (<%= order.shippingMethod %>)</span>
-                                    <span>R$ <%= order.shippingCost.toFixed(2).replace('.', ',') %></span>
-                                </div>
+                            <% if (order.trackingCode) { %>
+                                <a href="https://www.linkcorreios.com.br/<%= order.trackingCode %>" target="_blank" class="track-btn">
+                                    <i class="fas fa-box-open"></i> RASTREAR ENTREGA (<%= order.trackingCode %>)
+                                </a>
+                                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #f0f0f0;">
                             <% } %>
 
-                            <!-- Se tiver desconto -->
-                            <% if (order.discountTotal && order.subtotal && order.subtotal > order.discountTotal) { %>
-                                <div class="item-row" style="color: #2ecc71; font-size: 13px;">
-                                    <span>Desconto Cupom</span>
-                                    <span>- R$ <%= (order.subtotal - order.discountTotal).toFixed(2).replace('.', ',') %></span>
+                            <div class="info-grid">
+                                <div class="info-box">
+                                    <h4>Endereço</h4>
+                                    <p><%= order.address.rua %>, <%= order.address.numero %></p>
+                                    <p><%= order.address.bairro %></p>
+                                    <p><%= order.address.cidade %> - <%= order.address.estado %></p>
+                                    <p>CEP: <%= order.address.cep %></p>
                                 </div>
-                            <% } %>
-
-                            <div class="order-total">
-                                Total: R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %>
+                                <div class="info-box">
+                                    <h4>Pagamento</h4>
+                                    <p>Método: <%= order.paymentMethod %></p>
+                                    <p>Frete: R$ <%= (order.shippingCost || 0).toFixed(2).replace('.', ',') %></p>
+                                    <% if(order.discountTotal && order.subtotal > order.discountTotal) { %>
+                                        <p style="color: green;">Desconto aplicado!</p>
+                                    <% } %>
+                                </div>
                             </div>
+
+                            <div class="info-box">
+                                <h4>Itens</h4>
+                                <div>
+                                    <% order.items.forEach(item => { %>
+                                        <div class="product-item">
+                                            <% if (item.imageUrl) { %>
+                                                <img src="<%= item.imageUrl %>" class="product-thumb">
+                                            <% } else { %>
+                                                <div class="product-thumb" style="background:#eee; display:flex; align-items:center; justify-content:center;"><i class="fas fa-tshirt"></i></div>
+                                            <% } %>
+                                            
+                                            <div class="product-details">
+                                                <span class="product-name"><%= item.title %></span>
+                                                <span class="product-meta">
+    Tam: <%= item.size %> 
+    <% if (item.color) { %> | Cor: <%= item.color %> <% } %> 
+    | Qtd: <%= item.qty %>
+</span>
+                                            </div>
+                                            <div class="product-price">
+                                                R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 <% }) %>
             </div>
         <% } else { %>
-            <div class="no-orders">
-                <i class="fas fa-shopping-bag" style="font-size: 40px; margin-bottom: 15px; opacity: 0.2;"></i>
-                <p>Você ainda não fez nenhum pedido.</p>
-                <a href="/" class="btn-shop">Começar a comprar</a>
+            <div class="empty-state">
+                <i class="far fa-sad-tear" style="font-size: 50px; color: #ddd; margin-bottom: 20px;"></i>
+                <h3 style="margin-bottom: 10px;">Você ainda não fez compras</h3>
+                <a href="/" class="btn-start">IR PARA A LOJA</a>
             </div>
         <% } %>
     </main>
 
     <%- include('../partials/footer.ejs') %>
+
+    <script>
+        function toggleOrder(id) {
+            const body = document.getElementById('body-' + id);
+            // Pega o elemento pai do body (que é o card inteiro) e busca o cabeçalho
+            const header = body.parentElement.querySelector('.card-header');
+            
+            body.classList.toggle('open');
+            header.classList.toggle('active');
+        }
+    </script>
 </body>
 </html>

@@ -2,6 +2,7 @@ const shippingService = require('../services/shippingService');
 const  { db }  = require('../config/firebase');
 const QRCode = require('qrcode');
 const paymentService = require('../services/paymentService');
+const admin = require('firebase-admin'); 
 
 // ==========================================
 // 1. VITRINE E PRODUTOS
@@ -87,10 +88,11 @@ exports.getCart = (req, res) => {
 };
 
 exports.postCart = async (req, res) => {
-    try {
+    try { 
         const prodId = req.body.productId;
-        const size = req.body.size;
-        
+        const size = req.body.size; 
+        const color = req.body.color; // <--- PEGA A COR DO FORMULÁRIO
+
         const doc = await db.collection('products').doc(prodId).get();
         if (!doc.exists) return res.redirect('/');
         const product = doc.data();
@@ -98,40 +100,85 @@ exports.postCart = async (req, res) => {
         if (!req.session.cart) req.session.cart = { items: [], totalQty: 0, totalPrice: 0 };
         const cart = req.session.cart;
 
-        const existingItemIndex = cart.items.findIndex(item => item.productId === prodId && item.size === size);
+        // Verifica se já existe esse produto com ESSE tamanho E ESSA cor
+        const existingItemIndex = cart.items.findIndex(item => 
+            item.productId === prodId && 
+            item.size === size && 
+            item.color === color
+        );
 
         if (existingItemIndex >= 0) {
             cart.items[existingItemIndex].qty += 1;
         } else {
             cart.items.push({
-                productId: prodId, title: product.title, price: parseFloat(product.price),
-                imageUrl: product.imageUrl, size: size, qty: 1
+                productId: prodId, 
+                title: product.title, 
+                price: parseFloat(product.price),
+                imageUrl: product.imageUrl, 
+                size: size, 
+                color: color || 'Única', // <--- SALVA A COR (ou "Única" se não tiver)
+                qty: 1
             });
         }
 
         cart.totalQty += 1;
         cart.totalPrice += parseFloat(product.price);
 
-        req.session.save(() => res.redirect('/carrinho'));
-    } catch (error) {
+       // --- SALVA NO BANCO SE ESTIVER LOGADO ---
+        if (req.session.user) {
+            await db.collection('users').doc(req.session.user.id).update({
+                cart: cart // Salva o objeto do carrinho inteiro no usuário
+            }).catch(e => console.log("Erro ao salvar carrinho no banco", e));
+        }
+        // ----------------------------------------
+
+        req.session.save(err => {
+            if(err) console.log(err);
+            res.redirect('/carrinho');
+        });
+
+        } catch (error) { // <--- AQUI ESTAVA FALTANDO O FECHAMENTO
         console.log(error);
         res.redirect('/');
     }
 };
+        
+    
 
-exports.postCartDeleteProduct = (req, res) => {
+exports.postCartDeleteProduct = async (req, res) => {
     const prodId = req.body.productId;
     const size = req.body.size;
+    const color = req.body.color; // <--- Pega a cor do formulário
+    
     const cart = req.session.cart;
+
     if (!cart) return res.redirect('/carrinho');
 
-    const itemIndex = cart.items.findIndex(item => item.productId === prodId && item.size === size);
+    // Procura o item que tenha ID, Tamanho E Cor iguais
+    const itemIndex = cart.items.findIndex(item => 
+        item.productId === prodId && 
+        item.size === size &&
+        (item.color || '') === color // Compara a cor (trata vazios)
+    );
+    
     if (itemIndex >= 0) {
         const item = cart.items[itemIndex];
+        // Subtrai do total geral
         cart.totalQty -= item.qty;
         cart.totalPrice -= (item.price * item.qty);
+        
+        // Remove do array
         cart.items.splice(itemIndex, 1);
     }
+
+    // --- SALVA NO BANCO SE ESTIVER LOGADO ---
+    if (req.session.user) {
+        await db.collection('users').doc(req.session.user.id).update({
+            cart: cart
+        }).catch(e => console.log("Erro ao atualizar carrinho", e));
+    }
+    // ----------------------------------------
+
     req.session.save(() => res.redirect('/carrinho'));
 };
 
@@ -223,6 +270,11 @@ exports.postOrder = async (req, res) => {
             });
 
             req.session.cart = null; // Limpa carrinho
+
+            // Limpa do banco também
+            await db.collection('users').doc(user.id).update({
+                cart: null
+            });
             
             return res.render('shop/success-pix', { 
                 pageTitle: 'Pagar com PIX', 
@@ -614,4 +666,92 @@ exports.getInstitucional = (req, res) => {
         title: title,
         content: content
     });
+};
+
+// ==========================================
+// 11. ÁREA DE FAVORITOS
+// ==========================================
+
+// 1. Renderiza a página (o esqueleto)
+exports.getFavoritesPage = (req, res) => {
+    res.render('shop/favorites', {
+        pageTitle: 'Meus Favoritos',
+        path: '/favoritos'
+    });
+};
+
+// 2. API: Recebe uma lista de IDs e devolve os dados dos produtos
+exports.postGetFavoriteProducts = async (req, res) => {
+    const ids = req.body.ids || [];
+
+    if (ids.length === 0) {
+        return res.json([]);
+    }
+
+    try {
+        // O Firestore tem um limite para buscar vários IDs ("IN" query).
+        // Se tiver muitos favoritos, pegamos os 10 primeiros por segurança.
+        const safeIds = ids.slice(0, 10); 
+
+        const snapshot = await db.collection('products')
+            .where(admin.firestore.FieldPath.documentId(), 'in', safeIds)
+            .get();
+
+        const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        res.json(products);
+
+    } catch (error) {
+        console.log("Erro ao buscar favoritos:", error);
+        res.status(500).json({ error: 'Erro ao buscar favoritos' });
+    }
+};
+
+// ==========================================
+// 12. SINCRONIZAÇÃO DE FAVORITOS (BANCO DE DADOS)
+// ==========================================
+
+// Salvar/Remover Favorito no Firebase
+exports.postToggleFavoriteAPI = async (req, res) => {
+    if (!req.session.isLoggedIn) return res.json({ status: 'ignored' }); // Se não tá logado, só salva local
+
+    const userId = req.session.user.id;
+    const prodId = req.body.productId;
+
+    try {
+        const userRef = db.collection('users').doc(userId);
+        const doc = await userRef.get();
+        let favs = doc.data().favorites || [];
+
+        if (favs.includes(prodId)) {
+            // Remove
+            await userRef.update({
+                favorites: admin.firestore.FieldValue.arrayRemove(prodId)
+            });
+            res.json({ status: 'removed' });
+        } else {
+            // Adiciona
+            await userRef.update({
+                favorites: admin.firestore.FieldValue.arrayUnion(prodId)
+            });
+            res.json({ status: 'added' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao salvar favorito' });
+    }
+};
+
+// Ler Favoritos do Usuário (Para restaurar ao logar)
+exports.getUserFavoritesAPI = async (req, res) => {
+    if (!req.session.isLoggedIn) return res.json([]);
+
+    try {
+        const doc = await db.collection('users').doc(req.session.user.id).get();
+        const favs = doc.data().favorites || [];
+        res.json(favs);
+    } catch (error) {
+        console.error(error);
+        res.json([]);
+    }
 };

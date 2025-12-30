@@ -9,6 +9,8 @@ router.post('/logout', authController.postLogout);
 router.get('/cadastro', authController.getSignup);
 router.post('/cadastro', authController.postSignup);
 
+router.post('/verificar-codigo', authController.postVerifyCode);
+
 // NOVAS ROTAS (Recuperar Senha)
 router.get('/esqueci-senha', authController.getForgotPassword);
 router.post('/esqueci-senha', authController.postForgotPassword);

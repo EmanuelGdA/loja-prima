@@ -23,19 +23,16 @@ exports.getResetPassword = (req, res) => {
 
 // --- PROCESSAR DADOS ---
 
-// 1. CADASTRAR (COM VALIDAÇÃO DE TELEFONE)
+// 1. CADASTRAR (Gera Código e Mostra Tela de Validação)
 exports.postSignup = async (req, res) => {
-    const { name, email, phone, password, confirmPassword } = req.body;
+    const { name, email, confirmEmail, phone, password, confirmPassword } = req.body;
 
-    if (password !== confirmPassword) {
-        req.flash('error', 'As senhas não conferem.');
+    if (email !== confirmEmail) {
+        req.flash('error', 'E-mails não conferem.');
         return res.redirect('/cadastro');
     }
-
-    // Validação Simples de Telefone (10 ou 11 dígitos)
-    const cleanPhone = phone.replace(/\D/g, '');
-    if (cleanPhone.length < 10 || cleanPhone.length > 11) {
-        req.flash('error', 'Por favor, insira um telefone válido com DDD.');
+    if (password !== confirmPassword) {
+        req.flash('error', 'Senhas não conferem.');
         return res.redirect('/cadastro');
     }
 
@@ -49,23 +46,92 @@ exports.postSignup = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
+        
+        // GERA O CÓDIGO DE 6 NÚMEROS
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         await userRef.add({
             name: name,
             email: email,
-            phone: phone, 
+            phone: phone,
             password: hashedPassword,
             isAdmin: false,
+            
+            // Dados de Verificação
+            isVerified: false, 
+            verifyCode: verificationCode, // Salva o número
+            
             createdAt: new Date().toISOString()
         });
 
-        req.flash('success', 'Conta criada! Faça login.');
-        res.redirect('/login');
+        // --- TRUQUE PARA NÃO FICAR TRAVADO ---
+        console.log("=========================================");
+        console.log(`>>> CÓDIGO DE VERIFICAÇÃO PARA ${email}: ${verificationCode}`);
+        console.log("=========================================");
+        // -------------------------------------
+
+        // Tenta enviar o e-mail (se falhar, vc tem o console)
+        emailService.sendVerificationEmail(email, verificationCode); // Vamos adaptar essa função já já
+
+        // Renderiza a tela de digitar o código (passando o email para não ter que digitar de novo)
+        res.render('user/verify-code', { 
+            pageTitle: 'Validar Conta', 
+            email: email, // Envia o email para deixar o campo preenchido ou oculto
+            errorMessage: null
+        });
 
     } catch (err) {
         console.log(err);
-        req.flash('error', 'Erro ao criar conta.');
+        req.flash('error', 'Erro no cadastro.');
         res.redirect('/cadastro');
+    }
+};
+
+// 2. VERIFICAR CÓDIGO E JÁ LOGAR (NOVO!)
+exports.postVerifyCode = async (req, res) => {
+    const { email, code } = req.body;
+
+    try {
+        const snapshot = await db.collection('users')
+            .where('email', '==', email)
+            .where('verifyCode', '==', code) // Busca usuário com esse email E esse código
+            .get();
+
+        if (snapshot.empty) {
+            // Se errou, volta para a mesma tela
+            return res.render('user/verify-code', {
+                pageTitle: 'Validar Conta',
+                email: email,
+                errorMessage: 'Código incorreto. Tente novamente.'
+            });
+        }
+
+        const userDoc = snapshot.docs[0];
+        const userData = userDoc.data();
+
+        // 1. Atualiza no Banco (Conta Verificada!)
+        await db.collection('users').doc(userDoc.id).update({
+            isVerified: true,
+            verifyCode: null // Limpa o código
+        });
+
+        // 2. LOGIN AUTOMÁTICO (Aqui está a mágica)
+        req.session.isLoggedIn = true;
+        req.session.user = { 
+            id: userDoc.id, 
+            name: userData.name, 
+            email: userData.email,
+            isAdmin: userData.isAdmin || false 
+        };
+
+        req.session.save(() => {
+            req.flash('success', 'Conta verificada! Bem-vindo(a).');
+            res.redirect('/'); // Manda direto pra Home logado
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.redirect('/login');
     }
 };
 
@@ -84,17 +150,40 @@ exports.postLogin = async (req, res) => {
 
         const userDoc = snapshot.docs[0];
         const user = userDoc.data();
+
+        // --- TRAVA DE SEGURANÇA 
+        // Se a conta não foi verificada, impede o login
+        if (!user.isVerified) {
+            req.flash('error', 'Sua conta ainda não foi confirmada. Verifique seu e-mail (incluindo Spam).');
+            return res.redirect('/login');
+        }
+        // -------------------------------
+
         const doMatch = await bcrypt.compare(password, user.password);
 
         if (doMatch) {
             req.session.isLoggedIn = true;
+            
+            // Verifica se o usuário tem carrinho salvo no banco
+            if (userDoc.data().cart) {
+                // Restaura o carrinho antigo
+                req.session.cart = userDoc.data().cart;
+            } else if (req.session.cart && req.session.cart.items.length > 0) {
+                // Se ele não tinha carrinho salvo, mas montou um agora antes de logar,
+                // salvamos esse carrinho novo no banco para não perder.
+                await db.collection('users').doc(userDoc.id).update({
+                    cart: req.session.cart
+                });
+            }
+
             req.session.user = { 
                 id: userDoc.id, 
                 name: user.name, 
                 email: user.email,
-                cpf: user.cpf || '', // Prepara para ter CPF
+                phone: user.phone || '', 
                 isAdmin: user.isAdmin || false 
             };
+            
             return req.session.save(err => res.redirect('/'));
         }
 
