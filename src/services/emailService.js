@@ -1,24 +1,28 @@
-require('dotenv').config(); 
+require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-// CONFIGURAÇÃO FORÇANDO IPv4
+// CONFIGURAÇÃO SMTP MANUAL (Mais robusta para o Render)
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // O Nodemailer configura porta/host sozinho
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // false para porta 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-    // Correções de Segurança e Rede:
+    // Configurações de tempo para evitar o Timeout
+    connectionTimeout: 10000, // 10 segundos
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
     tls: {
         rejectUnauthorized: false
-    },
-    family: 4 // <--- O PULO DO GATO: Força usar IPv4 (Evita travamento no Render)
+    }
 });
 
-// Teste de conexão (Aparece no Log quando o servidor liga)
+// Teste de conexão ao iniciar
 transporter.verify((error, success) => {
     if (error) {
-        console.error("❌ ERRO CONEXÃO EMAIL:", error.message);
+        console.error("❌ ERRO CONEXÃO EMAIL (Ao iniciar):", error.message);
     } else {
         console.log("✅ Conectado ao Gmail! Pronto para enviar.");
     }
