@@ -390,6 +390,77 @@ ul { list-style: none; }
     display: none !important;
 }
 
+/* --- SEÇÃO INSTAGRAM --- */
+.insta-section {
+    padding: 60px 0;
+    text-align: center;
+    background-color: #fafafa;
+    margin-top: 50px;
+}
+
+.insta-header i { font-size: 30px; color: #333; margin-bottom: 10px; }
+.insta-header h3 { 
+    font-family: 'Playfair Display', serif; 
+    font-size: 28px; 
+    margin-bottom: 5px; 
+    color: #000;
+}
+.insta-header a { 
+    font-family: 'Montserrat', sans-serif; 
+    font-size: 13px; 
+    color: #666; 
+    text-decoration: underline; 
+}
+.insta-header a:hover { color: #d9534f; }
+
+/* O Mosaico */
+.insta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colunas no PC */
+    gap: 0; /* Fotos coladas uma na outra estilo mosaico */
+    margin-top: 30px;
+    max-width: 100%;
+}
+
+.insta-item {
+    position: relative;
+    display: block;
+    height: 350px; /* Altura fixa */
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.insta-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+/* Efeito ao passar o mouse */
+.insta-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    display: flex; justify-content: center; align-items: center;
+    opacity: 0;
+    transition: 0.3s;
+}
+.insta-overlay i { color: white; font-size: 30px; }
+
+.insta-item:hover .insta-overlay { opacity: 1; }
+.insta-item:hover img { transform: scale(1.1); }
+
+/* RESPONSIVO */
+@media (max-width: 768px) {
+    .insta-grid {
+        grid-template-columns: 1fr 1fr; /* 2 colunas no celular */
+    }
+    .insta-item { height: 200px; } /* Menor no celular */
+    .insta-section { padding: 40px 0; }
+    .insta-header h3 { font-size: 22px; }
+}
+
 /* ========================================= */
 /*      RESPONSIVIDADE (CELULAR) - FINAL     */
 /* ========================================= */
