@@ -1,31 +1,29 @@
 require('dotenv').config();
 const nodemailer = require('nodemailer');
 
-// CONFIGURAÇÃO SMTP GMAIL (PORTA 465 - SSL IMPLÍCITO)
-// Essa porta costuma funcionar melhor em servidores nuvem bloqueados
+// SEU EMAIL QUE VAI APARECER PARA O CLIENTE
+// (Coloque aqui o gmail que você usou para criar a conta no Brevo)
+const EMAIL_REMETENTE = 'emanuelgomesalmeida@gmail.com'; 
+
+// CONFIGURAÇÃO BREVO
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,  // <--- MUDANÇA PRINCIPAL
-    secure: true, // <--- TEM QUE SER TRUE NA PORTA 465
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    secure: false, 
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: process.env.EMAIL_USER, // O login estranho (9f14...)
+        pass: process.env.EMAIL_PASS  // A senha do Brevo (X5JL...)
     },
-    // Aumentando timeouts para garantir
-    connectionTimeout: 20000, 
-    greetingTimeout: 20000,
-    socketTimeout: 20000,
     tls: {
         rejectUnauthorized: false
     }
 });
 
-// Teste de conexão ao iniciar
 transporter.verify((error, success) => {
     if (error) {
         console.error("❌ ERRO CONEXÃO EMAIL:", error.message);
     } else {
-        console.log("✅ Conectado ao Gmail via Porta 465!");
+        console.log("✅ Conectado ao Brevo! Pronto para enviar.");
     }
 });
 
@@ -34,10 +32,16 @@ exports.sendResetEmail = async (toEmail, token) => {
     const resetLink = `${baseUrl}/redefinir-senha/${token}`;
 
     const mailOptions = {
-        from: `"Maely Cristina Store" <${process.env.EMAIL_USER}>`,
+        from: `"Maely Cristina Store" <${EMAIL_REMETENTE}>`, // <--- Mudamos aqui
         to: toEmail,
         subject: 'Recuperação de Senha',
-        html: `<p>Clique para redefinir: <a href="${resetLink}">Nova Senha</a></p>`
+        html: `
+            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                <h2>Recuperação de Senha</h2>
+                <p>Clique no botão abaixo para criar uma nova senha:</p>
+                <a href="${resetLink}" style="background: black; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a>
+            </div>
+        `
     };
 
     try {
@@ -50,7 +54,7 @@ exports.sendResetEmail = async (toEmail, token) => {
 
 exports.sendVerificationEmail = async (toEmail, code) => {
     const mailOptions = {
-        from: `"Maely Cristina Store" <${process.env.EMAIL_USER}>`,
+        from: `"Maely Cristina Store" <${EMAIL_REMETENTE}>`, // <--- Mudamos aqui
         to: toEmail,
         subject: 'Seu Código de Acesso',
         html: `
