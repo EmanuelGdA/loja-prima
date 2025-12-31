@@ -1,147 +1,232 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
+  <head>
     <%- include('../partials/head.ejs') %>
-    <link rel="stylesheet" href="/css/cart.css"> <!-- CSS novo -->
-</head>
-<body>
+    <link rel="stylesheet" href="/css/cart.css" />
+    <!-- CSS novo -->
+  </head>
+  <body>
     <%- include('../partials/header.ejs') %>
 
     <main class="cart-container">
-        <h1>Sua Sacola de Compras</h1>
+      <h1>Sua Sacola de Compras</h1>
 
-        <% if (cart.items.length > 0) { %>
-            <div class="cart-content">
-                <!-- Lista de Produtos -->
-                <div class="cart-items">
-                    <table class="cart-table">
-                        <thead>
-                            <tr>
-                                <th>Produto</th>
-                                <th>Preço</th>
-                                <th>Qtd</th>
-                                <th>Total</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% cart.items.forEach(item => { %>
-                                <tr class="cart-item-row">
-                                    <!-- 1. Imagem e Detalhes -->
-                                    <td class="product-col">
-                                        <div class="product-wrapper">
-                                            <a href="/produto/<%= item.productId %>">
-                                                <img src="<%= item.imageUrl %>" alt="<%= item.title %>">
-                                            </a>
-                                            <div class="item-details">
-                                                <strong><%= item.title %></strong>
-                                                
-                                                <div class="variant-info">
-                                                    <span>Tam: <%= item.size %></span>
-                                                    <% if(item.color && item.color !== 'Única') { %>
-                                                        <!-- Mostra a bolinha da cor em vez do código -->
-                                                        <span class="color-dot" style="background-color: <%= item.color %>;" title="Cor selecionada"></span>
-                                                    <% } %>
-                                                </div>
-                                                
-                                                <!-- Preço aparece aqui no Mobile -->
-                                                <div class="mobile-price">
-                                                    <%= item.qty %>x R$ <%= item.price.toFixed(2).replace('.', ',') %>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
+      <% if (cart.items.length > 0) { %>
+      <div class="cart-content">
+        <!-- Lista de Produtos -->
+        <div class="cart-items">
+          <table class="cart-table">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Preço</th>
+                <th>Qtd</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% cart.items.forEach(item => { %>
+              <tr class="cart-item-row">
+                <!-- 1. Imagem e Detalhes -->
+                <td class="product-col">
+                  <div class="product-wrapper">
+                    <a href="/produto/<%= item.productId %>">
+                      <img src="<%= item.imageUrl %>" alt="<%= item.title %>" />
+                    </a>
+                    <div class="item-details">
+                      <strong><%= item.title %></strong>
 
-                                    <!-- 2. Colunas Desktop (Escondidas no Mobile) -->
-                                    <td class="desktop-only">R$ <%= item.price.toFixed(2).replace('.', ',') %></td>
-                                    <td class="desktop-only"><%= item.qty %></td>
-                                    <td class="desktop-only"><strong>R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %></strong></td>
-                                    
-                                    <!-- 3. Botão Remover -->
-                                    <td class="action-col">
-                                        <form action="/carrinho-delete" method="POST">
-                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                            <input type="hidden" name="productId" value="<%= item.productId %>">
-                                            <input type="hidden" name="size" value="<%= item.size %>">
-                                            <input type="hidden" name="color" value="<%= item.color || '' %>">
-                                            
-                                            <button type="submit" class="btn-remove">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                </div>
+                      <div class="variant-info">
+                        <span>Tam: <%= item.size %></span>
+                        <% if(item.color && item.color !== 'Única') { %>
+                        <!-- Mostra a bolinha da cor em vez do código -->
+                        <span
+                          class="color-dot"
+                          style="background-color: <%= item.color %>"
+                          title="Cor selecionada"
+                        ></span>
+                        <% } %>
+                      </div>
 
-               
-                <!-- Resumo do Pedido -->
-            <div class="cart-summary">
-                <h3>Resumo do Pedido</h3>
-                
-                <div class="summary-row">
-                    <span>Subtotal</span>
-                    <span>R$ <%= parseFloat(cart.totalPrice).toFixed(2).replace('.', ',') %></span>
-                </div>
-
-                <!-- === LÓGICA DO CUPOM (AQUI ESTÁ O QUE FALTAVA) === -->
-                <% if (cart.coupon) { %>
-                    <!-- SE TIVER CUPOM APLICADO -->
-                    <div class="summary-row" style="color: #2ecc71; font-weight: bold;">
-                        <span>Desconto (<%= cart.coupon.code %>)</span>
-                        <span>- R$ <%= (cart.totalPrice - cart.totalWithDiscount).toFixed(2).replace('.', ',') %></span>
+                      <!-- Preço aparece aqui no Mobile -->
+                      <div class="mobile-price">
+                        <%= item.qty %>x R$ <%=
+                        item.price.toFixed(2).replace('.', ',') %>
+                      </div>
                     </div>
-                    
-                    <!-- Botão para Remover -->
-                    <form action="/carrinho/remover-cupom" method="POST" style="margin-bottom: 15px; text-align: right;">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button type="submit" style="background: none; border: none; font-size: 11px; color: red; text-decoration: underline; cursor: pointer;">
-                            Remover cupom
-                        </button>
-                    </form>
+                  </div>
+                </td>
 
-                <% } else { %>
-                    <!-- SE NÃO TIVER CUPOM: MOSTRA O CAMPO -->
-                    <div style="margin: 15px 0;">
-                        <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Possui Cupom?</label>
-                        <form action="/carrinho/cupom" method="POST" style="display: flex; gap: 5px;">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <input type="text" name="couponCode" placeholder="Ex: PRIMA10" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; text-transform: uppercase;">
-                            <button type="submit" style="background: black; color: white; border: none; padding: 0 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">OK</button>
-                        </form>
-                    </div>
-                <% } %>
-                <!-- ================================================= -->
+                <!-- 2. Colunas Desktop (Escondidas no Mobile) -->
+                <td class="desktop-only">
+                  R$ <%= item.price.toFixed(2).replace('.', ',') %>
+                </td>
+                <td class="desktop-only"><%= item.qty %></td>
+                <td class="desktop-only">
+                  <strong
+                    >R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',')
+                    %></strong
+                  >
+                </td>
 
-                <div class="summary-row">
-                    <span>Frete</span>
-                    <span style="font-size: 12px; color: #666;">Calculado no Checkout</span>
-                </div>
-                
-                <hr>
-                
-                <div class="summary-row total">
-                        <span>Total</span>
-                        <!-- CORREÇÃO: Se tem cupom, usa o valor com desconto. Se não, usa o cheio. -->
-                        <span>R$ <%= (cart.coupon ? cart.totalWithDiscount : cart.totalPrice).toFixed(2).replace('.', ',') %></span>
-                    </div>
-                
-                <a href="/checkout" class="btn-checkout">Finalizar Compra</a>
-                <a href="/" class="btn-continue">Continuar Comprando</a>
-            </div>
-            </div>
-        <% } else { %>
-            <div class="empty-cart">
-                <i class="fas fa-shopping-basket"></i>
-                <h2>Sua sacola está vazia</h2>
-                <p>Navegue pela loja e descubra nossas novidades.</p>
-                <a href="/" class="btn-cta">Ver Coleção</a>
-            </div>
-        <% } %>
+                <!-- 3. Botão Remover -->
+                <td class="action-col">
+                  <form action="/carrinho-delete" method="POST">
+                    <input
+                      type="hidden"
+                      name="_csrf"
+                      value="<%= csrfToken %>"
+                    />
+                    <input
+                      type="hidden"
+                      name="productId"
+                      value="<%= item.productId %>"
+                    />
+                    <input type="hidden" name="size" value="<%= item.size %>" />
+                    <input
+                      type="hidden"
+                      name="color"
+                      value="<%= item.color || '' %>"
+                    />
+
+                    <button type="submit" class="btn-remove">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Resumo do Pedido -->
+        <div class="cart-summary">
+          <h3>Resumo do Pedido</h3>
+
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span
+              >R$ <%= parseFloat(cart.totalPrice).toFixed(2).replace('.', ',')
+              %></span
+            >
+          </div>
+
+          <!-- === LÓGICA DO CUPOM (AQUI ESTÁ O QUE FALTAVA) === -->
+          <% if (cart.coupon) { %>
+          <!-- SE TIVER CUPOM APLICADO -->
+          <div class="summary-row" style="color: #2ecc71; font-weight: bold">
+            <span>Desconto (<%= cart.coupon.code %>)</span>
+            <span
+              >- R$ <%= (cart.totalPrice -
+              cart.totalWithDiscount).toFixed(2).replace('.', ',') %></span
+            >
+          </div>
+
+          <!-- Botão para Remover -->
+          <form
+            action="/carrinho/remover-cupom"
+            method="POST"
+            style="margin-bottom: 15px; text-align: right"
+          >
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+            <button
+              type="submit"
+              style="
+                background: none;
+                border: none;
+                font-size: 11px;
+                color: red;
+                text-decoration: underline;
+                cursor: pointer;
+              "
+            >
+              Remover cupom
+            </button>
+          </form>
+
+          <% } else { %>
+          <!-- SE NÃO TIVER CUPOM: MOSTRA O CAMPO -->
+          <div style="margin: 15px 0">
+            <label
+              style="
+                font-size: 12px;
+                font-weight: bold;
+                display: block;
+                margin-bottom: 5px;
+              "
+              >Possui Cupom?</label
+            >
+            <form
+              action="/carrinho/cupom"
+              method="POST"
+              style="display: flex; gap: 5px"
+            >
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <input
+                type="text"
+                name="couponCode"
+                placeholder="Ex: PRIMA10"
+                style="
+                  flex: 1;
+                  padding: 10px;
+                  border: 1px solid #ddd;
+                  border-radius: 4px;
+                  text-transform: uppercase;
+                "
+              />
+              <button
+                type="submit"
+                style="
+                  background: black;
+                  color: white;
+                  border: none;
+                  padding: 0 15px;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-weight: bold;
+                "
+              >
+                OK
+              </button>
+            </form>
+          </div>
+          <% } %>
+          <!-- ================================================= -->
+
+          <div class="summary-row">
+            <span>Frete</span>
+            <span style="font-size: 12px; color: #666"
+              >Calculado no Checkout</span
+            >
+          </div>
+
+          <hr />
+
+          <div class="summary-row total">
+            <span>Total</span>
+            <!-- CORREÇÃO: Se tem cupom, usa o valor com desconto. Se não, usa o cheio. -->
+            <span
+              >R$ <%= (cart.coupon ? cart.totalWithDiscount :
+              cart.totalPrice).toFixed(2).replace('.', ',') %></span
+            >
+          </div>
+
+          <a href="/checkout" class="btn-checkout">Finalizar Compra</a>
+          <a href="/" class="btn-continue">Continuar Comprando</a>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="empty-cart">
+        <i class="fas fa-shopping-basket"></i>
+        <h2>Sua sacola está vazia</h2>
+        <p>Navegue pela loja e descubra nossas novidades.</p>
+        <a href="/" class="btn-cta">Ver Coleção</a>
+      </div>
+      <% } %>
     </main>
 
     <%- include('../partials/footer.ejs') %>
-</body>
+  </body>
 </html>
