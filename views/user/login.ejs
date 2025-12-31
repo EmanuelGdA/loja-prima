@@ -3,6 +3,8 @@
 <head>
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/auth.css">
+    <!-- Ícones do Google -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <%- include('../partials/header.ejs') %>
@@ -10,48 +12,102 @@
     <main class="auth-container">
         <div class="auth-card">
             <h2 class="auth-title">Bem-vindo(a)</h2>
-            <p class="auth-subtitle">Entre com seus dados para continuar.</p>
+            <p class="auth-subtitle">Entre para acessar seus pedidos.</p>
             
             <% if (errorMessage.length > 0) { %>
                 <div class="alert error"><%= errorMessage %></div>
             <% } %>
-            <% if (successMessage.length > 0) { %>
-                <div class="alert success"><%= successMessage %></div>
-            <% } %>
+
+            <!-- BOTÃO GOOGLE -->
+            <button type="button" onclick="loginWithGoogle()" style="width: 100%; background: white; color: #333; border: 1px solid #ddd; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; transition: 0.3s;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+                Entrar com Google
+            </button>
+
+            <div class="auth-separator"><span>OU COM E-MAIL</span></div>
 
             <form action="/login" method="POST" class="auth-form">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                
                 <div class="input-group">
                     <label>E-mail</label>
-                    <input type="email" name="email" required placeholder="exemplo@gmail.com">
+                    <input type="email" name="email" placeholder="seu@email.com">
                 </div>
                 <div class="input-group">
                     <label>Senha</label>
-                    <input type="password" name="password" required placeholder="********">
+                    <input type="password" name="password" placeholder="********">
                 </div>
                 
                 <div style="text-align: right; margin-bottom: 20px;">
-                    <a href="/esqueci-senha" style="font-size: 12px; color: #666; text-decoration: underline;">
-                        Esqueci minha senha
-                    </a>
+                    <a href="/esqueci-senha" style="font-size: 12px; color: #666; text-decoration: underline;">Esqueci minha senha</a>
                 </div>
-                
 
                 <button type="submit" class="btn-black">ENTRAR</button>
             </form>
 
-            <div class="auth-separator">
-                <span>OU</span>
-            </div>
-
-            <div class="auth-links">
-                <p>Ainda não tem conta?</p>
-                <a href="/cadastro" class="btn-outline">CRIAR CONTA</a>
+            <div class="auth-footer-link">
+                <span>Ainda não tem conta?</span>
+                <a href="/cadastro">CRIAR CONTA</a>
             </div>
         </div>
     </main>
 
     <%- include('../partials/footer.ejs') %>
+
+    <!-- SCRIPTS DO FIREBASE (FRONTEND) -->
+    <script type="module">
+        // Importa as funções do Google
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // --- COLOQUE SUAS CHAVES AQUI ---
+        // (Vá no Console do Firebase > Config do Projeto > Geral > Role até embaixo no "SDK Setup and Configuration")
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqzer1uVrqaIw-orkgakBEG5QkYhTb4kw",
+  authDomain: "loja-prima.firebaseapp.com",
+  projectId: "loja-prima",
+  storageBucket: "loja-prima.firebasestorage.app",
+  messagingSenderId: "744309889992",
+  appId: "1:744309889992:web:295585b36da4e3c1f43efd"
+        };
+
+        // Inicializa
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const provider = new GoogleAuthProvider();
+
+        // Função Global para o botão usar
+        window.loginWithGoogle = function() {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    // O Google deu OK. Agora pegamos o Token para mandar pro nosso servidor
+                    result.user.getIdToken().then((token) => {
+                        sendTokenToServer(token);
+                    });
+                }).catch((error) => {
+                    console.error("Erro Google:", error);
+                    alert("Erro ao entrar com Google: " + error.message);
+                });
+        };
+
+        // Envia o token para o Node.js criar a sessão
+        function sendTokenToServer(token) {
+            fetch('/auth/google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'CSRF-Token': '<%= csrfToken %>'
+                },
+                body: JSON.stringify({ token: token })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    window.location.href = '/'; // Redireciona para Home
+                } else {
+                    alert("Erro no servidor: " + data.message);
+                }
+            });
+        }
+    </script>
 </body>
 </html>

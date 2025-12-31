@@ -3,6 +3,11 @@ require('dotenv').config();
 
 const API_KEY = process.env.FIREBASE_API_KEY;
 
+// TESTE DE DEPURAÇÃO (Adicione isso para ver no terminal se a chave aparece)
+console.log("--- DEBUG EMAIL SERVICE ---");
+console.log("Chave lida:", API_KEY ? API_KEY.slice(0, 5) + "..." : "NÃO ENCONTRADA");
+console.log("---------------------------");
+
 // URLs da API do Google Identity Toolkit
 const VERIFY_URL = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${API_KEY}`;
 

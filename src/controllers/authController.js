@@ -263,3 +263,62 @@ exports.postResetPassword = async (req, res) => {
 exports.postLogout = (req, res) => {
     req.session.destroy(() => res.redirect('/'));
 };
+
+// 6. LOGIN COM GOOGLE
+exports.googleLogin = async (req, res) => {
+    const idToken = req.body.token;
+
+    try {
+        // 1. Verifica se o token do Google é verdadeiro
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const { uid, email, name, picture } = decodedToken;
+
+        // 2. Verifica se o usuário já existe no nosso banco 'users'
+        const userRef = db.collection('users');
+        const snapshot = await userRef.where('email', '==', email).get();
+
+        let userDocId;
+        let userData;
+
+        if (snapshot.empty) {
+            // USUÁRIO NOVO: Cria a conta automaticamente
+            const newUser = {
+                name: name || 'Usuário Google',
+                email: email,
+                phone: '', // Google não manda telefone fácil
+                isAdmin: false,
+                isVerified: true, // Google já verificou!
+                googleId: uid,
+                createdAt: new Date().toISOString()
+            };
+            const docRef = await userRef.add(newUser);
+            userDocId = docRef.id;
+            userData = newUser;
+        } else {
+            // USUÁRIO EXISTENTE: Só pega os dados
+            const doc = snapshot.docs[0];
+            userDocId = doc.id;
+            userData = doc.data();
+        }
+
+        // 3. Cria a Sessão (Loga o usuário)
+        req.session.isLoggedIn = true;
+        req.session.user = { 
+            id: userDocId, 
+            name: userData.name, 
+            email: userData.email,
+            isAdmin: userData.isAdmin || false 
+        };
+
+        // Recupera carrinho (se tiver)
+        if (userData.cart) { req.session.cart = userData.cart; }
+
+        req.session.save(() => {
+            res.json({ status: 'success' });
+        });
+
+    } catch (error) {
+        console.error("Erro Google Login:", error);
+        res.status(401).json({ status: 'error', message: 'Token inválido' });
+    }
+};

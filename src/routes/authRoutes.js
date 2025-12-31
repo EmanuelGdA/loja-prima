@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 
+router.post('/auth/google', authController.googleLogin);
 router.get('/login', authController.getLogin);
 router.post('/login', authController.postLogin);
 router.post('/logout', authController.postLogout);
@@ -17,5 +18,6 @@ router.post('/esqueci-senha', authController.postForgotPassword);
 
 router.get('/redefinir-senha/:token', authController.getResetPassword);
 router.post('/redefinir-senha', authController.postResetPassword);
+
 
 module.exports = router;
