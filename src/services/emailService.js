@@ -4,9 +4,11 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'emanuelgomesalmeida@gmail.com', // Seu e-mail
-        pass: 'frim grxf pkpl sgcg'            // A SENHA NOVA QUE VOCÊ GEROU
-    }
+        // Agora o código busca das configurações do servidor
+        user: process.env.EMAIL_USER, 
+        pass: process.env.EMAIL_PASS  
+    },
+    tls: { rejectUnauthorized: false }
 });
 
 // 2. Função para "Esqueci Minha Senha" (Link)
