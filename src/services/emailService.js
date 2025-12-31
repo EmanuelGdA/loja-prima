@@ -1,37 +1,36 @@
-require('dotenv').config(); // Garante que lê as variáveis
+require('dotenv').config(); 
 const nodemailer = require('nodemailer');
 
-// CONFIGURAÇÃO ROBUSTA (SMTP)
+// CONFIGURAÇÃO FORÇANDO IPv4
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com', // Servidor do Google
-    port: 587,              // Porta padrão segura (TLS)
-    secure: false,          // false para porta 587 (true seria para 465)
+    service: 'gmail', // O Nodemailer configura porta/host sozinho
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
+    // Correções de Segurança e Rede:
     tls: {
-        rejectUnauthorized: false // Aceita conexões do servidor do Render
-    }
+        rejectUnauthorized: false
+    },
+    family: 4 // <--- O PULO DO GATO: Força usar IPv4 (Evita travamento no Render)
 });
 
-// Teste de conexão no início
-transporter.verify(function (error, success) {
+// Teste de conexão (Aparece no Log quando o servidor liga)
+transporter.verify((error, success) => {
     if (error) {
         console.error("❌ ERRO CONEXÃO EMAIL:", error.message);
     } else {
-        console.log("✅ Conectado ao Gmail com sucesso!");
+        console.log("✅ Conectado ao Gmail! Pronto para enviar.");
     }
 });
 
 // Função 1: Recuperação de Senha
 exports.sendResetEmail = async (toEmail, token) => {
-    // Detecta URL automaticamente
-    const baseUrl = process.env.RENDER_EXTERNAL_URL || 'http://localhost:3000';
+    const baseUrl = 'https://loja-prima.onrender.com';
     const resetLink = `${baseUrl}/redefinir-senha/${token}`;
 
     const mailOptions = {
-        from: '"Maely Cristina Store" <' + process.env.EMAIL_USER + '>',
+        from: `"Maely Cristina Store" <${process.env.EMAIL_USER}>`,
         to: toEmail,
         subject: 'Recuperação de Senha',
         html: `<p>Clique para redefinir: <a href="${resetLink}">Nova Senha</a></p>`
@@ -39,23 +38,23 @@ exports.sendResetEmail = async (toEmail, token) => {
 
     try {
         await transporter.sendMail(mailOptions);
-        console.log("Email Reset enviado para:", toEmail);
+        console.log("✅ Email Reset enviado para:", toEmail);
     } catch (error) {
-        console.error("Erro Reset:", error);
+        console.error("❌ Erro Reset:", error.message);
     }
 };
 
 // Função 2: Código de Verificação
 exports.sendVerificationEmail = async (toEmail, code) => {
     const mailOptions = {
-        from: '"Maely Cristina Store" <' + process.env.EMAIL_USER + '>',
+        from: `"Maely Cristina Store" <${process.env.EMAIL_USER}>`,
         to: toEmail,
         subject: 'Seu Código de Acesso',
         html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; text-align: center;">
-                <h2>Bem-vindo(a)!</h2>
+            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; text-align: center; max-width: 500px; margin: 0 auto;">
+                <h2 style="color: #000;">Bem-vindo(a)!</h2>
                 <p>Seu código de verificação é:</p>
-                <div style="font-size: 24px; font-weight: bold; background: #eee; padding: 10px; margin: 20px 0;">
+                <div style="font-size: 28px; font-weight: bold; background: #f4f4f4; padding: 15px; margin: 20px 0; letter-spacing: 5px;">
                     ${code}
                 </div>
             </div>
@@ -63,12 +62,10 @@ exports.sendVerificationEmail = async (toEmail, code) => {
     };
 
     try {
-        console.log(`Enviando código ${code} para ${toEmail}...`);
+        console.log(`📡 Tentando enviar código ${code} para ${toEmail}...`);
         await transporter.sendMail(mailOptions);
-        console.log("✅ Email de Código enviado com sucesso!");
+        console.log("✅ EMAIL ENVIADO COM SUCESSO!");
     } catch (error) {
-        // Mostra o erro exato
-        console.error("❌ FALHA ENVIO CÓDIGO:", error.message);
-        if (error.response) console.error("Resposta Google:", error.response);
+        console.error("❌ FALHA NO ENVIO:", error.message);
     }
 };
