@@ -1,78 +1,43 @@
+const axios = require('axios');
 require('dotenv').config();
-const nodemailer = require('nodemailer');
 
-// SEU EMAIL QUE VAI APARECER PARA O CLIENTE
-// (Coloque aqui o gmail que você usou para criar a conta no Brevo)
-const EMAIL_REMETENTE = 'emanuelgomesalmeida@gmail.com'; 
+const API_KEY = process.env.FIREBASE_API_KEY;
 
-// CONFIGURAÇÃO BREVO
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    secure: false, 
-    auth: {
-        user: process.env.EMAIL_USER, // O login estranho (9f14...)
-        pass: process.env.EMAIL_PASS  // A senha do Brevo (X5JL...)
-    },
-    tls: {
-        rejectUnauthorized: false
-    }
-});
+// URLs da API do Google Identity Toolkit
+const VERIFY_URL = `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${API_KEY}`;
 
-transporter.verify((error, success) => {
-    if (error) {
-        console.error("❌ ERRO CONEXÃO EMAIL:", error.message);
-    } else {
-        console.log("✅ Conectado ao Brevo! Pronto para enviar.");
-    }
-});
-
-exports.sendResetEmail = async (toEmail, token) => {
-    const baseUrl = 'https://loja-prima.onrender.com';
-    const resetLink = `${baseUrl}/redefinir-senha/${token}`;
-
-    const mailOptions = {
-        from: `"Maely Cristina Store" <${EMAIL_REMETENTE}>`, // <--- Mudamos aqui
-        to: toEmail,
-        subject: 'Recuperação de Senha',
-        html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                <h2>Recuperação de Senha</h2>
-                <p>Clique no botão abaixo para criar uma nova senha:</p>
-                <a href="${resetLink}" style="background: black; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Redefinir Senha</a>
-            </div>
-        `
-    };
-
+// 1. Enviar E-mail de Verificação (Cadastro)
+exports.sendVerificationEmail = async (email) => {
     try {
-        await transporter.sendMail(mailOptions);
-        console.log("✅ Email Reset enviado.");
+        // Pede ao Google para enviar o email
+        // Tipo "VERIFY_EMAIL" faz o Google mandar aquele email padrão de ativar conta
+        await axios.post(VERIFY_URL, {
+            requestType: "VERIFY_EMAIL",
+            email: email
+        });
+        
+        console.log("✅ Google enviou e-mail de verificação para:", email);
+        return true;
     } catch (error) {
-        console.error("❌ Erro Reset:", error.message);
+        console.error("Erro Google Email:", error.response ? error.response.data.error.message : error.message);
+        // Dica: O erro "EMAIL_NOT_FOUND" acontece se o usuário não estiver criado no Firebase Auth
+        return false;
     }
 };
 
-exports.sendVerificationEmail = async (toEmail, code) => {
-    const mailOptions = {
-        from: `"Maely Cristina Store" <${EMAIL_REMETENTE}>`, // <--- Mudamos aqui
-        to: toEmail,
-        subject: 'Seu Código de Acesso',
-        html: `
-            <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; text-align: center; max-width: 500px; margin: 0 auto;">
-                <h2 style="color: #000;">Bem-vindo(a)!</h2>
-                <p>Seu código de verificação é:</p>
-                <div style="font-size: 28px; font-weight: bold; background: #f4f4f4; padding: 15px; margin: 20px 0; letter-spacing: 5px;">
-                    ${code}
-                </div>
-            </div>
-        `
-    };
-
+// 2. Enviar Recuperação de Senha (Esqueci minha senha)
+exports.sendResetEmail = async (email) => {
     try {
-        console.log(`📡 Enviando código para ${toEmail}...`);
-        await transporter.sendMail(mailOptions);
-        console.log("✅ EMAIL ENVIADO COM SUCESSO!");
+        // Tipo "PASSWORD_RESET" faz o Google mandar o link de trocar senha
+        await axios.post(VERIFY_URL, {
+            requestType: "PASSWORD_RESET",
+            email: email
+        });
+
+        console.log("✅ Google enviou e-mail de senha para:", email);
+        return true;
     } catch (error) {
-        console.error("❌ FALHA NO ENVIO:", error.message);
+        console.error("Erro Google Reset:", error.response ? error.response.data.error.message : error.message);
+        return false;
     }
 };

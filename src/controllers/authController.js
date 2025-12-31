@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { db } = require('../config/firebase');
 const { v4: uuidv4 } = require('uuid'); // Para gerar o token
 const emailService = require('../services/emailService'); // Importa o envio de email
+const admin = require('firebase-admin');
 
 // --- EXIBIR FORMULÁRIOS ---
 exports.getLogin = (req, res) => {
@@ -27,16 +28,11 @@ exports.getResetPassword = (req, res) => {
 exports.postSignup = async (req, res) => {
     const { name, email, confirmEmail, phone, password, confirmPassword } = req.body;
 
-    if (email !== confirmEmail) {
-        req.flash('error', 'E-mails não conferem.');
-        return res.redirect('/cadastro');
-    }
-    if (password !== confirmPassword) {
-        req.flash('error', 'Senhas não conferem.');
-        return res.redirect('/cadastro');
-    }
+    if (email !== confirmEmail) { req.flash('error', 'E-mails não conferem.'); return res.redirect('/cadastro'); }
+    if (password !== confirmPassword) { req.flash('error', 'Senhas não conferem.'); return res.redirect('/cadastro'); }
 
     try {
+        // 1. Verifica se já existe no Banco
         const userRef = db.collection('users');
         const snapshot = await userRef.where('email', '==', email).get();
 
@@ -45,44 +41,41 @@ exports.postSignup = async (req, res) => {
             return res.redirect('/cadastro');
         }
 
-        const hashedPassword = await bcrypt.hash(password, 12);
-        
-        // GERA O CÓDIGO DE 6 NÚMEROS
-        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        // 2. CRIA NO FIREBASE AUTH (Para o Google gerenciar a senha/email)
+        // Isso é o que permite o envio de email funcionar
+        await admin.auth().createUser({
+            email: email,
+            password: password,
+            displayName: name,
+            disabled: false
+        });
 
+        // 3. Salva no Banco de Dados (Para a gente gerenciar o resto)
+        const hashedPassword = await bcrypt.hash(password, 12); // Mantemos o hash local por segurança do nosso sistema legado
+        
         await userRef.add({
             name: name,
             email: email,
             phone: phone,
-            password: hashedPassword,
+            password: hashedPassword, // Mantemos senha local também
             isAdmin: false,
-            
-            // Dados de Verificação
-            isVerified: false, 
-            verifyCode: verificationCode, // Salva o número
-            
             createdAt: new Date().toISOString()
         });
 
-        // --- TRUQUE PARA NÃO FICAR TRAVADO ---
-        console.log("=========================================");
-        console.log(`>>> CÓDIGO DE VERIFICAÇÃO PARA ${email}: ${verificationCode}`);
-        console.log("=========================================");
-        // -------------------------------------
+        // 4. Manda o e-mail usando o serviço novo
+        await emailService.sendVerificationEmail(email);
 
-        // Tenta enviar o e-mail (se falhar, vc tem o console)
-        emailService.sendVerificationEmail(email, verificationCode); // Vamos adaptar essa função já já
-
-        // Renderiza a tela de digitar o código (passando o email para não ter que digitar de novo)
-        res.render('user/verify-code', { 
-            pageTitle: 'Validar Conta', 
-            email: email, // Envia o email para deixar o campo preenchido ou oculto
-            errorMessage: null
-        });
+        req.flash('success', 'Conta criada! Verifique seu e-mail (Link oficial do Google).');
+        res.redirect('/login');
 
     } catch (err) {
-        console.log(err);
-        req.flash('error', 'Erro no cadastro.');
+        console.log("Erro Cadastro:", err);
+        // Se der erro que o email já existe no Auth
+        if (err.code === 'auth/email-already-exists') {
+            req.flash('error', 'Este e-mail já está cadastrado no sistema.');
+        } else {
+            req.flash('error', 'Erro ao criar conta.');
+        }
         res.redirect('/cadastro');
     }
 };
@@ -196,38 +189,25 @@ exports.postLogin = async (req, res) => {
     }
 };
 
-// 3. SOLICITAR RESET DE SENHA (ENVIA EMAIL)
+// 3. RECUPERAR SENHA (USANDO GOOGLE)
 exports.postForgotPassword = async (req, res) => {
     const email = req.body.email;
-
     try {
+        // Verifica se existe no nosso banco
         const snapshot = await db.collection('users').where('email', '==', email).get();
-
         if (snapshot.empty) {
             req.flash('error', 'E-mail não encontrado.');
             return res.redirect('/esqueci-senha');
         }
 
-        const userDoc = snapshot.docs[0];
-        const token = uuidv4(); // Gera código único
-        const expireDate = new Date();
-        expireDate.setHours(expireDate.getHours() + 1); // Vence em 1 hora
+        // Pede pro Google mandar o e-mail
+        await emailService.sendResetEmail(email);
 
-        // Salva o token no usuário
-        await db.collection('users').doc(userDoc.id).update({
-            resetToken: token,
-            resetTokenExpire: expireDate.toISOString()
-        });
-
-        // Envia o e-mail
-        await emailService.sendResetEmail(email, token);
-
-        req.flash('success', 'Verifique seu e-mail para redefinir a senha.');
+        req.flash('success', 'Se o e-mail estiver cadastrado, você receberá um link do Google em instantes.');
         res.redirect('/login');
-
     } catch (error) {
         console.log(error);
-        req.flash('error', 'Erro ao processar solicitação.');
+        req.flash('error', 'Erro ao processar.');
         res.redirect('/esqueci-senha');
     }
 };
