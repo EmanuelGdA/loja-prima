@@ -66,4 +66,5 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
     }
 
 // Mantenha a função de cartão simulada ou vazia se não for testar cartão agora
-exports.processarCartaoPagSeguro = async () => { return { status: 'ERROR' }; };
+exports.processarCartaoPagSeguro = async () => { return { status: 'ERROR'} };  
+};
