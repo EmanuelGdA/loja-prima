@@ -169,13 +169,24 @@
                                     <div class="detail-row"><strong>Email:</strong> <%= order.user.email %></div>
                                     <div class="detail-row"><strong>CPF:</strong> <%= order.user.cpf %></div>
                                     
-                                    <% if(order.user.phone) { %>
-                                       <div class="detail-row">
-                                          <strong>WhatsApp:</strong> 
-                                          <a href="https://wa.me/55<%= order.user.phone %>" target="_blank" style="color:#25d366; font-weight:bold;">
-                                             <i class="fab fa-whatsapp"></i> Chamar
-                                          </a>
-                                       </div>
+                                    <!-- VISUALIZAÇÃO DO TELEFONE + BOTÃO CHAMAR -->
+                                    <% if (order.user.phone) { %>
+                                        <div class="detail-row" style="margin-top: 8px;">
+                                            <strong>Tel:</strong> <%= order.user.phone %>
+                                        </div>
+                                        
+                                        <!-- Botão Verde do WhatsApp -->
+                                        <a href="https://wa.me/55<%= order.user.phone.replace(/\D/g, '') %>" 
+                                           target="_blank"
+                                           style="
+                                               display: inline-flex; align-items: center; gap: 5px;
+                                               background-color: #25d366; color: white; 
+                                               padding: 6px 12px; border-radius: 4px; 
+                                               text-decoration: none; font-size: 11px; font-weight: bold;
+                                               margin-top: 5px;
+                                           ">
+                                            <i class="fab fa-whatsapp"></i> CHAMAR NO WhatsApp
+                                        </a>
                                     <% } %>
                                     
                                 </div>
