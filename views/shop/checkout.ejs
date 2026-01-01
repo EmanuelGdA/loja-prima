@@ -46,12 +46,25 @@
                 
                 <!-- DADOS PESSOAIS (CPF É OBRIGATÓRIO) -->
                 <h2>Dados Pessoais</h2>
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label>CPF (Obrigatório)</label>
-                    <input type="text" name="cpf" placeholder="000.000.000-00" maxlength="14" required>
+                
+                <div class="form-row">
+                    <!-- CPF -->
+                    <div class="form-group main">
+                        <label>CPF (Obrigatório)</label>
+                        <!-- Se o usuário já tiver salvo, preenche automático -->
+                        <input type="text" name="cpf" placeholder="000.000.000-00" maxlength="14" 
+                               value="<%= user.cpf || '' %>" required oninput="maskCPF(this)">
+                    </div>
+
+                    <!-- TELEFONE (NOVO) -->
+                    <div class="form-group main">
+                        <label>WhatsApp</label>
+                        <input type="text" name="phone" placeholder="(00) 00000-0000" maxlength="15" 
+                               value="<%= user.phone || '' %>" required oninput="maskPhone(this)">
+                    </div>
                 </div>
 
-                <h2>1. Entrega</h2>
+                <h2>Entrega</h2>
                 <!-- ESCOLHA DO TIPO DE ENTREGA -->
                 <div class="delivery-type-group">
                     <label>
@@ -114,7 +127,7 @@
                 </div>
                 </div>
                 
-                <h2>2. Pagamento</h2>
+                <h2>Pagamento</h2>
                 
                 <div class="payment-methods">
                     <label class="method-option">
@@ -218,6 +231,23 @@
     </main>
 
     <script>
+
+        // Máscara de Telefone
+    function maskPhone(input) {
+        let v = input.value.replace(/\D/g,'');
+        v = v.replace(/^(\d{2})(\d)/g,"($1) $2");
+        v = v.replace(/(\d)(\d{4})$/,"$1-$2");
+        input.value = v;
+    }
+
+    // Máscara de CPF
+    function maskCPF(input) {
+        let v = input.value.replace(/\D/g,'');
+        v = v.replace(/(\d{3})(\d)/,"$1.$2");
+        v = v.replace(/(\d{3})(\d)/,"$1.$2");
+        v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2");
+        input.value = v;
+    }
         
     // Se tiver desconto, usa ele. Se não, usa o total normal.
     const cartSubtotal = parseFloat('<%= (cart.totalWithDiscount || cart.totalPrice) %>');

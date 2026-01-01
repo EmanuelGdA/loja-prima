@@ -1,12 +1,32 @@
 const axios = require('axios');
 
+// Função auxiliar para formatar cliente
 const buildCustomer = (cliente, cpf) => {
     const cleanCPF = cpf ? cpf.replace(/\D/g, '') : '';
+    
+    // Tenta pegar o telefone do cliente
+    let area = "11";
+    let number = "999999999";
+
+    // Se o cliente mandou telefone (ex: 41999998888)
+    if (cliente.phone && cliente.phone.length >= 10) {
+        const cleanPhone = cliente.phone.replace(/\D/g, ''); // Tira formatação
+        area = cleanPhone.substring(0, 2); // Pega os 2 primeiros (DDD)
+        number = cleanPhone.substring(2);  // Pega o resto
+    }
+
     return {
         name: cliente.name,
         email: cliente.email,
         tax_id: cleanCPF,
-        phones: [{ country: "55", area: "11", number: "999999999", type: "MOBILE" }]
+        phones: [
+            {
+                country: "55",
+                area: area,
+                number: number,
+                type: "MOBILE"
+            }
+        ]
     };
 };
 
