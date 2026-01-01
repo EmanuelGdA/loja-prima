@@ -22,6 +22,10 @@ router.get('/checkout', shopController.getCheckout);
 router.post('/criar-pedido', shopController.postOrder); // Botão "Pagar"
 router.get('/pedidos', shopController.getOrders);
 
+// NOVAS ROTAS DE PAGAMENTO TARDIO
+router.get('/pagar-pedido/:orderId', shopController.getPayOrder);
+router.post('/pagar-pedido/:orderId', shopController.postPayOrder);
+
 // ROTA DE LANÇAMENTOS
 router.get('/colecao/lancamentos', shopController.getNewArrivals);
 

@@ -743,3 +743,101 @@ exports.getUserFavoritesAPI = async (req, res) => {
         res.json([]);
     }
 };
+
+// ==========================================
+// 13. PAGAMENTO TARDIO (RE-PAGAR)
+// ==========================================
+
+// Tela de escolher pagamento novamente
+exports.getPayOrder = async (req, res) => {
+    const orderId = req.params.orderId;
+    try {
+        const doc = await db.collection('orders').doc(orderId).get();
+        if (!doc.exists) return res.redirect('/pedidos');
+        
+        const order = doc.data();
+        order.id = doc.id;
+
+        // Segurança: Só o dono do pedido pode pagar
+        if (order.user.id !== req.session.user.id) {
+            return res.redirect('/pedidos');
+        }
+
+        res.render('shop/payment', {
+            pageTitle: 'Realizar Pagamento',
+            order: order
+        });
+    } catch (error) {
+        console.log(error);
+        res.redirect('/pedidos');
+    }
+};
+
+// Processar o novo pagamento
+exports.postPayOrder = async (req, res) => {
+    const orderId = req.params.orderId;
+    const paymentMethod = req.body.paymentMethod;
+
+    try {
+        const orderRef = db.collection('orders').doc(orderId);
+        const doc = await orderRef.get();
+        const order = doc.data();
+        order.id = doc.id;
+
+        // Recupera o usuário atualizado (com CPF e dados)
+        const user = req.session.user; 
+        
+        // Verifica CPF no pedido antigo ou na sessão
+        const cpf = req.body.cpf || user.cpf || order.user.cpf; 
+
+        if (paymentMethod === 'pix') {
+            const pixData = await paymentService.gerarPixPagSeguro(
+                { id: orderId, totalPrice: order.totalPrice }, 
+                user, cpf
+            );
+            const qrCodeImage = await QRCode.toDataURL(pixData.qrCodeText);
+
+            await orderRef.update({
+                paymentMethod: 'PIX (Re-tentativa)',
+                pagseguroId: pixData.id,
+                pixCode: pixData.qrCodeText,
+                status: 'Aguardando Pagamento'
+            });
+
+            return res.render('shop/success-pix', { 
+                pageTitle: 'Pagar com PIX', path: '', 
+                qrCodeImage, pixCode: pixData.qrCodeText, total: order.totalPrice 
+            });
+
+        } else {
+            // Cartão
+            const cardData = {
+                number: req.body.cardNumber,
+                holder: req.body.cardHolder,
+                expiration: req.body.cardExpiration,
+                cvv: req.body.cardCvv,
+                installments: req.body.installments
+            };
+            const cardResult = await paymentService.processarCartaoPagSeguro(
+                { id: orderId, totalPrice: order.totalPrice }, user, cpf, cardData
+            );
+
+            if (cardResult.status === 'PAID') {
+                await orderRef.update({ 
+                    status: 'Pago / Aprovado', 
+                    paymentMethod: 'Cartão (Re-tentativa)',
+                    pagseguroId: cardResult.id 
+                });
+                return res.render('shop/success', { pageTitle: 'Sucesso', path: '' });
+            } else {
+                req.flash('error', 'Pagamento Recusado: ' + cardResult.message);
+                return res.redirect('/pagar-pedido/' + orderId);
+            }
+        }
+
+    } catch (error) {
+        console.error("ERRO REPAGAMENTO:", error);
+        req.flash('error', 'Erro ao processar. Tente novamente.');
+        res.redirect('/pagar-pedido/' + orderId);
+    }
+};
