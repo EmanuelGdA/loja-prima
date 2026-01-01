@@ -51,84 +51,149 @@
 
 <% } %>
 
-<!-- === MODAL DE LOGIN (DELAY + INTELIGENTE) === -->
-<% if (!locals.isAuthenticated) { %>
+<!-- === MODAL DE LOGIN (BOAS-VINDAS) - DESIGN NOVO === -->
+<% if (typeof isAuthenticated === 'undefined' || !isAuthenticated) { %>
     
-    <!-- AVISO: Mudei o display para 'none' para começar invisível -->
-    <div id="login-modal-overlay" style="
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-        z-index: 99999; 
-        display: none; /* COMEÇA ESCONDIDO */
-        justify-content: center; align-items: center;
-        animation: fadeIn 0.5s;
-    ">
-        <div style="
-            background: white; padding: 30px; border-radius: 12px; text-align: center; 
-            width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            position: relative;
-        ">
-            <!-- Botão Fechar (X) -->
-            <span onclick="fecharModalLogin()" 
-                  style="position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #999;">
-                  &times;
-            </span>
+    <div id="login-modal-overlay" style="display: none;">
+        <div class="login-modal-card">
+            <!-- Botão Fechar -->
+            <button onclick="fecharModalLogin()" class="close-modal-btn">&times;</button>
 
-            <h2 style="font-family: 'Playfair Display'; margin-bottom: 10px; color: #000;">Bem-vinda!</h2>
-            <p style="color: #666; margin-bottom: 25px; font-size: 14px; line-height: 1.5;">
-                Entre na sua conta para ver preços exclusivos, acompanhar pedidos e receber novidades.
-            </p>
+            <!-- Cabeçalho -->
+            <div class="modal-header-login">
+                <h2>BEM-VINDA!</h2>
+                <p>Para ver preços exclusivos e acompanhar seus pedidos, entre com sua conta.</p>
+            </div>
             
-            <a href="/login" style="
-                display: block; width: 100%; background: black; color: white; 
-                padding: 12px; border-radius: 6px; font-weight: bold; text-decoration: none; margin-bottom: 10px; font-size: 14px;">
-                FAZER LOGIN
-            </a>
-            
-            <a href="/cadastro" style="
-                display: block; width: 100%; border: 1px solid black; color: black; 
-                padding: 12px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 14px;">
-                CRIAR CONTA
-            </a>
+            <!-- Botão Google Direto -->
+            <button onclick="loginWithGoogleFromModal()" class="btn-google-modal">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+                Continuar com Google
+            </button>
 
-            <p style="margin-top: 20px; font-size: 12px; color: #888; cursor: pointer; text-decoration: underline;" 
-               onclick="fecharModalLogin()">
+            <!-- Botão Ignorar -->
+            <button onclick="fecharModalLogin()" class="btn-ignore">
                 Agora não, só quero dar uma olhadinha
-            </p>
+            </button>
         </div>
     </div>
 
-    <!-- SCRIPT DO TEMPORIZADOR -->
+    <style>
+        #login-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px);
+            z-index: 100000; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #login-modal-overlay.show { opacity: 1; pointer-events: all; }
+        .login-modal-card {
+            background-color: #ffffff; width: 90%; max-width: 380px; padding: 40px 30px;
+            border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); text-align: center;
+            position: relative; transform: translateY(20px); transition: transform 0.3s ease;
+        }
+        #login-modal-overlay.show .login-modal-card { transform: translateY(0); }
+        .close-modal-btn {
+            position: absolute; top: 15px; right: 15px; background: none; border: none;
+            font-size: 28px; color: #999; cursor: pointer; line-height: 1;
+        }
+        .modal-header-login h2 {
+            font-family: 'Playfair Display', serif; font-size: 26px; margin-bottom: 10px; color: #000; letter-spacing: 1px;
+        }
+        .modal-header-login p {
+            font-family: 'Montserrat', sans-serif; font-size: 14px; color: #666; margin-bottom: 30px; line-height: 1.5;
+        }
+        .btn-google-modal {
+            width: 100%; background-color: white; color: #444; border: 1px solid #ddd;
+            padding: 12px; border-radius: 50px; font-weight: 600; font-size: 14px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            gap: 10px; transition: 0.2s; margin-bottom: 20px; font-family: 'Montserrat', sans-serif;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .btn-google-modal:hover { background-color: #f8f8f8; border-color: #bbb; }
+        .btn-google-modal img { width: 20px; }
+        .btn-ignore {
+            background: none; border: none; color: #999; font-size: 12px; text-decoration: underline; cursor: pointer; font-family: 'Montserrat', sans-serif;
+        }
+    </style>
+
+    <!-- LOGICA DE LOGIN DIRETO (COM SUAS CHAVES REAIS) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // SUAS CHAVES REAIS (Coladas aqui para funcionar em qualquer página)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqzer1uVrqaIw-orkgakBEG5QkYhTb4kw",
+            authDomain: "loja-prima.firebaseapp.com",
+            projectId: "loja-prima",
+            storageBucket: "loja-prima.firebasestorage.app",
+            messagingSenderId: "744309889992",
+            appId: "1:744309889992:web:295585b36da4e3c1f43efd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const provider = new GoogleAuthProvider();
+
+        // Essa função agora é global e chama o Google DIRETO
+        window.loginWithGoogleFromModal = function() {
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    // Pega o token e manda pro servidor
+                    return result.user.getIdToken();
+                })
+                .then((token) => {
+                    return fetch('/auth/google', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            // Tenta pegar o token CSRF se ele existir na página, senão vai vazio
+                            'CSRF-Token': '<%= typeof csrfToken !== "undefined" ? csrfToken : "" %>'
+                        },
+                        body: JSON.stringify({ token: token })
+                    });
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Recarrega a página atual já logado!
+                        window.location.reload(); 
+                    } else {
+                        alert("Erro no servidor: " + data.message);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Erro Google:", error);
+                    alert("Erro ao conectar: " + error.message);
+                });
+        };
+    </script>
+
+    <!-- Timer do Modal -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Verifica em qual página estamos
             const path = window.location.pathname;
+            // Não mostra se já estiver na página de login (pra não ficar estranho)
+            if (path.includes('/login')) return;
 
-            // Se estiver na página de Login ou Cadastro, NÃO faz nada (sai da função)
-            if (path.includes('/login') || path.includes('/cadastro')) {
-                return;
-            }
-
-            // Configura o tempo de espera (5000 milissegundos = 5 segundos)
-            // Você pode mudar o 5000 para 10000 (10 seg) se preferir
+            // Timer de 5 segundos
             setTimeout(() => {
-                const modal = document.getElementById('login-modal-overlay');
-                
-                // Só mostra se o usuário ainda não fechou manualmente na mesma sessão (opcional, mas bom)
-                if (modal && !sessionStorage.getItem('modalClosed')) {
-                    modal.style.display = 'flex';
+                const overlay = document.getElementById('login-modal-overlay');
+                if (overlay && !sessionStorage.getItem('modalClosed')) {
+                    overlay.style.display = 'flex';
+                    setTimeout(() => overlay.classList.add('show'), 10);
                 }
-            }, 5000); 
+            }, 5000);
         });
 
         function fecharModalLogin() {
-            document.getElementById('login-modal-overlay').style.display = 'none';
-            // Salva na memória do navegador que ele fechou, para não abrir de novo na mesma navegação
+            const overlay = document.getElementById('login-modal-overlay');
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
             sessionStorage.setItem('modalClosed', 'true');
         }
     </script>
 <% } %>
-<!-- ========================================================== -->
 
 <!-- === MENU DE NAVEGAÇÃO INFERIOR (MOBILE) === -->
  <% if (typeof path !== 'undefined' && path === '/') { %>

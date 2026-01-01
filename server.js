@@ -24,12 +24,13 @@ const authRoutes = require('./src/routes/authRoutes');
 app.set('view engine', 'ejs');
 app.set('views', 'views'); // Pasta onde estão os HTMLs
 
-// 3. Middlewares de Segurança e Parsers
-// Configuração do Helmet (Segurança) permitindo imagens externas
+// 3. Middlewares de Segurança
 app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
+    // ESSA É A LINHA MÁGICA QUE RESOLVE O PROBLEMA DO GOOGLE:
+    crossOriginOpenerPolicy: false, 
   })
 );
 app.use(bodyParser.urlencoded({ extended: false })); // Para ler formulários
