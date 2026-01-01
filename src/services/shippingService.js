@@ -1,3 +1,4 @@
+require('dotenv').config();
 const axios = require('axios');
 
 exports.calcularFrete = async (cepDestino, produtos) => {
@@ -7,6 +8,12 @@ exports.calcularFrete = async (cepDestino, produtos) => {
         const token = process.env.MELHOR_ENVIO_TOKEN;
         const url = process.env.MELHOR_ENVIO_URL;
         const cepOrigem = process.env.CEP_ORIGEM;
+
+        // LOG PARA DEBUG (Vai mostrar no terminal se está lendo certo)
+        console.log("--- DEBUG FRETE ---");
+        console.log("URL:", url); 
+        console.log("Token:", token ? "OK (Carregado)" : "Vazio/Erro");
+        console.log("CEP Origem:", cepOrigem);
 
         // 1. Verificação de Segurança
         if (!cepOrigem || cepOrigem === '00000000') {
