@@ -12,21 +12,29 @@ const buildCustomer = (cliente, cpf) => {
 
 exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
     try {
-        console.log("--- GERANDO LOG PARA PAGSEGURO ---");
+        console.log("--- INICIANDO PIX (SANDBOX/REAL) ---");
         
         const valorEmCentavos = Math.round(pedido.totalPrice * 100);
         
-        // ESTE É O JSON QUE ELES QUEREM VER:
+        // Dados do Cliente (Limpa CPF)
+        const cleanCPF = cpf ? cpf.replace(/\D/g, '') : '';
+        
+        // Estrutura do Pedido (Payload)
         const body = {
             reference_id: pedido.id,
-            customer: buildCustomer(cliente, cpf),
+            customer: {
+                name: cliente.name,
+                email: cliente.email,
+                tax_id: cleanCPF,
+                phones: [{ country: "55", area: "11", number: "999999999", type: "MOBILE" }]
+            },
             items: [{ reference_id: "1", name: "Pedido Loja Maely", quantity: 1, unit_amount: valorEmCentavos }],
             qr_codes: [{ amount: { value: valorEmCentavos }, kind: "CALENDAR" }],
-            notification_urls: ["https://loja-da-prima.onrender.com/api/webhook/pagseguro"]
+            notification_urls: ["https://loja-prima.onrender.com/api/webhook/pagseguro"]
         };
 
-        // Vamos imprimir isso no terminal para você copiar
-        console.log("JSON REQUEST:", JSON.stringify(body, null, 2));
+        // --- IMPORTANTE: VAMOS IMPRIMIR ISSO PARA MANDAR PRO MAURÍCIO ---
+        console.log("JSON REQUEST (SANDBOX):", JSON.stringify(body, null, 2));
 
         const config = {
             headers: {
@@ -36,9 +44,11 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
             }
         };
 
-        const url = process.env.PAGSEGURO_URL || 'https://api.pagseguro.com';
-        const response = await axios.post(`${url}/orders`, body, config);
+        // Usa a URL que configuramos no passo 1 (Sandbox)
+        const response = await axios.post(`${process.env.PAGSEGURO_URL}/orders`, body, config);
         
+        console.log("JSON RESPONSE (SUCESSO):", JSON.stringify(response.data, null, 2));
+
         return {
             id: response.data.id,
             status: 'Aguardando Pagamento',
@@ -46,16 +56,14 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
         };
 
     } catch (error) {
-        // Se der erro (e vai dar), mostramos a resposta deles
-        console.error("--- ERRO RESPOSTA PAGSEGURO ---");
+        console.error("--- ERRO NO PAGSEGURO ---");
         if (error.response) {
-            console.error("JSON RESPONSE:", JSON.stringify(error.response.data, null, 2));
+            console.error(JSON.stringify(error.response.data, null, 2));
         } else {
             console.error(error.message);
         }
-        throw new Error("Falha técnica (Log gerado)");
+        throw new Error("Erro na comunicação com PagBank.");
     }
-};
 
 // Mantenha a função de cartão simulada ou vazia se não for testar cartão agora
 exports.processarCartaoPagSeguro = async () => { return { status: 'ERROR' }; };
