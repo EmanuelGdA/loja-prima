@@ -440,23 +440,33 @@
             // 1. Pede a chave pro servidor
             const response = await fetch('/api/pagseguro-key');
             const data = await response.json();
-            const publicKey = data.key;
+            let publicKey = data.key;
 
-            // --- REMOVI A FORMATAÇÃO MANUAL DAQUI ---
-            // Vamos confiar na chave crua que veio do servidor
-            
+            // --- CORREÇÃO OBRIGATÓRIA: FORMATAÇÃO DA CHAVE ---
+            // O JSEncrypt EXIGE que a chave tenha esses cabeçalhos.
+            // Se vier sem, nós adicionamos.
+            if (!publicKey.includes('-----BEGIN PUBLIC KEY-----')) {
+                publicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
+            }
+            // ------------------------------------------------
+
             // 2. Pega os dados sensíveis
+            // Removemos espaços em branco do número do cartão
             const number = document.getElementById('cc-number').value.replace(/\s/g, '');
             const cvv = document.getElementById('cc-cvv').value;
-            const exp = document.getElementById('cc-exp').value;
+            const exp = document.getElementById('cc-exp').value; // Formato MM/AA
             const [mes, ano] = exp.split('/');
 
             // 3. Monta o JSON para criptografar
+            // AVISO: O 'ano' precisa ser 4 dígitos (2030) e não 2 (30)
+            let fullYear = ano;
+            if (ano.length === 2) fullYear = "20" + ano;
+
             const cardData = {
                 number: number,
                 security_code: cvv,
                 exp_month: mes,
-                exp_year: "20" + ano,
+                exp_year: fullYear,
                 holder: { 
                     name: document.getElementsByName('cardHolder')[0].value 
                 }
@@ -468,18 +478,18 @@
             const encrypted = encrypt.encrypt(JSON.stringify(cardData));
 
             if (!encrypted) {
-                throw new Error("Falha na criptografia (Chave inválida).");
+                throw new Error("Falha ao gerar criptografia. Verifique a chave.");
             }
 
             // 5. Coloca no campo escondido
             document.getElementById('encryptedCardInput').value = encrypted;
 
-            // 6. Envia
+            // 6. Envia o formulário
             form.submit();
 
         } catch (error) {
             console.error(error);
-            alert("Erro ao processar segurança. Tente novamente.");
+            alert("Erro na segurança do pagamento: " + error.message);
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }
