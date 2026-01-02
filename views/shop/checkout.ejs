@@ -440,22 +440,18 @@
             // 1. Pede a chave pro servidor
             const response = await fetch('/api/pagseguro-key');
             const data = await response.json();
-            let publicKey = data.key;
+            const publicKey = data.key;
 
-            // --- CORREÇÃO IMPORTANTE: FORMATAÇÃO DA CHAVE ---
-            // O JSEncrypt precisa dos cabeçalhos PEM para funcionar direito
-            if (!publicKey.includes('-----BEGIN PUBLIC KEY-----')) {
-                publicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
-            }
-            // ------------------------------------------------
-
+            // --- REMOVI A FORMATAÇÃO MANUAL DAQUI ---
+            // Vamos confiar na chave crua que veio do servidor
+            
             // 2. Pega os dados sensíveis
             const number = document.getElementById('cc-number').value.replace(/\s/g, '');
             const cvv = document.getElementById('cc-cvv').value;
             const exp = document.getElementById('cc-exp').value;
             const [mes, ano] = exp.split('/');
 
-            // 3. Monta o JSON para criptografar (Estrutura V4 exata)
+            // 3. Monta o JSON para criptografar
             const cardData = {
                 number: number,
                 security_code: cvv,
@@ -472,7 +468,7 @@
             const encrypted = encrypt.encrypt(JSON.stringify(cardData));
 
             if (!encrypted) {
-                throw new Error("Falha ao gerar criptografia. Verifique a chave.");
+                throw new Error("Falha na criptografia (Chave inválida).");
             }
 
             // 5. Coloca no campo escondido
@@ -483,7 +479,7 @@
 
         } catch (error) {
             console.error(error);
-            alert("Erro na segurança do pagamento. Tente novamente.");
+            alert("Erro ao processar segurança. Tente novamente.");
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }
