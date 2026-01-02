@@ -441,19 +441,22 @@
             const response = await fetch('/api/pagseguro-key');
             const data = await response.json();
             
-            // --- CORREÇÃO DA FORMATAÇÃO DA CHAVE (CLEAN KEY) ---
+            // --- CORREÇÃO AVANÇADA DA CHAVE PÚBLICA ---
             let rawKey = data.key;
             
-            // Remove cabeçalhos se já vierem, remove espaços e quebras de linha
+            // Limpa tudo
             rawKey = rawKey.replace("-----BEGIN PUBLIC KEY-----", "")
                            .replace("-----END PUBLIC KEY-----", "")
                            .replace(/[\r\n\s]/g, "");
 
-            // Monta a chave limpa e perfeita para o JSEncrypt
-            const publicKey = `-----BEGIN PUBLIC KEY-----\n${rawKey}\n-----END PUBLIC KEY-----`;
-            // --------------------------------------------------
+            // Reconstrói no formato PEM (Quebra linha a cada 64 caracteres)
+            const formattedKeyBody = rawKey.match(/.{1,64}/g).join('\n');
+            const publicKey = `-----BEGIN PUBLIC KEY-----\n${formattedKeyBody}\n-----END PUBLIC KEY-----`;
+            
+            console.log("Chave Formatada:", publicKey); // Para debug
+            // ------------------------------------------
 
-            // 2. Pega os dados sensíveis
+            // 2. Pega os dados
             const number = document.getElementById('cc-number').value.replace(/\s/g, '');
             const cvv = document.getElementById('cc-cvv').value;
             const exp = document.getElementById('cc-exp').value;
@@ -463,7 +466,6 @@
             let ano = parts[1];
             if (ano.length === 2) ano = "20" + ano;
 
-            // 3. Monta o JSON exato que o PagSeguro V4 espera dentro da criptografia
             const cardData = {
                 number: number,
                 security_code: cvv,
@@ -474,26 +476,22 @@
                 }
             };
 
-            // 4. Criptografa
+            // 3. Criptografa
             const encrypt = new JSEncrypt();
             encrypt.setPublicKey(publicKey);
             const encrypted = encrypt.encrypt(JSON.stringify(cardData));
 
             if (!encrypted) {
-                // Se falhar a criptografia, força um erro visível
-                console.error("Falha ao gerar hash. Chave usada:", publicKey);
-                throw new Error("Erro interno de criptografia.");
+                throw new Error("Erro na biblioteca de criptografia.");
             }
 
-            // 5. Coloca no campo escondido
+            // 4. Envia
             document.getElementById('encryptedCardInput').value = encrypted;
-
-            // 6. Envia o formulário
             form.submit();
 
         } catch (error) {
             console.error(error);
-            alert("Erro ao processar segurança: " + error.message);
+            alert("Erro: " + error.message);
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }
