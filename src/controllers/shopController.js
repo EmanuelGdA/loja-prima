@@ -852,12 +852,12 @@ exports.postPayOrder = async (req, res) => {
     }
 };
 
-// API para o navegador pegar a chave pública de segurança
+
 exports.getPagSeguroKey = async (req, res) => {
     try {
         const key = await paymentService.getPublicKey();
         res.json({ key: key });
     } catch (e) {
-        res.status(500).json({ error: 'Erro ao obter chave' });
+        res.status(500).json({ error: 'Erro chave' });
     }
 };
