@@ -440,27 +440,30 @@
             // 1. Pede a chave pro servidor
             const response = await fetch('/api/pagseguro-key');
             const data = await response.json();
-            let publicKey = data.key;
+            
+            // --- CORREÇÃO DA FORMATAÇÃO DA CHAVE (CLEAN KEY) ---
+            let rawKey = data.key;
+            
+            // Remove cabeçalhos se já vierem, remove espaços e quebras de linha
+            rawKey = rawKey.replace("-----BEGIN PUBLIC KEY-----", "")
+                           .replace("-----END PUBLIC KEY-----", "")
+                           .replace(/[\r\n\s]/g, "");
 
-            // --- CORREÇÃO OBRIGATÓRIA: FORMATAÇÃO DA CHAVE ---
-            // O PagSeguro manda a chave "pelada". O JSEncrypt precisa dela "vestida".
-            if (!publicKey.includes('-----BEGIN PUBLIC KEY-----')) {
-                publicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
-            }
-            // ------------------------------------------------
+            // Monta a chave limpa e perfeita para o JSEncrypt
+            const publicKey = `-----BEGIN PUBLIC KEY-----\n${rawKey}\n-----END PUBLIC KEY-----`;
+            // --------------------------------------------------
 
             // 2. Pega os dados sensíveis
             const number = document.getElementById('cc-number').value.replace(/\s/g, '');
             const cvv = document.getElementById('cc-cvv').value;
-            const exp = document.getElementById('cc-exp').value; // MM/AA
+            const exp = document.getElementById('cc-exp').value;
             
-            // Tratamento da Data
             const parts = exp.split('/');
             const mes = parts[0];
             let ano = parts[1];
-            if (ano.length === 2) ano = "20" + ano; // Garante 2030 em vez de 30
+            if (ano.length === 2) ano = "20" + ano;
 
-            // 3. Monta o JSON para criptografar
+            // 3. Monta o JSON exato que o PagSeguro V4 espera dentro da criptografia
             const cardData = {
                 number: number,
                 security_code: cvv,
@@ -477,7 +480,9 @@
             const encrypted = encrypt.encrypt(JSON.stringify(cardData));
 
             if (!encrypted) {
-                throw new Error("Falha na biblioteca de criptografia.");
+                // Se falhar a criptografia, força um erro visível
+                console.error("Falha ao gerar hash. Chave usada:", publicKey);
+                throw new Error("Erro interno de criptografia.");
             }
 
             // 5. Coloca no campo escondido
@@ -488,7 +493,7 @@
 
         } catch (error) {
             console.error(error);
-            alert("Erro ao processar segurança. Tente novamente.");
+            alert("Erro ao processar segurança: " + error.message);
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }
