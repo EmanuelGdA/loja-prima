@@ -52,4 +52,7 @@ router.post('/api/frete', shopController.postCalculateShipping);
 // Rota Genérica para páginas de texto (trocas, entrega, contato)
 router.get('/institucional/:page', shopController.getInstitucional);
 
+// Rota de segurança
+router.get('/api/pagseguro-key', shopController.getPagSeguroKey);
+
 module.exports = router;

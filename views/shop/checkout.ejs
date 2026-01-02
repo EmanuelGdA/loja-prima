@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.2.1/jsencrypt.min.js"></script>
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/checkout.css">
     <style>
@@ -140,31 +141,40 @@
                     </label>
                 </div>
 
-                <!-- Formulário do Cartão (Começa escondido) -->
+                <!-- Formulário do Cartão (Criptografia no Front-End) -->
                 <div id="card-form" style="display: none; background: white; padding: 20px; border-radius: 4px; margin-top: 15px; border: 1px solid #eee;">
+                    
+                    <!-- CAMPO SECRETO: Aqui vai o código criptografado que o servidor vai ler -->
+                    <input type="hidden" name="encryptedCard" id="encryptedCardInput">
+
                     <div class="form-group">
                         <label>Número do Cartão</label>
-                        <input type="text" name="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19">
+                        <!-- MUDOU: Tiramos 'name' e pusemos 'id="cc-number"' -->
+                        <input type="text" id="cc-number" placeholder="0000 0000 0000 0000" maxlength="19">
                     </div>
                     
                     <div class="form-group">
                         <label>Nome no Cartão</label>
+                        <!-- Esse pode manter o name, não é secreto -->
                         <input type="text" name="cardHolder">
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Validade (MM/AA)</label>
-                            <input type="text" name="cardExpiration" placeholder="MM/AA" maxlength="5">
+                            <!-- MUDOU: id="cc-exp", sem name -->
+                            <input type="text" id="cc-exp" placeholder="MM/AA" maxlength="5">
                         </div>
                         <div class="form-group">
                             <label>CVV</label>
-                            <input type="text" name="cardCvv" placeholder="123" maxlength="4">
+                            <!-- MUDOU: id="cc-cvv", sem name -->
+                            <input type="text" id="cc-cvv" placeholder="123" maxlength="4">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Parcelamento</label>
+                        <!-- Esse mantém name, o servidor precisa saber -->
                         <select name="installments" style="width: 100%; padding: 10px;">
                             <option value="1">1x (À vista)</option>
                             <option value="2">2x</option>
@@ -412,6 +422,59 @@
             // ou mantém o último cálculo se quiser.
         }
     }
+
+    const form = document.getElementById('paymentForm');
+
+    form.addEventListener('submit', async function(e) {
+        // Se for PIX ou Retirada, deixa passar normal
+        const method = document.querySelector('input[name="paymentMethod"]:checked').value;
+        if (method !== 'credit_card') return;
+
+        e.preventDefault(); // PAUSA O ENVIO DO FORMULÁRIO
+
+        const btn = document.querySelector('.btn-finish');
+        btn.innerText = 'Processando Segurança...';
+        btn.disabled = true;
+
+        try {
+            // 1. Pede a chave pro servidor
+            const response = await fetch('/api/pagseguro-key');
+            const data = await response.json();
+            const publicKey = data.key;
+
+            // 2. Pega os dados sensíveis (que não têm name)
+            const number = document.getElementById('cc-number').value.replace(/\s/g, '');
+            const cvv = document.getElementById('cc-cvv').value;
+            const exp = document.getElementById('cc-exp').value; // MM/AA
+            const [mes, ano] = exp.split('/');
+
+            // 3. Monta o JSON para criptografar
+            const cardData = {
+                number: number,
+                security_code: cvv,
+                exp_month: mes,
+                exp_year: "20" + ano,
+                holder: { name: document.getElementsByName('cardHolder')[0].value }
+            };
+
+            // 4. Criptografa usando a biblioteca JSEncrypt
+            const encrypt = new JSEncrypt();
+            encrypt.setPublicKey(publicKey);
+            const encrypted = encrypt.encrypt(JSON.stringify(cardData));
+
+            // 5. Coloca no campo escondido
+            document.getElementById('encryptedCardInput').value = encrypted;
+
+            // 6. Envia o formulário de verdade
+            form.submit();
+
+        } catch (error) {
+            console.error(error);
+            alert("Erro na segurança do cartão. Verifique os dados.");
+            btn.innerText = 'Finalizar Pedido';
+            btn.disabled = false;
+        }
+    });
 </script>
 </body>
 </html>

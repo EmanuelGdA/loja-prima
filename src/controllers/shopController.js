@@ -269,41 +269,51 @@ exports.postOrder = async (req, res) => {
             return res.render('shop/success-pix', { pageTitle: 'Pagar com PIX', path: '', qrCodeImage, pixCode: pixData.qrCodeText, total: finalTotalPrice });
 
         } else {
-            // === LÓGICA DO CARTÃO (Aqui estava o risco de crash) ===
+            // === LÓGICA DO CARTÃO DE CRÉDITO (CRIPTOGRAFADO) ===
             
-            // Proteção contra data vazia
-            if (!req.body.cardExpiration || !req.body.cardExpiration.includes('/')) {
-                throw new Error("Data de validade do cartão inválida. Use MM/AA.");
+            // 1. Recebe os dados do formulário
+            // O número e CVV não chegam mais aqui, chega apenas o hash criptografado
+            const encryptedCard = req.body.encryptedCard;
+            const holder = req.body.cardHolder;
+            const installments = req.body.installments;
+
+            // Validação de segurança
+            if (!encryptedCard) {
+                throw new Error("Falha na criptografia. Por favor, tente novamente.");
             }
 
-            const cardData = {
-                number: req.body.cardNumber,
-                holder: req.body.cardHolder,
-                expiration: req.body.cardExpiration, // Ex: "12/30"
-                cvv: req.body.cardCvv,
-                installments: req.body.installments || 1
-            };
-
-            // Chama o serviço (que agora tem os logs internos também)
+            // 2. Chama o serviço passando o código criptografado
             const cardResult = await paymentService.processarCartaoPagSeguro(
                 { id: orderId, totalPrice: finalTotalPrice }, 
-                { ...user, phone }, // Envia usuário com telefone
+                { ...user, phone }, 
                 cpf, 
-                cardData
+                encryptedCard, // O código seguro
+                holder,
+                installments
             );
 
+            // 3. Verifica o resultado
             if (cardResult.status === 'PAID' || cardResult.status === 'AUTHORIZED') {
-                await orderRef.update({ status: 'Pago / Aprovado', pagseguroId: cardResult.id });
+                // SUCESSO
+                await orderRef.update({ 
+                    status: 'Pago / Aprovado', 
+                    pagseguroId: cardResult.id,
+                    paymentMethod: 'Cartão de Crédito'
+                });
                 req.session.cart = null;
                 return res.render('shop/success', { pageTitle: 'Compra Aprovada!', path: '' });
+            
             } else {
-                // Pagamento negado (Mas o código funcionou!)
+                // RECUSADO (Mas o sistema funcionou)
                 await orderRef.update({ status: 'Recusado (' + cardResult.status + ')' });
-                req.flash('error', 'Pagamento não autorizado pelo banco.');
+                
+                // Mostra a mensagem do banco ou uma genérica
+                const msgErro = cardResult.message ? cardResult.message : 'Verifique os dados do cartão.';
+                req.flash('error', 'Pagamento não autorizado: ' + msgErro);
                 return res.redirect('/checkout');
             }
         }
-
+        
     } catch (error) {
         console.error("ERRO NO CHECKOUT (PostOrder):", error);
         req.flash('error', 'Erro ao processar: ' + error.message);
@@ -839,5 +849,15 @@ exports.postPayOrder = async (req, res) => {
         console.error("ERRO REPAGAMENTO:", error);
         req.flash('error', 'Erro ao processar. Tente novamente.');
         res.redirect('/pagar-pedido/' + orderId);
+    }
+};
+
+// API para o navegador pegar a chave pública de segurança
+exports.getPagSeguroKey = async (req, res) => {
+    try {
+        const key = await paymentService.getPublicKey();
+        res.json({ key: key });
+    } catch (e) {
+        res.status(500).json({ error: 'Erro ao obter chave' });
     }
 };

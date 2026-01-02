@@ -10,11 +10,33 @@ const buildCustomer = (cliente, cpf) => {
     };
 };
 
+// --- NOVO: BUSCAR CHAVE PÚBLICA PARA CRIPTOGRAFIA ---
+exports.getPublicKey = async () => {
+    try {
+        const config = {
+            headers: {
+                'Authorization': `Bearer ${process.env.PAGSEGURO_TOKEN}`,
+                'Content-Type': 'application/json',
+                'accept': 'application/json'
+            }
+        };
+
+        const url = (process.env.PAGSEGURO_URL || 'https://sandbox.api.pagseguro.com') + '/public-keys';
+        
+        // Cria uma chave nova
+        const response = await axios.post(url, { type: "card" }, config);
+        
+        return response.data.public_key;
+
+    } catch (error) {
+        console.error("Erro ao pegar Chave Pública:", error.response?.data || error.message);
+        throw new Error("Falha na segurança do pagamento.");
+    }
+};
+
 // 1. PIX (Modo Real com Logs - Mantive aqui caso precise)
 exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
-    // ... (mesmo código do pix anterior, mas vamos focar no cartão agora) ...
-    // Se quiser, pode manter a versão simplificada de simulação aqui se não for testar pix agora
-    // Vou colocar a versão real curta:
+    
     try {
         const valorEmCentavos = Math.round(pedido.totalPrice * 100);
         const body = {
@@ -31,15 +53,13 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
     } catch (e) { throw new Error("Erro Pix"); }
 };
 
-// 2. CARTÃO DE CRÉDITO (AQUI É O FOCO!)
-exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cartao) => {
+// 2. CARTÃO DE CRÉDITO (VERSÃO SEGURA - CRIPTOGRAFADA)
+exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, encryptedCard, holder, installments) => {
     try {
-        console.log("--- INICIANDO CARTÃO (LOG PARA HOMOLOGAÇÃO) ---");
+        console.log("--- INICIANDO CARTÃO SEGURO ---");
         
         const valorEmCentavos = Math.round(pedido.totalPrice * 100);
-        const [mes, ano] = cartao.expiration.split('/');
 
-        // Payload do Cartão (Estrutura V4)
         const body = {
             reference_id: pedido.id,
             customer: buildCustomer(cliente, cpf),
@@ -51,14 +71,13 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cartao) => {
                     amount: { value: valorEmCentavos, currency: "BRL" },
                     payment_method: {
                         type: "CREDIT_CARD",
-                        installments: parseInt(cartao.installments),
-                        capture: true, // Cobrar na hora
+                        installments: parseInt(installments),
+                        capture: true,
                         card: {
-                            number: cartao.number.replace(/\s/g, ''),
-                            exp_month: mes,
-                            exp_year: "20" + ano,
-                            security_code: cartao.cvv,
-                            holder: { name: cartao.holder }
+                            // AQUI ESTÁ A MUDANÇA: Não enviamos number/cvv/mes/ano. Enviamos só isso:
+                            encrypted: encryptedCard, 
+                            store: true, // Opcional, pede para salvar se possível
+                            holder: { name: holder }
                         }
                     }
                 }
@@ -74,15 +93,12 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cartao) => {
             }
         };
 
-        // IMPRIMINDO O REQUEST PARA VOCÊ COPIAR
-        console.log("JSON REQUEST CARTAO:", JSON.stringify(body, null, 2));
+        console.log("JSON REQUEST (ENCRYPTED):", JSON.stringify(body, null, 2));
 
-        // URL (Usa Sandbox por enquanto)
-        const url = process.env.PAGSEGURO_URL || 'https://sandbox.api.pagseguro.com';
-        const response = await axios.post(`${url}/orders`, body, config);
+        const url = (process.env.PAGSEGURO_URL || 'https://sandbox.api.pagseguro.com') + '/orders';
+        const response = await axios.post(url, body, config);
         
-        // IMPRIMINDO O RESPONSE
-        console.log("JSON RESPONSE CARTAO:", JSON.stringify(response.data, null, 2));
+        console.log("JSON RESPONSE:", JSON.stringify(response.data, null, 2));
 
         const charge = response.data.charges[0];
         
@@ -93,13 +109,8 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cartao) => {
         };
 
     } catch (error) {
-        console.error("--- ERRO PAGSEGURO CARTÃO ---");
-        if (error.response) {
-            // Se der erro, imprimimos o erro também (eles aceitam log de erro de whitelist)
-            console.error("JSON RESPONSE ERRO:", JSON.stringify(error.response.data, null, 2));
-        } else {
-            console.error(error.message);
-        }
+        console.error("--- ERRO CARTÃO ---");
+        if(error.response) console.error(JSON.stringify(error.response.data, null, 2));
         throw new Error("Erro no processamento do cartão.");
     }
 };
