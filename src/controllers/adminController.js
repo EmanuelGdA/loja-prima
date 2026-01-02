@@ -1,4 +1,5 @@
 const { db } = require('../config/firebase');
+const emailService = require('../services/emailService'); 
 
 // ==========================================
 // 1. FUNÇÕES DE ADICIONAR (JÁ EXISTIAM)
@@ -168,11 +169,33 @@ exports.getOrders = async (req, res) => {
 
 exports.postUpdateStatus = async (req, res) => {
     const { orderId, status, trackingCode } = req.body;
+    
     try {
-        await db.collection('orders').doc(orderId).update({ status: status, trackingCode: trackingCode || '' // Salva o código ou vazio se não tiver 
+        // 1. Busca dados do pedido para pegar o e-mail do cliente
+        const doc = await db.collection('orders').doc(orderId).get();
+        if (!doc.exists) return res.redirect('/admin/pedidos');
+        
+        const orderData = doc.data();
+
+        // 2. Atualiza no Banco
+        await db.collection('orders').doc(orderId).update({ 
+            status: status, 
+            trackingCode: trackingCode || '' 
         });
-        console.log(`Pedido ${orderId} atualizado para ${status}`);
+
+        // 3. Envia E-mail de Aviso (Se o status mudou para algo importante)
+        if (status === 'Aguardando Retirada' || status === 'Enviado') {
+            await emailService.sendOrderStatusEmail(
+                orderData.user.email, 
+                orderData.user.name, 
+                orderId, 
+                status
+            );
+        }
+
+        console.log(`Status atualizado e e-mail enviado: ${status}`);
         res.redirect('/admin/pedidos');
+
     } catch (error) {
         console.log(error);
         res.redirect('/admin/pedidos');

@@ -277,6 +277,7 @@
                                     <select name="status" class="status-select">
                                         <option value="Aguardando Pagamento" <%= order.status.includes('Aguardando') ? 'selected' : '' %>>Aguardando Pagamento</option>
                                         <option value="Pago / Preparando" <%= order.status.includes('Pago') ? 'selected' : '' %>>Pago / Preparando</option>
+                                        <option value="Aguardando Retirada" <%= order.status === 'Aguardando Retirada' ? 'selected' : '' %>>🛍️ Aguardando Retirada</option>
                                         <option value="Enviado" <%= order.status.includes('Enviado') ? 'selected' : '' %>>Enviado</option>
                                         <option value="Entregue" <%= order.status.includes('Entregue') ? 'selected' : '' %>>Entregue</option>
                                         <option value="Cancelado" <%= order.status.includes('Cancelado') ? 'selected' : '' %>>Cancelado</option>
