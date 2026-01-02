@@ -443,30 +443,29 @@
             let publicKey = data.key;
 
             // --- CORREÇÃO OBRIGATÓRIA: FORMATAÇÃO DA CHAVE ---
-            // O JSEncrypt EXIGE que a chave tenha esses cabeçalhos.
-            // Se vier sem, nós adicionamos.
+            // O PagSeguro manda a chave "pelada". O JSEncrypt precisa dela "vestida".
             if (!publicKey.includes('-----BEGIN PUBLIC KEY-----')) {
                 publicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
             }
             // ------------------------------------------------
 
             // 2. Pega os dados sensíveis
-            // Removemos espaços em branco do número do cartão
             const number = document.getElementById('cc-number').value.replace(/\s/g, '');
             const cvv = document.getElementById('cc-cvv').value;
-            const exp = document.getElementById('cc-exp').value; // Formato MM/AA
-            const [mes, ano] = exp.split('/');
+            const exp = document.getElementById('cc-exp').value; // MM/AA
+            
+            // Tratamento da Data
+            const parts = exp.split('/');
+            const mes = parts[0];
+            let ano = parts[1];
+            if (ano.length === 2) ano = "20" + ano; // Garante 2030 em vez de 30
 
             // 3. Monta o JSON para criptografar
-            // AVISO: O 'ano' precisa ser 4 dígitos (2030) e não 2 (30)
-            let fullYear = ano;
-            if (ano.length === 2) fullYear = "20" + ano;
-
             const cardData = {
                 number: number,
                 security_code: cvv,
                 exp_month: mes,
-                exp_year: fullYear,
+                exp_year: ano,
                 holder: { 
                     name: document.getElementsByName('cardHolder')[0].value 
                 }
@@ -478,7 +477,7 @@
             const encrypted = encrypt.encrypt(JSON.stringify(cardData));
 
             if (!encrypted) {
-                throw new Error("Falha ao gerar criptografia. Verifique a chave.");
+                throw new Error("Falha na biblioteca de criptografia.");
             }
 
             // 5. Coloca no campo escondido
@@ -489,7 +488,7 @@
 
         } catch (error) {
             console.error(error);
-            alert("Erro na segurança do pagamento: " + error.message);
+            alert("Erro ao processar segurança. Tente novamente.");
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }
