@@ -200,113 +200,113 @@ exports.getCheckout = (req, res) => {
 
 exports.postOrder = async (req, res) => {
     console.log("--- INICIANDO PEDIDO ---");
+    
+    // 1. LOG DE DEPURAÇÃO (Para ver o que chega do formulário)
+    // Isso vai aparecer no seu terminal e nos logs do Render
+    console.log("MÉTODO:", req.body.paymentMethod);
+    console.log("DADOS RECEBIDOS:", JSON.stringify(req.body, null, 2));
+
     try {
         const user = req.session.user;
         const cart = req.session.cart;
         const paymentMethod = req.body.paymentMethod;
         
-        // 1. CAPTURA E LIMPEZA DE DADOS
+        // Limpeza de CPF e Telefone
         const cpf = req.body.cpf ? req.body.cpf.replace(/\D/g, '') : '';
-        // NOVO: Captura o telefone e limpa formatação
-        const phone = req.body.phone ? req.body.phone.replace(/\D/g, '') : ''; 
-        
+        const phone = req.body.phone ? req.body.phone.replace(/\D/g, '') : '';
+
+        // Frete
         const shippingCost = parseFloat(req.body.shippingCost) || 0;
         const shippingMethod = req.body.shippingMethod || 'A combinar';
 
+        // Validações Básicas
         if (!cart || cart.items.length === 0) return res.redirect('/carrinho');
-        
-        // NOVO: Valida CPF e Telefone
-        if (!cpf || !phone) {
-            req.flash('error', 'CPF e Telefone são obrigatórios para a nota fiscal e envio.');
+        if (!cpf) {
+            req.flash('error', 'CPF é obrigatório.');
             return res.redirect('/checkout');
         }
 
-        // CÁLCULO FINAL (Considerando Descontos e Frete)
+        // Atualiza usuário no banco (se tiver telefone novo)
+        if (user && user.id) {
+             await db.collection('users').doc(user.id).update({ cpf, phone }).catch(() => {});
+        }
+
+        // Cálculo Total
         const priceBase = cart.totalWithDiscount || cart.totalPrice;
         const finalTotalPrice = priceBase + shippingCost;
 
-        // 2. ATUALIZAR USUÁRIO (Salva telefone e CPF para próximas compras)
-        await db.collection('users').doc(user.id).update({
-            cpf: cpf,
-            phone: phone
-        });
-        // Atualiza a sessão atual para não precisar relogar
-        req.session.user.cpf = cpf;
-        req.session.user.phone = phone;
-
-        // 3. MONTAR O PEDIDO
+        // Monta Pedido
         const orderData = {
-            user: { 
-                id: user.id, 
-                email: user.email, 
-                name: user.name, 
-                cpf: cpf, 
-                phone: phone // <--- AGORA O TELEFONE É SALVO NO PEDIDO
-            },
+            user: { id: user.id, email: user.email, name: user.name, cpf, phone },
             items: cart.items,
-            
             subtotal: cart.totalPrice,
             discountTotal: cart.totalWithDiscount || cart.totalPrice,
-            shippingCost: shippingCost,
-            shippingMethod: shippingMethod,
+            shippingCost, shippingMethod,
             couponUsed: cart.coupon ? cart.coupon.code : null,
-            
-            totalPrice: finalTotalPrice, 
-            
+            totalPrice: finalTotalPrice,
             address: {
                 cep: req.body.cep, rua: req.body.rua, numero: req.body.numero,
                 bairro: req.body.bairro, cidade: req.body.cidade, estado: req.body.estado
             },
             date: new Date().toISOString(),
             status: 'Aguardando Pagamento',
-            paymentMethod: paymentMethod
+            paymentMethod: paymentMethod === 'pix' ? 'PIX' : 'Cartão de Crédito'
         };
 
         const orderRef = await db.collection('orders').add(orderData);
         const orderId = orderRef.id;
 
-        // 4. PROCESSAR PAGAMENTO
+        // 3. PAGAMENTO
         if (paymentMethod === 'pix') {
-            
+            // Lógica do Pix
             const pixData = await paymentService.gerarPixPagSeguro(
                 { id: orderId, totalPrice: finalTotalPrice }, 
-                { ...user, phone: phone }, // <--- ENVIA O TELEFONE PRO PAGSEGURO
-                cpf
+                { ...user, phone }, cpf
             );
-
             const qrCodeImage = await QRCode.toDataURL(pixData.qrCodeText);
-
-            await orderRef.update({ 
-                pagseguroId: pixData.id, 
-                pixCode: pixData.qrCodeText, 
-                status: 'Aguardando Pagamento' 
-            });
-
-            req.session.cart = null; 
-
-            // Limpa do banco também
-            await db.collection('users').doc(user.id).update({
-                cart: null
-            });
-            
-            return res.render('shop/success-pix', { 
-                pageTitle: 'Pagar com PIX', 
-                path: '', 
-                qrCodeImage: qrCodeImage, 
-                pixCode: pixData.qrCodeText, 
-                total: finalTotalPrice 
-            });
+            await orderRef.update({ pagseguroId: pixData.id, pixCode: pixData.qrCodeText });
+            req.session.cart = null;
+            return res.render('shop/success-pix', { pageTitle: 'Pagar com PIX', path: '', qrCodeImage, pixCode: pixData.qrCodeText, total: finalTotalPrice });
 
         } else {
-            // LÓGICA DO CARTÃO (Se for implementar agora, lembre de passar o 'phone' aqui também)
-            // ...
-            req.flash('error', 'Cartão indisponível no momento, use PIX.');
-            return res.redirect('/checkout');
+            // === LÓGICA DO CARTÃO (Aqui estava o risco de crash) ===
+            
+            // Proteção contra data vazia
+            if (!req.body.cardExpiration || !req.body.cardExpiration.includes('/')) {
+                throw new Error("Data de validade do cartão inválida. Use MM/AA.");
+            }
+
+            const cardData = {
+                number: req.body.cardNumber,
+                holder: req.body.cardHolder,
+                expiration: req.body.cardExpiration, // Ex: "12/30"
+                cvv: req.body.cardCvv,
+                installments: req.body.installments || 1
+            };
+
+            // Chama o serviço (que agora tem os logs internos também)
+            const cardResult = await paymentService.processarCartaoPagSeguro(
+                { id: orderId, totalPrice: finalTotalPrice }, 
+                { ...user, phone }, // Envia usuário com telefone
+                cpf, 
+                cardData
+            );
+
+            if (cardResult.status === 'PAID' || cardResult.status === 'AUTHORIZED') {
+                await orderRef.update({ status: 'Pago / Aprovado', pagseguroId: cardResult.id });
+                req.session.cart = null;
+                return res.render('shop/success', { pageTitle: 'Compra Aprovada!', path: '' });
+            } else {
+                // Pagamento negado (Mas o código funcionou!)
+                await orderRef.update({ status: 'Recusado (' + cardResult.status + ')' });
+                req.flash('error', 'Pagamento não autorizado pelo banco.');
+                return res.redirect('/checkout');
+            }
         }
 
     } catch (error) {
-        console.error("ERRO CHECKOUT:", error);
-        req.flash('error', 'Erro ao processar pagamento. Verifique os dados.');
+        console.error("ERRO NO CHECKOUT (PostOrder):", error);
+        req.flash('error', 'Erro ao processar: ' + error.message);
         res.redirect('/checkout');
     }
 };
