@@ -440,37 +440,50 @@
             // 1. Pede a chave pro servidor
             const response = await fetch('/api/pagseguro-key');
             const data = await response.json();
-            const publicKey = data.key;
+            let publicKey = data.key;
 
-            // 2. Pega os dados sensíveis (que não têm name)
+            // --- CORREÇÃO IMPORTANTE: FORMATAÇÃO DA CHAVE ---
+            // O JSEncrypt precisa dos cabeçalhos PEM para funcionar direito
+            if (!publicKey.includes('-----BEGIN PUBLIC KEY-----')) {
+                publicKey = `-----BEGIN PUBLIC KEY-----\n${publicKey}\n-----END PUBLIC KEY-----`;
+            }
+            // ------------------------------------------------
+
+            // 2. Pega os dados sensíveis
             const number = document.getElementById('cc-number').value.replace(/\s/g, '');
             const cvv = document.getElementById('cc-cvv').value;
-            const exp = document.getElementById('cc-exp').value; // MM/AA
+            const exp = document.getElementById('cc-exp').value;
             const [mes, ano] = exp.split('/');
 
-            // 3. Monta o JSON para criptografar
+            // 3. Monta o JSON para criptografar (Estrutura V4 exata)
             const cardData = {
                 number: number,
                 security_code: cvv,
                 exp_month: mes,
                 exp_year: "20" + ano,
-                holder: { name: document.getElementsByName('cardHolder')[0].value }
+                holder: { 
+                    name: document.getElementsByName('cardHolder')[0].value 
+                }
             };
 
-            // 4. Criptografa usando a biblioteca JSEncrypt
+            // 4. Criptografa
             const encrypt = new JSEncrypt();
             encrypt.setPublicKey(publicKey);
             const encrypted = encrypt.encrypt(JSON.stringify(cardData));
 
+            if (!encrypted) {
+                throw new Error("Falha ao gerar criptografia. Verifique a chave.");
+            }
+
             // 5. Coloca no campo escondido
             document.getElementById('encryptedCardInput').value = encrypted;
 
-            // 6. Envia o formulário de verdade
+            // 6. Envia
             form.submit();
 
         } catch (error) {
             console.error(error);
-            alert("Erro na segurança do cartão. Verifique os dados.");
+            alert("Erro na segurança do pagamento. Tente novamente.");
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }
