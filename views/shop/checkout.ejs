@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.2.1/jsencrypt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.0.0-rc.1/jsencrypt.min.js"></script>
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/checkout.css">
     <style>
@@ -377,46 +377,72 @@
         btn.disabled = true;
 
         try {
-            // 1. Busca Chave
+            // 1. Pede a chave pro servidor
             const response = await fetch('/api/pagseguro-key');
             const data = await response.json();
-            
-            // 2. Formata Chave (Correção do Erro)
-            const publicKey = formatPublicKey(data.key);
-            console.log("Chave Formatada:", publicKey);
+            let publicKey = data.key;
 
-            // 3. Dados do Cartão
-            const number = document.getElementById('cc-number').value.replace(/\s/g, '');
-            const cvv = document.getElementById('cc-cvv').value;
+            console.log("Chave Original:", publicKey); // Para verificarmos no F12
+
+            // --- TRATAMENTO ROBUSTO DA CHAVE ---
+            // Remove cabeçalhos, rodapés e espaços em branco/quebras de linha
+            const keyContent = publicKey
+                .replace(/-----BEGIN PUBLIC KEY-----/g, '')
+                .replace(/-----END PUBLIC KEY-----/g, '')
+                .replace(/\s+/g, '');
+
+            // Remonta a chave no padrão PEM exato
+            const formattedKey = `-----BEGIN PUBLIC KEY-----\n${keyContent}\n-----END PUBLIC KEY-----`;
+            // ------------------------------------
+
+            // 2. Prepara os dados (LIMPEZA TOTAL)
+            const number = document.getElementById('cc-number').value.replace(/\D/g, ''); // Só números
+            const cvv = document.getElementById('cc-cvv').value.replace(/\D/g, '');
             const exp = document.getElementById('cc-exp').value;
-            const [mes, ano] = exp.split('/');
             
-            // Garante ano com 4 dígitos
-            let fullYear = ano;
-            if (ano.length === 2) fullYear = "20" + ano;
+            const parts = exp.split('/');
+            const mes = parts[0];
+            let ano = parts[1];
+            if (ano.length === 2) ano = "20" + ano;
 
+            const holderName = document.getElementsByName('cardHolder')[0].value.toUpperCase().trim();
+
+            // 3. Monta o Objeto
             const cardData = {
-                number: number,
-                security_code: cvv,
-                exp_month: mes,
-                exp_year: fullYear,
-                holder: { name: document.getElementsByName('cardHolder')[0].value }
+                "number": number,
+                "security_code": cvv,
+                "exp_month": mes,
+                "exp_year": ano,
+                "holder": { 
+                    "name": holderName
+                }
             };
+
+            console.log("Dados antes de criptografar:", cardData); // Debug (não mostra senha real, só no seu F12)
 
             // 4. Criptografa
             const encrypt = new JSEncrypt();
-            encrypt.setPublicKey(publicKey);
+            encrypt.setKey(formattedKey); // Tenta usar setKey que é mais genérico
+            
             const encrypted = encrypt.encrypt(JSON.stringify(cardData));
 
-            if (!encrypted) throw new Error("Falha na biblioteca de criptografia.");
+            if (!encrypted) {
+                // Tenta fallback com setPublicKey se falhar
+                encrypt.setPublicKey(formattedKey);
+                const encrypted2 = encrypt.encrypt(JSON.stringify(cardData));
+                if (!encrypted2) throw new Error("A biblioteca não conseguiu criptografar com esta chave.");
+                
+                document.getElementById('encryptedCardInput').value = encrypted2;
+            } else {
+                document.getElementById('encryptedCardInput').value = encrypted;
+            }
 
             // 5. Envia
-            document.getElementById('encryptedCardInput').value = encrypted;
             form.submit();
 
         } catch (error) {
-            console.error(error);
-            alert("Erro de segurança: " + error.message);
+            console.error("ERRO NO FRONTEND:", error);
+            alert("Erro técnico no pagamento: " + error.message);
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }

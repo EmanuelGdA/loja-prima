@@ -55,15 +55,19 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, encryptedCard, h
                     description: "Compra Loja Maely",
                     amount: { value: valorEmCentavos, currency: "BRL" },
                     payment_method: {
-                        type: "CREDIT_CARD",
-                        installments: parseInt(installments),
-                        capture: true,
-                        card: {
-                            encrypted: encryptedCard, // O HASH QUE O FRONTEND MANDOU
-                            store: false, 
-                            holder: { name: holder }
-                        }
-                    }
+                type: "CREDIT_CARD",
+                installments: parseInt(installments),
+                capture: true,
+                card: {
+                    encrypted: encryptedCard,
+                    store: false
+                }, // Fecha o card aqui
+                holder: { 
+                    name: holder 
+                    // Se tiver CPF do dono do cartão (tax_id), colocaria aqui também, 
+                    // mas em testes sandbox nem sempre precisa se o customer já tem.
+                }
+            }
                 }
             ],
             notification_urls: ["https://loja-prima.onrender.com/api/webhook/pagseguro"]
