@@ -62,21 +62,20 @@
                 </span>
             </div>
 
-            <!-- FORMULÁRIO DE ADICIONAR AO CARRINHO -->
-            <form action="/carrinho" method="POST">
+            <!-- FORMULÁRIO DE ADICIONAR AO CARRINHO (ATUALIZADO) -->
+            <!-- Adicionamos o id="addToCartForm" aqui para o script pegar -->
+            <form action="/carrinho" method="POST" id="addToCartForm">
                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                 <input type="hidden" name="productId" value="<%= product.id %>">
 
-                <!-- SELETOR DE CORES (Dinâmico) -->
+                <!-- SELETOR DE CORES -->
                 <% if (product.colors && product.colors.length > 0) { %>
                     <div class="variation-group">
                         <label class="variation-label">Cor:</label>
                         <div class="color-options">
                             <% product.colors.forEach((cor, index) => { %>
                                 <label class="color-option">
-                                    <!-- A primeira cor vem marcada por padrão -->
                                     <input type="radio" name="color" value="<%= cor %>" <%= index === 0 ? 'checked' : '' %>>
-                                    <!-- Exibe a bolinha colorida -->
                                     <span class="color-circle" style="background-color: <%= cor %>;" title="<%= cor %>"></span>
                                 </label>
                             <% }) %>
@@ -84,14 +83,16 @@
                     </div>
                 <% } %>
 
-                <!-- SELETOR DE TAMANHOS (Dinâmico) -->
+                <!-- SELETOR DE TAMANHOS -->
                 <% if (product.sizes && product.sizes.length > 0) { %>
-                    <div class="variation-group">
+                    <!-- Adicionamos o id="sizeGroup" aqui para fazer ele tremer se der erro -->
+                    <div class="variation-group" id="sizeGroup">
                         <label class="variation-label">Tamanho:</label>
                         <div class="size-options">
                             <% product.sizes.forEach((size, index) => { %>
                                 <label class="size-option">
-                                    <input type="radio" name="size" value="<%= size %>" required>
+                                    <!-- IMPORTANTE: Removemos o 'required' nativo para usar nosso alerta bonito -->
+                                    <input type="radio" name="size" value="<%= size %>">
                                     <span class="size-box"><%= size %></span>
                                 </label>
                             <% }) %>
@@ -99,40 +100,53 @@
                     </div>
                 <% } %>
 
-                <!-- BARRA DE FERRAMENTAS (GUIA + AÇÕES) -->
+                <!-- BARRA DE FERRAMENTAS (Mantida) -->
                 <div class="product-tools">
-                    
-                    <!-- 1. Botão Guia de Medidas (Agora bonito) -->
                     <button type="button" class="btn-tool-guide" onclick="toggleSizeGuide('open')">
                         <i class="fas fa-ruler-horizontal"></i> Guia de Medidas
                     </button>
-
                     <div class="tools-actions">
-                        <!-- 2. Botão Compartilhar -->
                         <button type="button" class="btn-icon-tool" onclick="shareProduct()" title="Compartilhar">
                             <i class="fas fa-share-alt"></i>
                         </button>
-
-                        <!-- 3. Botão Favoritar -->
                         <button type="button" class="btn-icon-tool" id="favBtn" onclick="toggleFavorite('<%= product.id %>')" title="Amar">
                             <i class="far fa-heart" id="favIcon"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- BOTÃO COMPRAR -->
-                <button type="submit" class="btn-add-cart" 
-                    style="width: 100%; background: #000; color: white; padding: 15px; border: none; font-weight: bold; cursor: pointer; text-transform: uppercase;">
-                    Adicionar à Sacola
+                <!-- LOGICA DE ESTOQUE (Mantida) -->
+                <% if (product.stock > 0 && product.stock <= 5) { %>
+                    <div class="stock-warning">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Corra! Restam apenas <%= product.stock %> unidades.
+                    </div>
+                <% } else if (product.stock === 0) { %>
+                    <div class="stock-warning" style="color: #666;">
+                        <i class="fas fa-ban"></i> Produto Esgotado
+                    </div>
+                <% } %>
+
+                <!-- BOTÃO COMPRAR (Visual Novo com Ícone) -->
+                <button type="submit" class="btn-add-cart">
+                    <i class="fas fa-shopping-bag"></i> ADICIONAR À SACOLA
                 </button>
                 
-            </form>
+                <!-- BOTÃO WHATSAPP DO PRODUTO (Mantido) -->
+                <button type="button" id="btnZapProduct" class="btn-whatsapp-product">
+                    <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
+                    Dúvidas? Chame no WhatsApp
+                </button>
 
-            <!-- BOTÃO ZAP PRODUTO -->
-            <button type="button" id="btnZapProduct" class="btn-whatsapp-product">
-    <i class="fab fa-whatsapp" style="font-size: 16px;"></i>
-    Dúvidas? Chame no WhatsApp
-</button>
+                <!-- AVISO DE POSTAGEM (Mantido) -->
+                <div class="handling-time-box">
+                    <i class="fas fa-shipping-fast"></i>
+                    <div>
+                        <strong>Prazo de Postagem:</strong><br>
+                        Enviamos seu pedido em até 2 dias úteis após a confirmação do pagamento.
+                    </div>
+                </div>
+            </form>
 
             <!-- Script para montar a mensagem automática -->
             <script>
@@ -361,23 +375,72 @@
                 return;
             }
 
-            // Monta a lista de fretes
-            let html = '<ul style="list-style: none; padding: 0;">';
+            // --- NOVO DESIGN: LISTA CLEAN COM ÍCONES ---
+            let html = '<div style="margin-top: 20px; border-top: 1px solid #eee;">';
+
             opcoes.forEach(op => {
+                // 1. Define o Ícone baseado no tipo de entrega
+                let icon = 'fa-truck'; // Padrão (Caminhão)
+                let iconColor = '#f5f5f5'; // Fundo Cinza
+                let iconTextColor = '#666';
+
+                if (op.nome.toLowerCase().includes('retirar')) {
+                    icon = 'fa-store'; // Loja
+                    iconColor = '#e8f5e9'; // Fundo Verde Claro
+                    iconTextColor = '#2f855a';
+                } else if (op.nome.toLowerCase().includes('motoboy') || op.nome.toLowerCase().includes('expressa')) {
+                    icon = 'fa-motorcycle'; // Moto
+                    iconColor = '#fff3e0'; // Fundo Laranja Claro
+                    iconTextColor = '#e67e22';
+                }
+
+                // 2. Formata o Prazo
+                let prazoTexto = (op.prazo === '0' || op.prazo === 0) 
+                    ? 'Disponível hoje' 
+                    : `Chega em ${op.prazo} dia${op.prazo > 1 ? 's' : ''}`;
+
+                // 3. Formata o Preço
+                let precoTexto = op.preco === 0 
+                    ? '<span style="color: #27ae60;">Grátis</span>' 
+                    : `R$ ${op.preco.toFixed(2).replace('.', ',')}`;
+
+                // 4. Monta o HTML do Item
                 html += `
-                    <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <img src="${op.logo}" height="20" alt="${op.nome}" style="max-width: 50px;">
-                            <span style="font-size: 13px;">${op.nome}</span>
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid #eee;">
+                        
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <!-- Ícone Redondo -->
+                            <div style="
+                                width: 40px; height: 40px; border-radius: 50%; 
+                                background-color: ${iconColor}; color: ${iconTextColor};
+                                display: flex; align-items: center; justify-content: center;
+                                font-size: 16px;
+                            ">
+                                <i class="fas ${icon}"></i>
+                            </div>
+
+                            <!-- Textos -->
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-weight: 600; font-size: 13px; color: #333; text-transform: uppercase;">
+                                    ${op.nome}
+                                </span>
+                                <span style="font-size: 11px; color: #999; margin-top: 2px;">
+                                    ${prazoTexto}
+                                </span>
+                            </div>
                         </div>
-                        <div style="text-align: right;">
-                            <strong>R$ ${op.preco.toFixed(2).replace('.', ',')}</strong><br>
-                            <small style="color: #666;">${op.prazo} dias úteis</small>
+
+                        <!-- Preço na Direita -->
+                        <div style="font-weight: 700; font-size: 14px; color: #000;">
+                            ${precoTexto}
                         </div>
-                    </li>
+                    </div>
                 `;
             });
-            html += '</ul>';
+
+            html += '</div>';
+            
+            // Coloca na tela
             resultadoDiv.innerHTML = html;
 
         } catch (error) {
@@ -599,5 +662,40 @@
             }
         }
     </script>
+
+    <!-- ALERTA FLUTUANTE (TOAST) -->
+    <div id="toast-warning"><i class="fas fa-exclamation-circle"></i> Por favor, selecione um tamanho.</div>
+
+    <script>
+        // SCRIPT DE VALIDAÇÃO DE TAMANHO
+        document.getElementById('addToCartForm').addEventListener('submit', function(e) {
+            // Verifica se existem tamanhos para escolher
+            const sizeContainer = document.getElementById('sizeGroup');
+            
+            if (sizeContainer) {
+                // Tenta achar um tamanho marcado
+                const sizeSelected = document.querySelector('input[name="size"]:checked');
+                
+                if (!sizeSelected) {
+                    e.preventDefault(); // CANCELA O ENVIO (Não recarrega a página)
+                    
+                    // 1. Mostra o Alerta (Toast)
+                    const toast = document.getElementById("toast-warning");
+                    toast.className = "show";
+                    setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000); // Some depois de 3s
+                    
+                    // 2. Faz a área de tamanhos tremer (Shake effect)
+                    sizeContainer.classList.add('shake-animation');
+                    setTimeout(() => {
+                        sizeContainer.classList.remove('shake-animation');
+                    }, 500); // Remove a classe depois que tremer
+                }
+            }
+        });
+        
+        // ... (seus outros scripts de zoom e whats continuam aqui) ...
+    </script>
+
+
 </body>
 </html>

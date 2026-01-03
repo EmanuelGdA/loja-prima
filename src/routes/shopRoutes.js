@@ -13,6 +13,8 @@ router.post('/produto/avaliar', shopController.postReview);
 router.get('/carrinho', shopController.getCart);
 router.post('/carrinho', shopController.postCart); // Quando clica em "Comprar"
 router.post('/carrinho-delete', shopController.postCartDeleteProduct); // Remover item
+router.post('/carrinho/aumentar', shopController.postCartIncrease);
+router.post('/carrinho/diminuir', shopController.postCartDecrease);
 router.post('/carrinho/cupom', shopController.postApplyCoupon);
 router.post('/carrinho/remover-cupom', shopController.postRemoveCoupon);
 

@@ -5,6 +5,50 @@
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/checkout.css">
     <style>
+        /* --- ESTILO NOVO DAS OPÇÕES DE FRETE --- */
+        .shipping-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: white;
+        }
+
+        .shipping-option:hover {
+            border-color: #aaa;
+            background-color: #fcfcfc;
+        }
+
+        /* Quando selecionado (Input Radio dentro do label) */
+        .shipping-option:has(input:checked) {
+            border-color: black;
+            background-color: #f9f9f9;
+            box-shadow: 0 0 0 1px black;
+        }
+
+        .option-left { display: flex; align-items: center; gap: 12px; }
+        
+        /* Círculo do ícone */
+        .icon-box {
+            width: 35px; height: 35px;
+            border-radius: 50%;
+            background-color: #f0f0f0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .option-details { display: flex; flex-direction: column; }
+        .option-name { font-weight: 600; font-size: 13px; color: #333; }
+        .option-prazo { font-size: 11px; color: #777; }
+        
+        .option-price { font-weight: 700; font-size: 14px; color: #000; }
+
         .payment-methods { display: flex; gap: 10px; margin-bottom: 15px; }
         .method-option { 
             flex: 1; border: 1px solid #ccc; padding: 15px; border-radius: 4px; 
@@ -291,18 +335,60 @@
             
             if (opcoes.error || opcoes.length === 0) { listaDiv.innerHTML = 'Sem entrega.'; return; }
 
+            // Monta os botões de escolha (ESTILO NOVO)
             let html = '';
+            
             opcoes.forEach((op, index) => {
                 const checked = index === 0 ? 'checked' : '';
-                if(index === 0) selecionarFrete(op.preco, op.nome);
-                html += `<label style="display:flex; justify-content:space-between; padding:10px; border:1px solid #ddd; margin-bottom:5px;">
-                            <div style="display:flex; gap:10px;">
-                                <input type="radio" name="freteRadio" ${checked} onchange="selecionarFrete(${op.preco}, '${op.nome}')">
-                                <img src="${op.logo}" height="20"> <span>${op.nome}</span>
+                if(index === 0) selecionarFrete(op.preco, op.nome); 
+
+                // 1. Lógica para escolher Ícone ou Imagem
+                let iconHTML = '';
+                
+                // Se for Correios ou Loggi (tem URL de logo), usa a imagem
+                if (op.logo && op.logo.startsWith('http')) {
+                    iconHTML = `<img src="${op.logo}" style="height: 15px; width: auto;">`;
+                } 
+                // Se for Retirada
+                else if (op.nome.toLowerCase().includes('retirar')) {
+                    iconHTML = '<i class="fas fa-store"></i>';
+                }
+                // Se for Motoboy
+                else if (op.nome.toLowerCase().includes('moto') || op.nome.toLowerCase().includes('expressa')) {
+                    iconHTML = '<i class="fas fa-motorcycle"></i>';
+                }
+                // Padrão
+                else {
+                    iconHTML = '<i class="fas fa-truck"></i>';
+                }
+
+                // Ajuste texto prazo
+                let prazoTxt = op.prazo == 0 ? 'Entrega Hoje/Amanhã' : `${op.prazo} dias úteis`;
+                if(op.id === 'local_retirada') prazoTxt = 'Disponível Imediatamente';
+
+                html += `
+                    <label class="shipping-option">
+                        <div class="option-left">
+                            <input type="radio" name="freteRadio" ${checked} 
+                                onchange="selecionarFrete(${op.preco}, '${op.nome}')" style="accent-color: black;">
+                            
+                            <div class="icon-box">
+                                ${iconHTML}
                             </div>
-                            <div><strong>R$ ${op.preco.toFixed(2).replace('.', ',')}</strong></div>
-                        </label>`;
+                            
+                            <div class="option-details">
+                                <span class="option-name">${op.nome}</span>
+                                <span class="option-prazo">${prazoTxt}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="option-price">
+                            ${op.preco === 0 ? '<span style="color:#27ae60">Grátis</span>' : 'R$ ' + op.preco.toFixed(2).replace('.', ',')}
+                        </div>
+                    </label>
+                `;
             });
+            
             listaDiv.innerHTML = html;
         } catch (error) { console.error(error); listaDiv.innerHTML = 'Erro no frete.'; }
     }

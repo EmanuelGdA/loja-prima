@@ -861,3 +861,76 @@ exports.getPagSeguroKey = async (req, res) => {
         res.status(500).json({ error: 'Erro chave' });
     }
 };
+
+
+// ==========================================
+// 14. CONTROLE DE QUANTIDADE (+/-)
+// ==========================================
+
+// AUMENTAR QUANTIDADE
+exports.postCartIncrease = async (req, res) => {
+    const { productId, size, color } = req.body;
+    const cart = req.session.cart;
+    if (!cart) return res.redirect('/carrinho');
+
+    // Acha o item exato
+    const itemIndex = cart.items.findIndex(i => i.productId === productId && i.size === size && (i.color || '') === color);
+
+    if (itemIndex >= 0) {
+        cart.items[itemIndex].qty += 1;
+        cart.totalQty += 1;
+        cart.totalPrice += parseFloat(cart.items[itemIndex].price);
+        
+        // Recalcula desconto se tiver cupom
+        if (cart.coupon) {
+            const factor = (100 - cart.coupon.percent) / 100;
+            cart.totalWithDiscount = cart.totalPrice * factor;
+        }
+
+        await salvarCarrinhoNoBanco(req, cart); // Função auxiliar ou código direto
+    }
+    
+    req.session.save(() => res.redirect('/carrinho'));
+};
+
+// DIMINUIR QUANTIDADE
+exports.postCartDecrease = async (req, res) => {
+    const { productId, size, color } = req.body;
+    const cart = req.session.cart;
+    if (!cart) return res.redirect('/carrinho');
+
+    const itemIndex = cart.items.findIndex(i => i.productId === productId && i.size === size && (i.color || '') === color);
+
+    if (itemIndex >= 0) {
+        const item = cart.items[itemIndex];
+        
+        if (item.qty > 1) {
+            item.qty -= 1;
+            cart.totalQty -= 1;
+            cart.totalPrice -= parseFloat(item.price);
+        } else {
+            // Se for 1 e diminuir, remove o item? 
+            // Geralmente sim, ou bloqueia. Vamos remover:
+            cart.totalQty -= 1;
+            cart.totalPrice -= parseFloat(item.price);
+            cart.items.splice(itemIndex, 1);
+        }
+
+        // Recalcula cupom
+        if (cart.coupon) {
+            const factor = (100 - cart.coupon.percent) / 100;
+            cart.totalWithDiscount = cart.totalPrice * factor;
+        }
+
+        await salvarCarrinhoNoBanco(req, cart);
+    }
+
+    req.session.save(() => res.redirect('/carrinho'));
+};
+
+// Pequena função auxiliar para não repetir código de banco
+async function salvarCarrinhoNoBanco(req, cart) {
+    if (req.session.user) {
+        await db.collection('users').doc(req.session.user.id).update({ cart: cart }).catch(() => {});
+    }
+}
