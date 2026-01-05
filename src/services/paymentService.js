@@ -19,8 +19,18 @@ exports.getPublicKey = async () => {
                 'Content-Type': 'application/json'
             }
         };
-        const url = process.env.PAGSEGURO_URL + '/public-keys';
+        const url = (process.env.PAGSEGURO_URL || 'https://sandbox.api.pagseguro.com') + '/public-keys';
+        
+        // Estamos pedindo a chave aqui
         const response = await axios.post(url, { type: "card" }, config);
+
+        // --- ADICIONE ISTO AQUI ---
+        console.log("\n========================================");
+        console.log(">>> A CHAVE PÚBLICA QUE O PAGSEGURO MANDOU É:");
+        console.log(response.data.public_key);
+        console.log("========================================\n");
+        // --------------------------
+        
         return response.data.public_key;
     } catch (error) {
         console.error("Erro Chave Pública:", error.message);
