@@ -180,16 +180,18 @@
                 
                 <div class="payment-methods">
                     <label class="method-option">
+                        <!-- Clicou aqui, manda 'pix' pro script -->
                         <input type="radio" name="paymentMethod" value="pix" checked onclick="togglePayment('pix')">
                         <span><i class="fab fa-pix"></i> PIX</span>
                     </label>
                     <label class="method-option">
-                        <input type="radio" name="paymentMethod" value="credit_card" onclick="togglePayment('card')">
+                        <!-- CORREÇÃO: Clicou aqui, manda 'credit_card' pro script -->
+                        <input type="radio" name="paymentMethod" value="credit_card" onclick="togglePayment('credit_card')">
                         <span><i class="far fa-credit-card"></i> Cartão</span>
                     </label>
                 </div>
 
-                <!-- Formulário do Cartão (Criptografia no Front-End) -->
+                <!-- Formulário do Cartão (Confirme se o ID está card-form) -->
                 <div id="card-form" style="display: none; background: white; padding: 20px; border-radius: 4px; margin-top: 15px; border: 1px solid #eee;">
                     
                     <!-- CAMPO SECRETO: Aqui vai o código criptografado que o servidor vai ler -->
@@ -317,12 +319,18 @@
     function togglePayment(method) {
         const cardForm = document.getElementById('card-form');
         const inputs = cardForm.querySelectorAll('input, select');
-        if (method === 'credit_card') {
-            cardForm.style.display = 'block';
-            // inputs.forEach(i => i.setAttribute('required', 'true')); // Opcional: validação manual é melhor com MP
+        
+        // Verifica se é cartão (aceita tanto 'card' quanto 'credit_card' pra garantir)
+        if (method === 'credit_card' || method === 'card') {
+            cardForm.style.display = 'block'; // Mostra o formulário
+            
+            // Torna os campos obrigatórios para o navegador validar
+            inputs.forEach(i => i.setAttribute('required', 'true'));
         } else {
-            cardForm.style.display = 'none';
-            // inputs.forEach(i => i.removeAttribute('required'));
+            cardForm.style.display = 'none'; // Esconde
+            
+            // Remove a obrigatoriedade (senão não dá pra pagar com Pix)
+            inputs.forEach(i => i.removeAttribute('required'));
         }
     }
 
