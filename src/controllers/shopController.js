@@ -267,49 +267,30 @@ exports.postOrder = async (req, res) => {
             await orderRef.update({ pagseguroId: pixData.id, pixCode: pixData.qrCodeText });
             req.session.cart = null;
             return res.render('shop/success-pix', { pageTitle: 'Pagar com PIX', path: '', qrCodeImage, pixCode: pixData.qrCodeText, total: finalTotalPrice });
-
         } else {
-            // === LÓGICA DO CARTÃO DE CRÉDITO (CRIPTOGRAFADO) ===
-            
-            // 1. Recebe os dados do formulário
-            // O número e CVV não chegam mais aqui, chega apenas o hash criptografado
-            const encryptedCard = req.body.encryptedCard;
-            const holder = req.body.cardHolder;
+            // --- CARTÃO MERCADO PAGO ---
+            const cardToken = req.body.cardToken;
+            const paymentMethodId = req.body.paymentMethodId; // ex: visa
             const installments = req.body.installments;
 
-            // Validação de segurança
-            if (!encryptedCard) {
-                throw new Error("Falha na criptografia. Por favor, tente novamente.");
-            }
+            if (!cardToken) throw new Error("Erro ao processar cartão (Token inválido).");
 
-            // 2. Chama o serviço passando o código criptografado
             const cardResult = await paymentService.processarCartaoPagSeguro(
                 { id: orderId, totalPrice: finalTotalPrice }, 
-                { ...user, phone }, 
+                user, 
                 cpf, 
-                encryptedCard, // O código seguro
-                holder,
-                installments
+                cardToken, 
+                installments,
+                paymentMethodId
             );
 
-            // 3. Verifica o resultado
-            if (cardResult.status === 'PAID' || cardResult.status === 'AUTHORIZED') {
-                // SUCESSO
-                await orderRef.update({ 
-                    status: 'Pago / Aprovado', 
-                    pagseguroId: cardResult.id,
-                    paymentMethod: 'Cartão de Crédito'
-                });
+            if (cardResult.status === 'Pago / Aprovado') {
+                await orderRef.update({ status: 'Pago / Aprovado', pagseguroId: cardResult.id });
                 req.session.cart = null;
                 return res.render('shop/success', { pageTitle: 'Compra Aprovada!', path: '' });
-            
             } else {
-                // RECUSADO (Mas o sistema funcionou)
-                await orderRef.update({ status: 'Recusado (' + cardResult.status + ')' });
-                
-                // Mostra a mensagem do banco ou uma genérica
-                const msgErro = cardResult.message ? cardResult.message : 'Verifique os dados do cartão.';
-                req.flash('error', 'Pagamento não autorizado: ' + msgErro);
+                await orderRef.update({ status: 'Recusado' });
+                req.flash('error', 'Pagamento não aprovado. Motivo: ' + (cardResult.message || 'Banco recusou'));
                 return res.redirect('/checkout');
             }
         }

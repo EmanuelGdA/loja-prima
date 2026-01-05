@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.0.0-rc.1/jsencrypt.min.js"></script>
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/checkout.css">
     <style>
@@ -82,6 +82,10 @@
     <main class="checkout-container">
         
         <form action="/criar-pedido" method="POST" class="checkout-form" id="paymentForm">
+            <!-- Inputs ocultos para o Mercado Pago -->
+            <input type="hidden" name="cardToken" id="cardToken">
+            <input type="hidden" name="paymentMethodId" id="paymentMethodId">
+            <input type="hidden" name="issuerId" id="issuerId">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <!-- Campos que guardam o frete escolhido para enviar pro servidor -->
             <input type="hidden" name="shippingCost" id="shippingCostInput" value="0">
@@ -284,23 +288,77 @@
         </form>
     </main>
 
-    <script>
+   
+
+<script>
+    // --- 1. CONFIGURAÇÕES E VARIÁVEIS GLOBAIS ---
+    const mp = new MercadoPago('COLE_SUA_PUBLIC_KEY_AQUI'); // <--- COLOQUE SUA CHAVE AQUI
+    
+    // Pega o valor total do EJS
     const cartSubtotal = parseFloat('<%= (cart.totalWithDiscount || cart.totalPrice) %>');
 
-    // Funções de Máscara
-    function maskPhone(input) {
-        let v = input.value.replace(/\D/g,'');
-        v = v.replace(/^(\d{2})(\d)/g,"($1) $2");
-        v = v.replace(/(\d)(\d{4})$/,"$1-$2");
-        input.value = v;
+    // --- 2. FUNÇÕES AUXILIARES (Máscaras e Abas) ---
+    
+    function maskPhone(i) {
+        let v = i.value.replace(/\D/g, '');
+        v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
+        v = v.replace(/(\d)(\d{4})$/, "$1-$2");
+        i.value = v;
     }
-    function maskCPF(input) {
-        let v = input.value.replace(/\D/g,'');
-        v = v.replace(/(\d{3})(\d)/,"$1.$2");
-        v = v.replace(/(\d{3})(\d)/,"$1.$2");
-        v = v.replace(/(\d{3})(\d{1,2})$/,"$1-$2");
-        input.value = v;
+
+    function maskCPF(i) {
+        let v = i.value.replace(/\D/g, '');
+        v = v.replace(/(\d{3})(\d)/, "$1.$2");
+        v = v.replace(/(\d{3})(\d)/, "$1.$2");
+        v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        i.value = v;
     }
+
+    function togglePayment(method) {
+        const cardForm = document.getElementById('card-form');
+        const inputs = cardForm.querySelectorAll('input, select');
+        if (method === 'credit_card') {
+            cardForm.style.display = 'block';
+            // inputs.forEach(i => i.setAttribute('required', 'true')); // Opcional: validação manual é melhor com MP
+        } else {
+            cardForm.style.display = 'none';
+            // inputs.forEach(i => i.removeAttribute('required'));
+        }
+    }
+
+    function toggleDeliveryMode(mode) {
+        const addressForm = document.getElementById('shipping-address-form');
+        const pickupBox = document.getElementById('pickup-box');
+        const freteOptions = document.getElementById('frete-options');
+        const addressInputs = addressForm.querySelectorAll('input');
+
+        const costInput = document.getElementById('shippingCostInput');
+        const methodInput = document.getElementById('shippingMethodInput');
+        const freteVisual = document.getElementById('valorFreteVisual');
+        const totalVisual = document.getElementById('totalFinalDisplay');
+
+        if (mode === 'pickup') {
+            addressForm.style.display = 'none';
+            if (freteOptions) freteOptions.style.display = 'none';
+            pickupBox.style.display = 'block';
+            addressInputs.forEach(i => i.removeAttribute('required'));
+
+            costInput.value = 0;
+            methodInput.value = 'Retirar na Loja';
+            if (freteVisual) freteVisual.innerText = 'Grátis';
+            if (totalVisual) totalVisual.innerText = 'R$ ' + cartSubtotal.toFixed(2).replace('.', ',');
+
+        } else {
+            addressForm.style.display = 'block';
+            pickupBox.style.display = 'none';
+            if (document.getElementById('lista-frete').innerHTML.trim() !== '') {
+                if (freteOptions) freteOptions.style.display = 'block';
+            }
+            addressInputs.forEach(i => i.setAttribute('required', 'true'));
+        }
+    }
+
+    // --- 3. LÓGICA DE FRETE (Melhor Envio) ---
 
     function buscarCep() {
         const cep = document.getElementById('cep').value.replace(/\D/g, '');
@@ -314,7 +372,9 @@
                         document.getElementById('cidade').value = data.localidade;
                         document.getElementById('estado').value = data.uf;
                         calcularFreteCarrinho(cep);
-                    } else { alert("CEP não encontrado."); }
+                    } else {
+                        alert("CEP não encontrado.");
+                    }
                 });
         }
     }
@@ -329,206 +389,105 @@
             const response = await fetch('/api/frete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'CSRF-Token': '<%= csrfToken %>' },
-                body: JSON.stringify({ cep: cep }) 
+                body: JSON.stringify({ cep: cep })
             });
             const opcoes = await response.json();
-            
-            if (opcoes.error || opcoes.length === 0) { listaDiv.innerHTML = 'Sem entrega.'; return; }
 
-            // Monta os botões de escolha (ESTILO NOVO)
-            let html = '';
-            
+            if (opcoes.error || opcoes.length === 0) {
+                listaDiv.innerHTML = 'Sem entrega para este CEP.';
+                return;
+            }
+
+            let html = '<div style="background-color:#F8D7DA; border-radius:8px; overflow:hidden; font-family:Montserrat,sans-serif; margin-top:15px;">';
             opcoes.forEach((op, index) => {
                 const checked = index === 0 ? 'checked' : '';
-                if(index === 0) selecionarFrete(op.preco, op.nome); 
-
-                // 1. Lógica para escolher Ícone ou Imagem
-                let iconHTML = '';
+                if (index === 0) selecionarFrete(op.preco, op.nome);
                 
-                // Se for Correios ou Loggi (tem URL de logo), usa a imagem
-                if (op.logo && op.logo.startsWith('http')) {
-                    iconHTML = `<img src="${op.logo}" style="height: 15px; width: auto;">`;
-                } 
-                // Se for Retirada
-                else if (op.nome.toLowerCase().includes('retirar')) {
-                    iconHTML = '<i class="fas fa-store"></i>';
-                }
-                // Se for Motoboy
-                else if (op.nome.toLowerCase().includes('moto') || op.nome.toLowerCase().includes('expressa')) {
-                    iconHTML = '<i class="fas fa-motorcycle"></i>';
-                }
-                // Padrão
-                else {
-                    iconHTML = '<i class="fas fa-truck"></i>';
-                }
+                let border = index < opcoes.length - 1 ? 'border-bottom: 2px solid white;' : '';
+                let prazo = (op.prazo == 0) ? 'Hoje' : op.prazo + ' dias';
+                if(op.id.includes('retirada')) prazo = 'Imediato';
 
-                // Ajuste texto prazo
-                let prazoTxt = op.prazo == 0 ? 'Entrega Hoje/Amanhã' : `${op.prazo} dias úteis`;
-                if(op.id === 'local_retirada') prazoTxt = 'Disponível Imediatamente';
+                let nomeFrete = op.nome; 
+                if(op.nome.includes('Correios')) nomeFrete = 'Correios SEDEX';
 
-                html += `
-                    <label class="shipping-option">
-                        <div class="option-left">
-                            <input type="radio" name="freteRadio" ${checked} 
-                                onchange="selecionarFrete(${op.preco}, '${op.nome}')" style="accent-color: black;">
-                            
-                            <div class="icon-box">
-                                ${iconHTML}
+                html += `<label style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; ${border} color:#333; font-size:13px; cursor:pointer;">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <input type="radio" name="freteRadio" ${checked} onchange="selecionarFrete(${op.preco}, '${op.nome}')" style="accent-color:black;"> 
+                                <span style="font-weight:600">${nomeFrete}</span>
                             </div>
-                            
-                            <div class="option-details">
-                                <span class="option-name">${op.nome}</span>
-                                <span class="option-prazo">${prazoTxt}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="option-price">
-                            ${op.preco === 0 ? '<span style="color:#27ae60">Grátis</span>' : 'R$ ' + op.preco.toFixed(2).replace('.', ',')}
-                        </div>
-                    </label>
-                `;
+                            <div style="text-align:center; font-size:12px;">${prazo}</div>
+                            <div style="font-weight:700;">R$ ${op.preco.toFixed(2).replace('.', ',')}</div>
+                         </label>`;
             });
-            
+            html += '</div>';
             listaDiv.innerHTML = html;
-        } catch (error) { console.error(error); listaDiv.innerHTML = 'Erro no frete.'; }
+        } catch (error) {
+            console.error(error);
+            listaDiv.innerHTML = 'Erro no frete.';
+        }
     }
 
     function selecionarFrete(valor, nome) {
         document.getElementById('shippingCostInput').value = valor;
         document.getElementById('shippingMethodInput').value = nome;
         const freteVisual = document.getElementById('valorFreteVisual');
-        if(freteVisual) freteVisual.innerText = 'R$ ' + valor.toFixed(2).replace('.', ',');
+        if (freteVisual) freteVisual.innerText = 'R$ ' + valor.toFixed(2).replace('.', ',');
         const totalVisual = document.getElementById('totalFinalDisplay');
-        if(totalVisual) {
+        if (totalVisual) {
             const novoTotal = cartSubtotal + valor;
             totalVisual.innerText = 'R$ ' + novoTotal.toFixed(2).replace('.', ',');
         }
     }
 
-    function togglePayment(method) {
-        const cardForm = document.getElementById('card-form');
-        const inputs = cardForm.querySelectorAll('input, select');
-        if (method === 'card') {
-            cardForm.style.display = 'block';
-            inputs.forEach(i => i.setAttribute('required', 'true'));
-        } else {
-            cardForm.style.display = 'none';
-            inputs.forEach(i => i.removeAttribute('required'));
-        }
-    }
 
-    function toggleDeliveryMode(mode) {
-        const addressForm = document.getElementById('shipping-address-form');
-        const pickupBox = document.getElementById('pickup-box');
-        const freteOptions = document.getElementById('frete-options'); 
-        const addressInputs = addressForm.querySelectorAll('input');
-        
-        if (mode === 'pickup') {
-            addressForm.style.display = 'none';
-            if(freteOptions) freteOptions.style.display = 'none';
-            pickupBox.style.display = 'block';
-            addressInputs.forEach(input => input.removeAttribute('required'));
-            selecionarFrete(0, 'Retirar na Loja');
-        } else {
-            addressForm.style.display = 'block';
-            pickupBox.style.display = 'none';
-            if(document.getElementById('lista-frete').innerHTML !== '') {
-                 if(freteOptions) freteOptions.style.display = 'block';
-            }
-            addressInputs.forEach(input => input.setAttribute('required', 'true'));
+    // --- 4. LÓGICA DE PAGAMENTO (Mercado Pago) ---
+    
+    // Identificação da Bandeira (Visa/Master)
+    document.getElementById('cc-number').addEventListener('keyup', async (e) => {
+        const text = e.target.value.replace(/\s/g, '');
+        if (text.length >= 6) {
+            const bin = text.substring(0, 6);
+            try {
+                const paymentMethods = await mp.getPaymentMethods({ bin: bin });
+                const pm = paymentMethods.results[0];
+                if(pm) {
+                    document.getElementById('paymentMethodId').value = pm.id;
+                    document.getElementById('issuerId').value = pm.issuer.id;
+                }
+            } catch(err) { console.log(err); }
         }
-    }
-
-    // --- FUNÇÃO DE CORREÇÃO DA CHAVE PÚBLICA ---
-    function formatPublicKey(key) {
-        // Remove cabeçalhos existentes e espaços
-        let cleanKey = key.replace("-----BEGIN PUBLIC KEY-----", "")
-                          .replace("-----END PUBLIC KEY-----", "")
-                          .replace(/[\r\n\s]/g, "");
-        
-        // Reconstrói no formato PEM (Quebra de linha a cada 64 chars)
-        const chunked = cleanKey.match(/.{1,64}/g).join('\n');
-        return `-----BEGIN PUBLIC KEY-----\n${chunked}\n-----END PUBLIC KEY-----`;
-    }
+    });
 
     const form = document.getElementById('paymentForm');
 
     form.addEventListener('submit', async function(e) {
         const method = document.querySelector('input[name="paymentMethod"]:checked').value;
-        if (method !== 'credit_card') return;
+        if (method !== 'credit_card') return; // Se for Pix, envia normal
 
         e.preventDefault(); 
         const btn = document.querySelector('.btn-finish');
-        btn.innerText = 'Criptografando...';
+        btn.innerText = 'Processando...';
         btn.disabled = true;
 
         try {
-            // 1. Pede a chave pro servidor
-            const response = await fetch('/api/pagseguro-key');
-            const data = await response.json();
-            let publicKey = data.key;
+            // Cria o Token do Cartão
+            const tokenObj = await mp.createCardToken({
+                cardNumber: document.getElementById('cc-number').value.replace(/\s/g, ''),
+                cardholderName: document.getElementsByName('cardHolder')[0].value,
+                cardExpirationMonth: document.getElementById('cc-exp').value.split('/')[0],
+                cardExpirationYear: "20" + document.getElementById('cc-exp').value.split('/')[1],
+                securityCode: document.getElementById('cc-cvv').value,
+                identificationType: "CPF",
+                identificationNumber: document.getElementsByName('cpf')[0].value.replace(/\D/g, '')
+            });
 
-            console.log("Chave Original:", publicKey); // Para verificarmos no F12
-
-            // --- TRATAMENTO ROBUSTO DA CHAVE ---
-            // Remove cabeçalhos, rodapés e espaços em branco/quebras de linha
-            const keyContent = publicKey
-                .replace(/-----BEGIN PUBLIC KEY-----/g, '')
-                .replace(/-----END PUBLIC KEY-----/g, '')
-                .replace(/\s+/g, '');
-
-            // Remonta a chave no padrão PEM exato
-            const formattedKey = `-----BEGIN PUBLIC KEY-----\n${keyContent}\n-----END PUBLIC KEY-----`;
-            // ------------------------------------
-
-            // 2. Prepara os dados (LIMPEZA TOTAL)
-            const number = document.getElementById('cc-number').value.replace(/\D/g, ''); // Só números
-            const cvv = document.getElementById('cc-cvv').value.replace(/\D/g, '');
-            const exp = document.getElementById('cc-exp').value;
-            
-            const parts = exp.split('/');
-            const mes = parts[0];
-            let ano = parts[1];
-            if (ano.length === 2) ano = "20" + ano;
-
-            const holderName = document.getElementsByName('cardHolder')[0].value.toUpperCase().trim();
-
-            // 3. Monta o Objeto
-            const cardData = {
-                "number": number,
-                "security_code": cvv,
-                "exp_month": mes,
-                "exp_year": ano,
-                "holder": { 
-                    "name": holderName
-                }
-            };
-
-            console.log("Dados antes de criptografar:", cardData); // Debug (não mostra senha real, só no seu F12)
-
-            // 4. Criptografa
-            const encrypt = new JSEncrypt();
-            encrypt.setKey(formattedKey); // Tenta usar setKey que é mais genérico
-            
-            const encrypted = encrypt.encrypt(JSON.stringify(cardData));
-
-            if (!encrypted) {
-                // Tenta fallback com setPublicKey se falhar
-                encrypt.setPublicKey(formattedKey);
-                const encrypted2 = encrypt.encrypt(JSON.stringify(cardData));
-                if (!encrypted2) throw new Error("A biblioteca não conseguiu criptografar com esta chave.");
-                
-                document.getElementById('encryptedCardInput').value = encrypted2;
-            } else {
-                document.getElementById('encryptedCardInput').value = encrypted;
-            }
-
-            // 5. Envia
+            // Sucesso!
+            document.getElementById('cardToken').value = tokenObj.id;
             form.submit();
 
         } catch (error) {
-            console.error("ERRO NO FRONTEND:", error);
-            alert("Erro técnico no pagamento: " + error.message);
+            console.error(error);
+            alert("Erro no cartão: " + (error.message || "Verifique os dados"));
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }

@@ -1,115 +1,86 @@
-const axios = require('axios');
+const { MercadoPagoConfig, Payment } = require('mercadopago');
+require('dotenv').config();
 
-const buildCustomer = (cliente, cpf) => {
-    const cleanCPF = cpf ? cpf.replace(/\D/g, '') : '';
-    return {
-        name: cliente.name,
-        email: cliente.email,
-        tax_id: cleanCPF,
-        phones: [{ country: "55", area: "11", number: "999999999", type: "MOBILE" }]
-    };
-};
+// Configura o Cliente com o Access Token (Privado)
+const client = new MercadoPagoConfig({ 
+    accessToken: process.env.MP_ACCESS_TOKEN, 
+    options: { timeout: 10000 } 
+});
 
-// 1. BUSCAR CHAVE PÚBLICA
-exports.getPublicKey = async () => {
+const payment = new Payment(client);
+
+// 1. GERAR PIX
+exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
+    // Mantive o nome da função antigo para não quebrar o controller
     try {
-        const config = {
-            headers: {
-                'Authorization': `Bearer ${process.env.PAGSEGURO_TOKEN}`,
-                'Content-Type': 'application/json'
-            }
-        };
-        const url = (process.env.PAGSEGURO_URL || 'https://sandbox.api.pagseguro.com') + '/public-keys';
-        
-        // Estamos pedindo a chave aqui
-        const response = await axios.post(url, { type: "card" }, config);
+        console.log("--- PIX MERCADO PAGO ---");
 
-        // --- ADICIONE ISTO AQUI ---
-        console.log("\n========================================");
-        console.log(">>> A CHAVE PÚBLICA QUE O PAGSEGURO MANDOU É:");
-        console.log(response.data.public_key);
-        console.log("========================================\n");
-        // --------------------------
+        const body = {
+            transaction_amount: parseFloat(pedido.totalPrice),
+            description: `Pedido #${pedido.id}`,
+            payment_method_id: 'pix',
+            payer: {
+                email: cliente.email,
+                first_name: cliente.name.split(' ')[0],
+                last_name: cliente.name.split(' ').slice(1).join(' ') || 'Cliente',
+                identification: {
+                    type: 'CPF',
+                    number: cpf.replace(/\D/g, '')
+                }
+            },
+            notification_url: 'https://loja-prima.onrender.com/api/webhook/mp'
+        };
+
+        const response = await payment.create({ body });
         
-        return response.data.public_key;
+        return {
+            id: response.id.toString(),
+            status: 'Aguardando Pagamento',
+            qrCodeText: response.point_of_interaction.transaction_data.qr_code,
+            // O MP já devolve a imagem em Base64 pronta
+            qrCodeBase64: response.point_of_interaction.transaction_data.qr_code_base64
+        };
     } catch (error) {
-        console.error("Erro Chave Pública:", error.message);
-        throw error;
+        console.error("Erro MP Pix:", error);
+        throw new Error("Erro ao gerar Pix.");
     }
 };
 
-// 2. PIX (SANDBOX)
-exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
+// 2. PROCESSAR CARTÃO
+exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, installments, paymentMethodId) => {
     try {
-        console.log("--- GERANDO PIX SANDBOX ---");
-        // ... (lógica do pix igual a anterior) ...
-        // Para simplificar, vou focar no cartão que é o que precisamos pro log
-        return { id: "PIX_TEST", status: "Aguardando", qrCodeText: "..." };
-    } catch (e) { throw e; }
-};
-
-// 3. CARTÃO (SANDBOX - ESSE É O IMPORTANTE)
-exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, encryptedCard, holder, installments) => {
-    try {
-        console.log("--- PROCESSANDO CARTÃO SANDBOX ---");
-        
-        const valorEmCentavos = Math.round(pedido.totalPrice * 100);
+        console.log("--- CARTÃO MERCADO PAGO ---");
 
         const body = {
-            reference_id: pedido.id,
-            customer: buildCustomer(cliente, cpf),
-            items: [{ reference_id: "1", name: "Pedido Loja Maely", quantity: 1, unit_amount: valorEmCentavos }],
-            charges: [
-                {
-                    reference_id: pedido.id,
-                    description: "Compra Loja Maely",
-                    amount: { value: valorEmCentavos, currency: "BRL" },
-                    payment_method: {
-                        type: "CREDIT_CARD",
-                        installments: parseInt(installments),
-                        capture: true,
-                        card: {
-                            encrypted: encryptedCard,
-                            store: false,
-                            holder: { name: holder }
-                        }
-                    }
+            transaction_amount: parseFloat(pedido.totalPrice),
+            token: cardToken, // O token gerado no frontend
+            description: `Pedido #${pedido.id}`,
+            installments: parseInt(installments), // Quantas parcelas
+            payment_method_id: paymentMethodId,   // ex: "master", "visa"
+            payer: {
+                email: cliente.email,
+                identification: {
+                    type: 'CPF',
+                    number: cpf.replace(/\D/g, '')
                 }
-            ]
-        };
-
-        const config = {
-            headers: {
-                'Authorization': `Bearer ${process.env.PAGSEGURO_TOKEN}`,
-                'Content-Type': 'application/json',
-                'accept': '*/*'
             }
         };
 
-        // IMPRIMINDO O REQUEST PARA VOCÊ MANDAR PRO MAURICIO
-        console.log("JSON REQUEST CARTAO:", JSON.stringify(body, null, 2));
-
-        const url = `${process.env.PAGSEGURO_URL}/orders`;
-        const response = await axios.post(url, body, config);
+        const response = await payment.create({ body });
         
-        // IMPRIMINDO O RESPONSE (ESPERAMOS SUCESSO AGORA!)
-        console.log("JSON RESPONSE CARTAO:", JSON.stringify(response.data, null, 2));
+        // Mapeia o status do MP para o nosso sistema
+        let statusFinal = 'Recusado';
+        if (response.status === 'approved') statusFinal = 'Pago / Aprovado';
+        if (response.status === 'in_process') statusFinal = 'Em Análise';
 
-        const charge = response.data.charges[0];
-        
         return {
-            id: response.data.id,
-            status: charge.status, 
-            message: charge.payment_response ? charge.payment_response.message : 'Processado'
+            id: response.id.toString(),
+            status: statusFinal,
+            message: response.status_detail
         };
 
     } catch (error) {
-        console.error("--- ERRO NO PAGSEGURO ---");
-        if (error.response) {
-            console.error(JSON.stringify(error.response.data, null, 2));
-        } else {
-            console.error(error.message);
-        }
-        throw new Error("Erro no processamento.");
+        console.error("Erro MP Cartão:", error);
+        throw new Error("Pagamento recusado.");
     }
 };
