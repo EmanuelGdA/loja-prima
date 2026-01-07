@@ -18,10 +18,22 @@
 .item-details strong { display: block; font-size: 14px; margin-bottom: 4px; color: #333; }
 
 /* Bolinha de Cor e Tamanho */
-.variant-info { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #666; }
+.variant-info { 
+    display: flex; 
+    align-items: center; /* Centraliza verticalmente o texto com a bolinha */
+    gap: 10px; /* Dá um espaço entre o Tamanho e a Cor */
+    font-size: 12px; 
+    color: #666;
+    margin-top: 4px;
+}
+
 .color-dot { 
-    display: inline-block; width: 15px; height: 15px; 
-    border-radius: 50%; border: 1px solid #ccc; 
+    display: inline-block; 
+    width: 16px; 
+    height: 16px; 
+    border-radius: 50%; 
+    border: 1px solid #999; /* Borda mais escura para cores claras aparecerem */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Sombrinha leve */
 }
 
 .mobile-price { display: none; } /* Esconde preço mobile no desktop */
@@ -128,4 +140,64 @@
 /* Mostra o seletor da esquerda (e esconde as colunas desktop) no celular */
 @media (max-width: 768px) {
     .mobile-only-qty { display: flex !important; }
+}
+
+/* --- BARRA DE PROGRESSO FRETE GRÁTIS --- */
+.free-shipping-container {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.progress-track {
+    background-color: #eee;
+    height: 8px;
+    border-radius: 10px;
+    position: relative;
+    margin: 25px 10px 10px; /* Espaço para o caminhão andar */
+}
+
+.progress-fill {
+    background: linear-gradient(to right, #ff9966, #ff5e62); /* Degradê Laranja/Vermelho */
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease-in-out;
+    position: relative;
+}
+
+/* O Caminhãozinho que anda junto com a barra */
+.truck-icon-progress {
+    position: absolute;
+    right: -15px; /* Ajuste para centralizar no final da barra */
+    top: -22px;
+    background: white;
+    color: #ff5e62;
+    border: 2px solid #ff5e62;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: right 0.5s;
+}
+
+.shipping-msg {
+    font-size: 14px;
+    color: #666;
+    margin-top: 15px;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.shipping-msg strong {
+    color: #ff5e62;
+    font-weight: 700;
+}
+
+/* Estado de Sucesso (Atingiu a meta) */
+.shipping-msg.success {
+    color: #27ae60;
+    font-weight: bold;
 }

@@ -5,6 +5,38 @@
     <%- include('../partials/head.ejs') %>
     <link rel="stylesheet" href="/css/checkout.css">
     <style>
+
+        /* --- SELECT DE PARCELAS BOUTIQUE --- */
+.boutique-select-card {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px; /* Cantos arredondados */
+    background-color: #fff;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    cursor: pointer;
+    transition: 0.3s;
+    
+    /* Remove a seta padrão feia do navegador */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    
+    /* Adiciona uma seta customizada minimalista */
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23333%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 10px;
+}
+
+.boutique-select-card:focus {
+    border-color: #000;
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+}
+        
         /* --- ESTILO NOVO DAS OPÇÕES DE FRETE --- */
         .shipping-option {
             display: flex;
@@ -58,6 +90,35 @@
             border-color: black; background: #f0f0f0; font-weight: bold; 
         }
         .method-option input:checked + span { font-weight: bold; }
+
+        /* --- ESTILO DAS OPÇÕES DE FRETE (NOVO) --- */
+        .shipping-option-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: white;
+        }
+        
+        /* Quando o input (escondido) estiver marcado, muda o estilo da div */
+        .shipping-option-card:has(input:checked) {
+            border-color: #000;
+            background-color: #f9f9f9;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .ship-icon {
+            width: 35px; height: 35px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; margin-right: 12px;
+        }
+        
+        
     </style>
 </head>
 <body>
@@ -197,40 +258,55 @@
                     <!-- CAMPO SECRETO: Aqui vai o código criptografado que o servidor vai ler -->
                     <input type="hidden" name="encryptedCard" id="encryptedCardInput">
 
+                    <!-- NOVO: Escolha da Função (Crédito/Débito) -->
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="margin-bottom: 5px; display: block;">Função do Cartão</label>
+                        <div style="display: flex; gap: 15px;">
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="cardType" value="credit" checked onchange="resetInstallments()">
+                                Crédito
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                <input type="radio" name="cardType" value="debit" onchange="resetInstallments()">
+                                Débito
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label>Número do Cartão</label>
                         <!-- MUDOU: Tiramos 'name' e pusemos 'id="cc-number"' -->
-                        <input type="text" id="cc-number" placeholder="0000 0000 0000 0000" maxlength="19">
+                        <input type="text" id="cc-number" placeholder="0000 0000 0000 0000" maxlength="19" oninput="maskCardNumber(this)">
                     </div>
                     
                     <div class="form-group">
                         <label>Nome no Cartão</label>
                         <!-- Esse pode manter o name, não é secreto -->
-                        <input type="text" name="cardHolder">
+                        <input type="text" name="cardHolder" placeholder="COMO NO CARTÃO" oninput="this.value = this.value.toUpperCase()">
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Validade (MM/AA)</label>
                             <!-- MUDOU: id="cc-exp", sem name -->
-                            <input type="text" id="cc-exp" placeholder="MM/AA" maxlength="5">
+                            <input type="text" id="cc-exp" placeholder="MM/AA" maxlength="5" oninput="maskDate(this)">
                         </div>
                         <div class="form-group">
                             <label>CVV</label>
                             <!-- MUDOU: id="cc-cvv", sem name -->
-                            <input type="text" id="cc-cvv" placeholder="123" maxlength="4">
+                            <input type="text" id="cc-cvv" placeholder="123" maxlength="4" oninput="maskCVV(this)">
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Parcelamento</label>
-                        <!-- Esse mantém name, o servidor precisa saber -->
-                        <select name="installments" style="width: 100%; padding: 10px;">
-                            <option value="1">1x (À vista)</option>
-                            <option value="2">2x</option>
-                            <option value="3">3x</option>
+                    
+                    <div class="form-group" id="installments-container" style="display: none;">
+                        <label style="font-weight: bold; margin-bottom: 5px; display: block;">Parcelamento</label>
+                        <select name="installments" id="installments" class="boutique-select-card">
+                            <!-- O JS preenche aqui -->
                         </select>
                     </div>
+                </div> 
+                
                 </div>
             </div>
 
@@ -293,96 +369,128 @@
    
 
 <script>
-    // --- 1. CONFIGURAÇÕES E VARIÁVEIS GLOBAIS ---
-    const mp = new MercadoPago('APP_USR-6ef4f872-b933-4bb5-bb93-ed386d5158a1'); 
-    
-    // Pega o valor total do EJS
+    // Valor dos produtos (Fixo)
     const cartSubtotal = parseFloat('<%= (cart.totalWithDiscount || cart.totalPrice) %>');
 
-    // --- 2. FUNÇÕES AUXILIARES (Máscaras e Abas) ---
-    
-    function maskPhone(i) {
-        let v = i.value.replace(/\D/g, '');
-        v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
-        v = v.replace(/(\d)(\d{4})$/, "$1-$2");
-        i.value = v;
-    }
+    // --- MÁSCARAS ---
+    function maskPhone(i){ i.value = i.value.replace(/\D/g,'').replace(/^(\d{2})(\d)/g,"($1) $2").replace(/(\d)(\d{4})$/,"$1-$2"); }
+    function maskCPF(i){ i.value = i.value.replace(/\D/g,'').replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2"); }
 
-    function maskCPF(i) {
-        let v = i.value.replace(/\D/g, '');
-        v = v.replace(/(\d{3})(\d)/, "$1.$2");
-        v = v.replace(/(\d{3})(\d)/, "$1.$2");
-        v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-        i.value = v;
-    }
+    // --- MÁSCARAS DE CARTÃO DE CRÉDITO ---
 
-    function togglePayment(method) {
-        const cardForm = document.getElementById('card-form');
-        const inputs = cardForm.querySelectorAll('input, select');
+    // 1. Máscara do Número (0000 0000 0000 0000)
+    function maskCardNumber(i) {
+        let v = i.value.replace(/\D/g, ""); // Remove tudo que não é dígito
+        v = v.substring(0, 16); // Limita a 16 números
+        v = v.replace(/(\d{4})(\d)/, "$1 $2");
+        v = v.replace(/(\d{4})(\d)/, "$1 $2");
+        v = v.replace(/(\d{4})(\d)/, "$1 $2");
+        i.value = v;
         
-        // Verifica se é cartão (aceita tanto 'card' quanto 'credit_card' pra garantir)
-        if (method === 'credit_card' || method === 'card') {
-            cardForm.style.display = 'block'; // Mostra o formulário
-            
-            // Torna os campos obrigatórios para o navegador validar
-            inputs.forEach(i => i.setAttribute('required', 'true'));
-        } else {
-            cardForm.style.display = 'none'; // Esconde
-            
-            // Remove a obrigatoriedade (senão não dá pra pagar com Pix)
-            inputs.forEach(i => i.removeAttribute('required'));
+        // Dica Extra: Se quiser disparar a busca de parcelas automático quando terminar
+        if (v.length >= 7) { 
+            // O evento 'keyup' original já cuida disso, então não precisa mexer aqui
         }
     }
 
+    // 2. Máscara da Validade (MM/AA)
+    function maskDate(i) {
+        let v = i.value.replace(/\D/g, "");
+        if (v.length > 2) {
+            v = v.replace(/^(\d{2})(\d)/, "$1/$2");
+        }
+        i.value = v;
+    }
+
+    // 3. Máscara do CVV (Só números)
+    function maskCVV(i) {
+        i.value = i.value.replace(/\D/g, "");
+    }
+
+    // --- LÓGICA DE TROCA DE ENTREGA (BLINDADA) ---
     function toggleDeliveryMode(mode) {
         const addressForm = document.getElementById('shipping-address-form');
         const pickupBox = document.getElementById('pickup-box');
-        const freteOptions = document.getElementById('frete-options');
+        const freteOptions = document.getElementById('frete-options'); 
         const addressInputs = addressForm.querySelectorAll('input');
-
+        
+        // Elementos de Valores
         const costInput = document.getElementById('shippingCostInput');
         const methodInput = document.getElementById('shippingMethodInput');
         const freteVisual = document.getElementById('valorFreteVisual');
         const totalVisual = document.getElementById('totalFinalDisplay');
 
         if (mode === 'pickup') {
+            // >>> MODO RETIRADA (FORÇA ZERO) <<<
+            
+            // 1. Esconde coisas de correio
             addressForm.style.display = 'none';
-            if (freteOptions) freteOptions.style.display = 'none';
+            if(freteOptions) freteOptions.style.display = 'none';
+            
+            // 2. Mostra caixa da loja
             pickupBox.style.display = 'block';
-            addressInputs.forEach(i => i.removeAttribute('required'));
+            
+            // 3. Tira obrigatoriedade do endereço
+            addressInputs.forEach(input => input.removeAttribute('required'));
 
-            costInput.value = 0;
+            // 4. FORÇA VALORES (Isso evita o bug)
+            costInput.value = 0; 
             methodInput.value = 'Retirar na Loja';
-            if (freteVisual) freteVisual.innerText = 'Grátis';
-            if (totalVisual) totalVisual.innerText = 'R$ ' + cartSubtotal.toFixed(2).replace('.', ',');
+            
+            // 5. Atualiza Visual na hora
+            freteVisual.innerText = 'Grátis';
+            totalVisual.innerText = 'R$ ' + cartSubtotal.toFixed(2).replace('.', ',');
+            
+            // 6. Desmarca qualquer opção de frete que estava selecionada lá embaixo
+            const radios = document.querySelectorAll('input[name="freteRadio"]');
+            radios.forEach(r => r.checked = false);
 
         } else {
+            // >>> MODO ENTREGA <<<
+            
+            // 1. Mostra campos
             addressForm.style.display = 'block';
             pickupBox.style.display = 'none';
-            if (document.getElementById('lista-frete').innerHTML.trim() !== '') {
-                if (freteOptions) freteOptions.style.display = 'block';
+            
+            // 2. Torna obrigatório
+            addressInputs.forEach(input => input.setAttribute('required', 'true'));
+            
+            // 3. SEGREDO ANTI-BUG: 
+            // Se já tem CEP digitado, recalcula o frete imediatamente para recuperar o valor
+            const cepAtual = document.getElementById('cep').value.replace(/\D/g, '');
+            if (cepAtual.length === 8) {
+                // Chama o cálculo de novo
+                calcularFreteCarrinho(cepAtual); 
+            } else {
+                // Se não tem CEP, reseta visualmente para "traço"
+                if(freteOptions) freteOptions.style.display = 'none';
+                freteVisual.innerText = '-';
+                totalVisual.innerText = 'R$ ' + cartSubtotal.toFixed(2).replace('.', ',');
+                costInput.value = 0;
             }
-            addressInputs.forEach(i => i.setAttribute('required', 'true'));
         }
     }
 
-    // --- 3. LÓGICA DE FRETE (Melhor Envio) ---
-
+    // --- LÓGICA DE CÁLCULO (MELHOR ENVIO) ---
     function buscarCep() {
+        // Se a pessoa estiver no modo "Retirar", ignora a busca de CEP para não bugar
+        const modoAtual = document.querySelector('input[name="deliveryType"]:checked').value;
+        if(modoAtual === 'pickup') return;
+
         const cep = document.getElementById('cep').value.replace(/\D/g, '');
         if (cep.length === 8) {
             fetch(`https://viacep.com.br/ws/${cep}/json/`)
                 .then(res => res.json())
                 .then(data => {
                     if (!data.erro) {
+                        // Preenche endereço
                         document.getElementById('rua').value = data.logradouro;
                         document.getElementById('bairro').value = data.bairro;
                         document.getElementById('cidade').value = data.localidade;
                         document.getElementById('estado').value = data.uf;
+                        // Chama frete
                         calcularFreteCarrinho(cep);
-                    } else {
-                        alert("CEP não encontrado.");
-                    }
+                    } else { alert("CEP não encontrado."); }
                 });
         }
     }
@@ -390,87 +498,193 @@
     async function calcularFreteCarrinho(cep) {
         const listaDiv = document.getElementById('lista-frete');
         const container = document.getElementById('frete-options');
-        listaDiv.innerHTML = 'Calculando...';
+        
+        // Limpa lista anterior e mostra "Calculando"
+        listaDiv.innerHTML = '<div style="padding:10px; color:#666;">Calculando... <i class="fas fa-spinner fa-spin"></i></div>';
         container.style.display = 'block';
 
         try {
             const response = await fetch('/api/frete', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'CSRF-Token': '<%= csrfToken %>' },
-                body: JSON.stringify({ cep: cep })
+                headers: { 'Content-Type': 'application/json', 'csrf-token': '<%= csrfToken %>' },
+                body: JSON.stringify({ cep: cep }) 
             });
             const opcoes = await response.json();
+            
+            if (opcoes.error || opcoes.length === 0) { listaDiv.innerHTML = 'Sem entrega para este CEP.'; return; }
 
-            if (opcoes.error || opcoes.length === 0) {
-                listaDiv.innerHTML = 'Sem entrega para este CEP.';
-                return;
+            let html = '';
+            let algumMarcado = false;
+            
+            opcoes.forEach((op) => {
+                // FILTRO: Esconde opção "Retirar" da lista (já tem botão em cima)
+                if (op.id === 'local_retirada' || op.nome.toLowerCase().includes('retirar')) return;
+
+                // Marca automaticamente o PRIMEIRO da lista
+                let checked = '';
+                if (!algumMarcado) {
+                    checked = 'checked';
+                    selecionarFrete(op.preco, op.nome); // Já atualiza o valor
+                    algumMarcado = true;
+                }
+
+                // Ícones
+                let icon = 'fa-truck'; let bgIcon='#f5f5f5'; let colorIcon='#555';
+                if (op.nome.toLowerCase().includes('moto')) { icon='fa-motorcycle'; bgIcon='#fff3e0'; colorIcon='#e67e22'; }
+                else if (op.logo && op.logo.startsWith('http')) { icon = 'img'; }
+
+                let prazoTxt = (op.prazo == 0) ? 'Hoje' : op.prazo + ' dias';
+                
+                // HTML do ícone
+                let iconHTML = icon === 'img' ? `<img src="${op.logo}" style="height:15px;width:auto;">` : `<i class="fas ${icon}"></i>`;
+
+                html += `
+                    <label class="shipping-option-card">
+                        <div style="display:flex; align-items:center;">
+                            <input type="radio" name="freteRadio" ${checked} onchange="selecionarFrete(${op.preco}, '${op.nome}')" style="margin-right:10px; accent-color:black;">
+                            
+                            <div class="ship-icon" style="background:${bgIcon}; color:${colorIcon}; display:flex; align-items:center; justify-content:center; width:35px; height:35px; border-radius:50%; margin-right:10px;">
+                                ${iconHTML}
+                            </div>
+
+                            <div style="display:flex; flex-direction:column;">
+                                <span style="font-size:13px; font-weight:700; color:#333;">${op.nome}</span>
+                                <span style="font-size:11px; color:#888;">Chega em ${prazoTxt}</span>
+                            </div>
+                        </div>
+                        
+                        <div style="font-weight:700; font-size:14px; color:#000;">
+                            R$ ${op.preco.toFixed(2).replace('.', ',')}
+                        </div>
+                    </label>
+                `;
+            });
+            
+            if(html === '') {
+                 listaDiv.innerHTML = '<div style="padding:10px; font-size:13px; color:#666;">Utilize a opção <strong>Retirar na Loja</strong> no topo.</div>';
+            } else {
+                 listaDiv.innerHTML = html;
             }
 
-            let html = '<div style="background-color:#F8D7DA; border-radius:8px; overflow:hidden; font-family:Montserrat,sans-serif; margin-top:15px;">';
-            opcoes.forEach((op, index) => {
-                const checked = index === 0 ? 'checked' : '';
-                if (index === 0) selecionarFrete(op.preco, op.nome);
-                
-                let border = index < opcoes.length - 1 ? 'border-bottom: 2px solid white;' : '';
-                let prazo = (op.prazo == 0) ? 'Hoje' : op.prazo + ' dias';
-                if(op.id.includes('retirada')) prazo = 'Imediato';
-
-                let nomeFrete = op.nome; 
-                if(op.nome.includes('Correios')) nomeFrete = 'Correios SEDEX';
-
-                html += `<label style="display:flex; justify-content:space-between; align-items:center; padding:12px 15px; ${border} color:#333; font-size:13px; cursor:pointer;">
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <input type="radio" name="freteRadio" ${checked} onchange="selecionarFrete(${op.preco}, '${op.nome}')" style="accent-color:black;"> 
-                                <span style="font-weight:600">${nomeFrete}</span>
-                            </div>
-                            <div style="text-align:center; font-size:12px;">${prazo}</div>
-                            <div style="font-weight:700;">R$ ${op.preco.toFixed(2).replace('.', ',')}</div>
-                         </label>`;
-            });
-            html += '</div>';
-            listaDiv.innerHTML = html;
-        } catch (error) {
-            console.error(error);
-            listaDiv.innerHTML = 'Erro no frete.';
-        }
+        } catch (error) { console.error(error); listaDiv.innerHTML = 'Erro no frete.'; }
     }
 
+    // Função que atualiza os totais na tela
     function selecionarFrete(valor, nome) {
+        // Se estiver no modo "Retirar", ignora cliques na lista de baixo (segurança extra)
+        const modoAtual = document.querySelector('input[name="deliveryType"]:checked').value;
+        if(modoAtual === 'pickup') return; 
+
         document.getElementById('shippingCostInput').value = valor;
         document.getElementById('shippingMethodInput').value = nome;
+        
         const freteVisual = document.getElementById('valorFreteVisual');
-        if (freteVisual) freteVisual.innerText = 'R$ ' + valor.toFixed(2).replace('.', ',');
+        if(freteVisual) freteVisual.innerText = 'R$ ' + valor.toFixed(2).replace('.', ',');
+        
         const totalVisual = document.getElementById('totalFinalDisplay');
-        if (totalVisual) {
+        if(totalVisual) {
             const novoTotal = cartSubtotal + valor;
             totalVisual.innerText = 'R$ ' + novoTotal.toFixed(2).replace('.', ',');
         }
     }
 
+    // --- LÓGICA DE PAGAMENTO (Abas Pix/Cartão) ---
+    function togglePayment(method) {
+        const cardForm = document.getElementById('card-form');
+        const inputs = cardForm.querySelectorAll('input, select');
+        if (method === 'credit_card' || method === 'card') {
+            cardForm.style.display = 'block';
+            inputs.forEach(i => i.setAttribute('required', 'true'));
+        } else {
+            cardForm.style.display = 'none';
+            inputs.forEach(i => i.removeAttribute('required'));
+        }
+    }
 
-    // --- 4. LÓGICA DE PAGAMENTO (Mercado Pago) ---
+    // --- ENVIO DO FORMULÁRIO (Criptografia) ---
+    // (Apenas inicialização básica se necessário)
+    // O SDK V2 não exige muito setup manual se usar a versão transparente,
+    // mas vamos manter o fluxo do seu código anterior que já estava bom.
+    // Lembre-se de ter importado a SDK no Head.
+
+    const mp = new MercadoPago('APP_USR-6ef4f872-b933-4bb5-bb93-ed386d5158a1'); // SUA CHAVE PÚBLICA
     
-    // Identificação da Bandeira (Visa/Master)
-    document.getElementById('cc-number').addEventListener('keyup', async (e) => {
-        const text = e.target.value.replace(/\s/g, '');
-        if (text.length >= 6) {
-            const bin = text.substring(0, 6);
-            try {
-                const paymentMethods = await mp.getPaymentMethods({ bin: bin });
-                const pm = paymentMethods.results[0];
-                if(pm) {
-                    document.getElementById('paymentMethodId').value = pm.id;
-                    document.getElementById('issuerId').value = pm.issuer.id;
-                }
-            } catch(err) { console.log(err); }
+    // --- FUNÇÃO QUE ATUALIZA AS PARCELAS ---
+    async function updateInstallments() {
+        const type = document.querySelector('input[name="cardType"]:checked').value;
+        const installContainer = document.getElementById('installments-container');
+        const select = document.getElementById('installments');
+        
+        // Pega o número do cartão para saber a bandeira (BIN)
+        const cardNumber = document.getElementById('cc-number').value.replace(/\s/g, '');
+        
+        // Validação básica antes de chamar API
+        if (cardNumber.length < 6) return;
+
+        // Se for DÉBITO: Não busca parcelas, trava em 1x
+        if (type === 'debit') {
+            select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
+            installContainer.style.display = 'block';
+            return;
+        }
+
+        // Se for CRÉDITO: Busca no Mercado Pago
+        const bin = cardNumber.substring(0, 6);
+        let freteValor = parseFloat(document.getElementById('shippingCostInput').value) || 0;
+        const totalFinal = cartSubtotal + freteValor;
+
+        try {
+            // 1. Identifica Bandeira
+            const paymentMethods = await mp.getPaymentMethods({ bin: bin });
+            if (paymentMethods.results.length === 0) return;
+            
+            // 2. Busca Parcelas
+            const installments = await mp.getInstallments({
+                amount: String(totalFinal),
+                bin: bin,
+                paymentTypeId: 'credit_card'
+            });
+
+            select.innerHTML = ''; // Limpa
+            
+            if (installments.length > 0) {
+                const opcoes = installments[0].payer_costs;
+                opcoes.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.installments;
+                    option.text = opt.recommended_message; 
+                    select.appendChild(option);
+                });
+                installContainer.style.display = 'block'; // MOSTRA NA TELA
+            }
+
+        } catch (error) {
+            console.log("Erro ao buscar parcelas:", error);
+        }
+    }
+
+    // --- GATILHO DO CVV (SÓ RODA QUANDO PREENCHER O CÓDIGO) ---
+    document.getElementById('cc-cvv').addEventListener('input', function(e) {
+        const cvv = e.target.value;
+        // Quando digitar 3 números do CVV, busca as parcelas
+        if (cvv.length >= 3) {
+            updateInstallments();
         }
     });
+
+    // Função para resetar se trocar de Crédito para Débito
+    function resetInstallments() {
+        const cvv = document.getElementById('cc-cvv').value;
+        if(cvv.length >= 3) {
+            updateInstallments(); // Atualiza na hora se já tiver preenchido tudo
+        }
+    }
 
     const form = document.getElementById('paymentForm');
 
     form.addEventListener('submit', async function(e) {
         const method = document.querySelector('input[name="paymentMethod"]:checked').value;
-        if (method !== 'credit_card') return; // Se for Pix, envia normal
+        if (method !== 'credit_card') return; 
 
         e.preventDefault(); 
         const btn = document.querySelector('.btn-finish');
@@ -478,7 +692,6 @@
         btn.disabled = true;
 
         try {
-            // Cria o Token do Cartão
             const tokenObj = await mp.createCardToken({
                 cardNumber: document.getElementById('cc-number').value.replace(/\s/g, ''),
                 cardholderName: document.getElementsByName('cardHolder')[0].value,
@@ -489,13 +702,12 @@
                 identificationNumber: document.getElementsByName('cpf')[0].value.replace(/\D/g, '')
             });
 
-            // Sucesso!
             document.getElementById('cardToken').value = tokenObj.id;
             form.submit();
 
         } catch (error) {
             console.error(error);
-            alert("Erro no cartão: " + (error.message || "Verifique os dados"));
+            alert("Erro no cartão. Verifique os dados.");
             btn.innerText = 'Finalizar Pedido';
             btn.disabled = false;
         }

@@ -234,7 +234,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         const favs = JSON.parse(localStorage.getItem('myFavorites')) || [];
         const badge = document.getElementById('mobileFavBadge');
-        if (favs.length > 0) {
+       if (badge && favs.length > 0) {
             badge.innerText = favs.length;
             badge.style.display = 'flex';
         }

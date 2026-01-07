@@ -83,8 +83,35 @@ exports.getProduct = async (req, res) => {
 // ==========================================
 
 exports.getCart = (req, res) => {
-    const cart = req.session.cart || { items: [], totalQty: 0, totalPrice: 0 };
-    res.render('shop/cart', { pageTitle: 'Sua Sacola', path: '/carrinho', cart: cart });
+    // Pega o carrinho ou cria vazio
+    let cart = req.session.cart || { items: [], totalQty: 0, totalPrice: 0 };
+
+    // --- BLOCO DE CORREÇÃO (Recalcula tudo do zero) ---
+    let somaReal = 0;
+    let qtdReal = 0;
+
+    // Soma item por item para garantir que o valor bate
+    cart.items.forEach(item => {
+        somaReal += (parseFloat(item.price) * parseInt(item.qty));
+        qtdReal += parseInt(item.qty);
+    });
+
+    // Atualiza o carrinho com os valores auditados
+    cart.totalPrice = somaReal;
+    cart.totalQty = qtdReal;
+
+    // Se tiver cupom, recalcula o desconto também para não ficar errado
+    if (cart.coupon) {
+        const factor = (100 - cart.coupon.percent) / 100;
+        cart.totalWithDiscount = cart.totalPrice * factor;
+    }
+    // --------------------------------------------------
+
+    res.render('shop/cart', {
+        pageTitle: 'Sua Sacola',
+        path: '/carrinho',
+        cart: cart
+    });
 };
 
 exports.postCart = async (req, res) => {
@@ -502,12 +529,12 @@ exports.postRemoveCoupon = (req, res) => {
 
 // --- CÁLCULO DE FRETE (API) ---
 exports.postCalculateShipping = async (req, res) => {
-    const { cep, productId } = req.body;
+    // PEGA A VARIÁVEL NOVA 'isCheckout'
+    const { cep, productId, isCheckout } = req.body; 
 
     try {
         let produtosParaCalculo = [];
 
-        // Se veio um ID (Página de Produto), calcula só ele
         if (productId) {
             const doc = await db.collection('products').doc(productId).get();
             if (doc.exists) {
@@ -515,32 +542,22 @@ exports.postCalculateShipping = async (req, res) => {
                 prod.id = doc.id;
                 produtosParaCalculo.push(prod);
             }
-        } 
-        // Se NÃO veio ID (Página de Checkout), calcula o Carrinho todo
-        else if (req.session.cart && req.session.cart.items.length > 0) {
-            // O Melhor Envio precisa de altura/largura. Como não temos no carrinho,
-            // vamos pegar do banco ou usar padrão para cada item
-            // Simplificação: Vamos usar os dados que já estão no carrinho + padrão
+        } else if (req.session.cart && req.session.cart.items.length > 0) {
             produtosParaCalculo = req.session.cart.items.map(item => ({
-                id: item.productId,
-                price: item.price,
-                width: 20, height: 5, length: 20, weight: 0.3, // Padrão
-                quantity: item.qty
+                id: item.productId, price: item.price, width: 20, height: 5, length: 20, weight: 0.3, quantity: item.qty
             }));
         }
 
-        if (produtosParaCalculo.length === 0) {
-            return res.status(400).json({ error: 'Nenhum produto para calcular' });
-        }
+        if (produtosParaCalculo.length === 0) return res.status(400).json({ error: 'Erro' });
 
-        // Chama o serviço do Melhor Envio
-        const opcoesFrete = await shippingService.calcularFrete(cep, produtosParaCalculo);
+        // Passamos o 'isCheckout' para o serviço decidir se mostra "Retirar"
+        const opcoesFrete = await shippingService.calcularFrete(cep, produtosParaCalculo, isCheckout);
 
         res.json(opcoesFrete);
 
     } catch (error) {
         console.log("Erro Frete:", error.message);
-        res.status(500).json({ error: 'Erro ao calcular frete' });
+        res.status(500).json({ error: 'Erro ao calcular' });
     }
 };
 

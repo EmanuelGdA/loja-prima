@@ -284,7 +284,19 @@
                                     </select>
                                     
                                     <button type="submit" class="btn-save">Salvar</button>
+
                                 </form>
+
+                                <!-- BOTÃO DE EXCLUIR PEDIDO -->
+                            <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; text-align: right;">
+                                <form action="/admin/excluir-pedido" method="POST" onsubmit="return confirm('Tem certeza? Isso apagará o pedido permanentemente.');">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <input type="hidden" name="orderId" value="<%= order.id %>">
+                                    <button type="submit" style="background: none; border: none; color: #cc0000; font-size: 12px; cursor: pointer; text-decoration: underline;">
+                                        <i class="fas fa-trash"></i> Excluir este pedido
+                                    </button>
+                                </form>
+                            </div>
                             </div>
                         </div>
                     </div>

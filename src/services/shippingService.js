@@ -1,45 +1,69 @@
 require('dotenv').config();
 const axios = require('axios');
 
-exports.calcularFrete = async (cepDestino, produtos) => {
-    try {
-        // 1. Limpeza do CEP
+exports.calcularFrete = async (cepDestino, produtos, isCheckout = false) => {
+     try {
         const cleanCep = cepDestino.replace(/\D/g, '');
-        const prefix = cleanCep.substring(0, 2); // Pega os 2 primeiros dígitos
+        const prefix = cleanCep.substring(0, 2);
+
+        // --- 1. CÁLCULO DO TOTAL DO CARRINHO (CÓDIGO NOVO) ---
+        // Somamos (Preço x Quantidade) de todos os itens recebidos
+        const totalCartValue = produtos.reduce((sum, p) => {
+            // Tenta pegar o preço em 'price' ou 'insurance_value', garante que é número
+            const price = parseFloat(p.price || p.insurance_value || 0);
+            const qty = parseInt(p.quantity || p.qty || 1);
+            return sum + (price * qty);
+        }, 0);
+
+         const isFreeShipping = totalCartValue >= 499.00;
+
+        // Define o preço do Motoboy com base no total
+        // Se for maior ou igual a 499, é 0.00. Senão, é 15.00.
+        const precoMotoboy = totalCartValue >= 499.00 ? 0.00 : 15.00;
+        
+        // Muda o nome para avisar o cliente
+        const nomeMotoboy = totalCartValue >= 499.00 ? 'Entrega Motoboy (FRETE GRÁTIS!)' : 'Entrega Motoboy';
 
         // ==============================================================
-        // CENÁRIO 1: CURITIBA E REGIÃO (80, 81, 82)
-        // Retorna APENAS opções locais (sem chamar Melhor Envio)
+        // CENÁRIO 1: CURITIBA (80, 81, 82)
         // ==============================================================
         if (prefix === '80' || prefix === '81' || prefix === '82') {
-            console.log("Frete Local (Curitiba) detectado.");
+            console.log(`Frete Local. Total Carrinho: R$ ${totalCartValue.toFixed(2)}`);
             
-            return [
-                
-                {
-                    id: 'local_motoboy',
-                    nome: 'Entrega Motoboy',
-                    preco: 15.00, // Preço Fixo Curitiba
-                    prazo: '1',   // 1 dia útil
-                    logo: null    // Ou coloque uma URL de ícone de moto se quiser
-                }
-            ];
+            const opcoesLocais = [];
+
+            // Se NÃO for checkout (está na página do produto), mostra a opção de retirar
+            if (!isCheckout) {
+                opcoesLocais.push({
+                    id: 'local_retirada',
+                    nome: 'Retirar na Loja',
+                    preco: 0.00,
+                    prazo: '0',
+                    logo: null 
+                });
+            }
+
+            // Opção de Motoboy (AGORA É DINÂMICA)
+            opcoesLocais.push({
+                id: 'local_motoboy',
+                nome: nomeMotoboy,   // Usa o nome variável
+                preco: precoMotoboy, // Usa o preço calculado (0 ou 15)
+                prazo: '1',
+                logo: null 
+            });
+
+            return opcoesLocais;
         }
 
         // ==============================================================
-        // CENÁRIO 2: FORA DE CURITIBA (BRASIL)
-        // Chama a API do Melhor Envio para calcular Loggi/Correios
+        // CENÁRIO 2: NACIONAL (MELHOR ENVIO)
         // ==============================================================
-        
-        console.log("Frete Nacional detectado. Consultando Melhor Envio...");
-        
         const token = process.env.MELHOR_ENVIO_TOKEN;
         const url = process.env.MELHOR_ENVIO_URL;
         const cepOrigem = process.env.CEP_ORIGEM;
 
-        if (!cepOrigem || !token) throw new Error("Configuração de Frete incompleta.");
+        if (!cepOrigem || !token) throw new Error("Configuração incompleta.");
 
-        // Formata os produtos para a API
         const produtosFormatados = produtos.map(prod => ({
             id: prod.id,
             width: parseInt(prod.width) || 20,
@@ -57,37 +81,84 @@ exports.calcularFrete = async (cepDestino, produtos) => {
             options: { receipt: false, own_hand: false }
         };
 
-        const config = {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'User-Agent': 'Loja Maely (contato@maely.com)'
-            }
-        };
+        const config = { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' } };
 
         const response = await axios.post(`${url}/me/shipment/calculate`, body, config);
 
-        // Filtra para mostrar apenas Loggi e Correios
-        return response.data
-            .filter(op => !op.error)
-            .filter(op => {
-                const nome = op.company.name.toLowerCase();
-                return nome.includes('loggi') || nome.includes('correios');
-            })
-            .map(op => ({
-                id: op.id,
-                // Simplifica os nomes para ficar bonito na tabela rosa
-                nome: op.company.name.includes('Loggi') ? 'Loggi Express' : 'Correios SEDEX', 
-                logo: op.company.picture,
-                preco: parseFloat(op.price),
-                prazo: op.delivery_time
-            }))
-            .sort((a, b) => a.preco - b.preco); // O mais barato primeiro
+    
+
+        // --- 2. FILTRAR AS MELHORES OPÇÕES ---
+        let bestLoggi = null;
+        let bestSedex = null;
+        let bestPac = null;
+
+        response.data.forEach(op => {
+            if (op.error) return;
+            const name = (op.company.name + " " + op.name).toLowerCase();
+            const price = parseFloat(op.price);
+
+            // Loggi
+            if (name.includes('loggi')) {
+                if (!bestLoggi || price < parseFloat(bestLoggi.price)) {
+                    bestLoggi = op;
+                    bestLoggi.customName = 'Loggi Express';
+                }
+            } 
+            // Sedex
+            else if (name.includes('sedex')) {
+                if (!bestSedex || price < parseFloat(bestSedex.price)) {
+                    bestSedex = op;
+                    bestSedex.customName = 'Correios SEDEX';
+                }
+            } 
+            // PAC
+            else if (name.includes('pac')) {
+                if (!bestPac || price < parseFloat(bestPac.price)) {
+                    bestPac = op;
+                    bestPac.customName = 'Correios PAC';
+                }
+            }
+        });
+
+        // --- 3. APLICAR FRETE GRÁTIS ---
+        // Regra: Se > 499, Loggi e PAC ficam gratuitos. Sedex continua pago (opção expressa).
+        // Se preferir Sedex grátis também, adicione a linha do Sedex dentro do if.
+        
+        if (isFreeShipping) {
+            if (bestLoggi) {
+                bestLoggi.price = 0; 
+                bestLoggi.customName += ' (FRETE GRÁTIS)';
+            }
+            if (bestPac) {
+                bestPac.price = 0;
+                bestPac.customName += ' (FRETE GRÁTIS)';
+            }
+        }
+
+        // --- 4. RETORNAR SÓ O NECESSÁRIO ---
+        // A sua regra: Se tem Loggi, manda só Loggi. Se não tem, manda Correios.
+        
+        let finalOptions = [];
+
+        if (bestLoggi) {
+            finalOptions = [bestLoggi];
+        } else {
+            // Se não tem Loggi, manda o que tiver de Correios
+            if (bestSedex) finalOptions.push(bestSedex);
+            if (bestPac) finalOptions.push(bestPac);
+        }
+
+        // Formata para o padrão do nosso site
+        return finalOptions.map(op => ({
+            id: op.id,
+            nome: op.customName,
+            logo: op.company.picture,
+            preco: parseFloat(op.price),
+            prazo: op.delivery_time
+        })).sort((a, b) => a.preco - b.preco);
 
     } catch (error) {
-        console.error("Erro no Serviço de Frete:", error.message);
-        // Em vez de quebrar, retorna erro legível
+        console.error("Erro Frete:", error.message);
         throw new Error("Não foi possível calcular o frete.");
     }
 };

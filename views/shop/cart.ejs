@@ -11,6 +11,33 @@
     <main class="cart-container">
       <h1>Sua Sacola de Compras</h1>
 
+      <!-- LÓGICA DA BARRA DE FRETE -->
+        <% 
+            const FRETE_GRATIS_LIMIT = 499.00;
+            const atual = cart.totalPrice;
+            const falta = FRETE_GRATIS_LIMIT - atual;
+            let porcentagem = (atual / FRETE_GRATIS_LIMIT) * 100;
+            if (porcentagem > 100) porcentagem = 100;
+        %>
+
+        <div class="free-shipping-container">
+            <div class="progress-track">
+                <div class="progress-fill" style="width: <%= porcentagem %>%;">
+                    <div class="truck-icon-progress">
+                        <i class="fas fa-shipping-fast"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="shipping-msg <%= falta <= 0 ? 'success' : '' %>">
+                <% if (falta > 0) { %>
+                    Gaste mais <strong>R$ <%= parseFloat(falta).toFixed(2).replace('.', ',') %></strong> para aproveitar <strong>FRETE GRÁTIS!</strong>
+                <% } else { %>
+                    Parabéns! Você ganhou <strong>FRETE GRÁTIS</strong> para todo o Brasil! 🎉
+                <% } %>
+            </div>
+        </div>
+
       <% if (cart.items.length > 0) { %>
       <div class="cart-content">
         <!-- Lista de Produtos -->

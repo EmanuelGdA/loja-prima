@@ -580,3 +580,16 @@ exports.postRefreshMenu = async (req, res) => {
         res.redirect('/admin/produtos');
     }
 };
+
+// EXCLUIR PEDIDO (ADMIN)
+exports.postDeleteOrder = async (req, res) => {
+    const orderId = req.body.orderId;
+    try {
+        await db.collection('orders').doc(orderId).delete();
+        console.log('Pedido excluído:', orderId);
+        res.redirect('/admin/pedidos');
+    } catch (error) {
+        console.error("Erro ao excluir pedido:", error);
+        res.redirect('/admin/pedidos');
+    }
+};

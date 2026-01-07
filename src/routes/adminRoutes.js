@@ -35,5 +35,6 @@ router.post('/excluir-cupom', isAdmin, adminController.postDeleteCoupon);
 // Rotas de Pedidos (Protegidas)
 router.get('/pedidos', isAdmin, adminController.getOrders);
 router.post('/atualizar-status', isAdmin, adminController.postUpdateStatus);
+router.post('/excluir-pedido', isAdmin, adminController.postDeleteOrder);
 
 module.exports = router;

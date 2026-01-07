@@ -1,4 +1,6 @@
 require('dotenv').config();
+const { db } = require('./src/config/firebase');
+const FirestoreStore = require('connect-session-firestore')(session);
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
@@ -38,15 +40,21 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public'))); // Pasta pública (CSS/IMG)
 
-// 4. Configurar Sessão (Login e Carrinho temporário)
+// 4. Configurar Sessão (AGORA SALVANDO NO FIREBASE)
 app.use(session({
+    // Diz para salvar no Banco de Dados em vez da Memória
+    store: new FirestoreStore({
+        database: db,
+        collection: 'sessions' // Vai criar essa coleção sozinha no Firebase
+    }),
+    
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: { 
         httpOnly: true, 
-        secure: process.env.NODE_ENV === 'production', // True se estiver em HTTPS
-        maxAge: 1000 * 60 * 60 * 24 * 7  
+        secure: process.env.NODE_ENV === 'production', 
+        maxAge: 1000 * 60 * 60 * 24 * 7 // Mantém logado por 7 dias
     }
 }));
 
