@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .admin-list { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        
+        .header-actions { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;
+        }
+        
+        /* CARD TOTAL GERAL */
+        .total-box {
+            background: #222; color: white; padding: 15px 25px; border-radius: 8px;
+            display: flex; flex-direction: column; text-align: center;
+        }
+        .total-box span { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .total-box strong { font-size: 28px; line-height: 1; margin-top: 5px; }
+
+        .cat-card {
+            background: white; border: 1px solid #eee; border-radius: 12px;
+            margin-bottom: 20px; padding: 25px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+
+        .cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .cat-title { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .cat-badge { background: #f0f0f0; color: #555; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+
+        /* LISTA DE SUBCATEGORIAS */
+        .sub-container {
+            display: flex; flex-wrap: wrap; gap: 10px; padding-top: 15px; border-top: 1px solid #f9f9f9;
+        }
+
+        .sub-tag {
+            display: flex; align-items: center; gap: 8px;
+            background: #fff; border: 1px solid #ddd;
+            padding: 6px 12px; border-radius: 6px; font-size: 13px;
+        }
+
+        .sub-count { color: #888; font-size: 11px; font-weight: 600; }
+        
+        .btn-remove-sub {
+            background: none; border: none; color: #cc0000; 
+            cursor: pointer; font-weight: bold; font-size: 14px; 
+            display: flex; align-items: center; margin-left: 5px;
+            padding: 2px;
+        }
+        .btn-remove-sub:hover { color: red; transform: scale(1.2); }
+
+        .btn-delete-cat { 
+            background: #fff0f0; color: #cc0000; border: 1px solid #ffcccc; 
+            padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px;
+        }
+        .btn-back { text-decoration: none; color: #333; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="admin-list">
+        <div class="header-actions">
+            <div>
+                <a href="/admin/produtos" class="btn-back"><i class="fas fa-arrow-left"></i> Voltar</a>
+                <h1 style="margin: 10px 0 0; font-family: 'Playfair Display';">Mapa da Loja</h1>
+            </div>
+            
+            <!-- TOTAL GLOBAL -->
+            <div class="total-box">
+                <span>Total Produtos</span>
+                <strong><%= totalGlobal %></strong>
+            </div>
+        </div>
+
+        <% if (categories.length > 0) { %>
+            <div style="display: flex; flex-direction: column;">
+                <% categories.forEach(cat => { %>
+                    <div class="cat-card">
+                        
+                        <!-- Cabeçalho da Categoria -->
+                        <div class="cat-header">
+                            <div class="cat-title">
+                                <%= cat.name %> 
+                                <span class="cat-badge"><%= cat.count %> itens</span>
+                            </div>
+                            
+                            <form action="/admin/excluir-categoria" method="POST" onsubmit="return confirm('ATENÇÃO: Apagar a categoria \'<%= cat.name %>\' inteira?');">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <input type="hidden" name="categoryId" value="<%= cat.id %>">
+                                <button type="submit" class="btn-delete-cat"><i class="fas fa-trash"></i> Apagar Tudo</button>
+                            </form>
+                        </div>
+
+                        <!-- Lista de Subcategorias -->
+                        <div class="sub-container">
+                            <% if (cat.subs && cat.subs.length > 0) { %>
+                                <% cat.subs.forEach(sub => { %>
+                                    <div class="sub-tag">
+                                        <span><%= sub.name %></span>
+                                        <span class="sub-count">(<%= sub.count %>)</span>
+                                        
+                                        <!-- Botão X para apagar só a subcategoria -->
+                                        <form action="/admin/excluir-subcategoria" method="POST" onsubmit="return confirm('Remover a subcategoria \'<%= sub.name %>\'?');" style="margin:0;">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <input type="hidden" name="categoryId" value="<%= cat.id %>">
+                                            <input type="hidden" name="subName" value="<%= sub.name %>">
+                                            <button type="submit" class="btn-remove-sub" title="Remover">&times;</button>
+                                        </form>
+                                    </div>
+                                <% }) %>
+                            <% } else { %>
+                                <span style="font-size: 12px; color: #999;">Nenhuma subcategoria cadastrada.</span>
+                            <% } %>
+                        </div>
+
+                    </div>
+                <% }) %>
+            </div>
+        <% } else { %>
+            <p style="text-align: center; color: #999; margin-top: 50px;">Nenhuma categoria encontrada.</p>
+        <% } %>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>
+</html>

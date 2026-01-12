@@ -180,27 +180,34 @@
                                             <div class="item-thumb" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-tshirt"></i></div>
                                         <% } %>
 
-                                        <div class="item-details">
-                                            <span class="item-name"><%= item.title %></span>
-                                            
-                                            <!-- CORREÇÃO 2: COR E TAMANHO -->
-                                            <div class="variant-tag">
-                                                <span>Tam: <%= item.size %></span>
-                                                <% if(item.color && item.color !== 'Única') { %>
-                                                    <span style="color:#ddd;">|</span>
-                                                    <!-- Se a cor for Hexadecimal (#FFF), mostra bolinha. Se for texto, mostra texto -->
-                                                    <% if(item.color.startsWith('#')) { %>
-                                                        <span class="color-dot" style="background-color: <%= item.color %>;"></span>
-                                                    <% } else { %>
-                                                        Cor: <%= item.color %>
-                                                    <% } %>
-                                                <% } %>
-                                            </div>
-                                        </div>
+                                        <!-- Procure este trecho e substitua -->
+<div class="item-details">
+    <span class="item-name">
+        <!-- ADICIONADO: Quantidade x Nome -->
+        <%= item.qty %>x <%= item.title %>
+    </span>
+    
+    <div class="variant-tag">
+        <span>Tam: <%= item.size %></span>
+        <% if(item.color && item.color !== 'Única') { %>
+            <span style="color:#ddd;">|</span>
+            <% if(item.color.startsWith('#')) { %>
+                <span class="color-dot" style="background-color: <%= item.color %>;"></span>
+            <% } else { %>
+                Cor: <%= item.color %>
+            <% } %>
+        <% } %>
+    </div>
+</div>
 
-                                        <span style="font-weight: 600; font-size: 13px;">
-                                            R$ <%= item.price.toFixed(2).replace('.', ',') %>
-                                        </span>
+<span style="font-weight: 600; font-size: 13px; text-align: right;">
+    <!-- Exibe o total daquela linha (Preço x Qtd) -->
+    R$ <%= (item.price * item.qty).toFixed(2).replace('.', ',') %>
+    <br>
+    <small style="font-weight: 400; color: #888; font-size: 10px;">
+        unid: R$ <%= item.price.toFixed(2).replace('.', ',') %>
+    </small>
+</span>
                                     </div>
                                 <% }) %>
                             </div>

@@ -2,79 +2,113 @@
 <html lang="pt-br">
 <head>
     <%- include('../partials/head.ejs') %>
-    <link rel="stylesheet" href="/css/checkout.css">
+    <link rel="stylesheet" href="/css/checkout.css"> <!-- Reaproveita o CSS -->
 </head>
 <body>
-    <header class="simple-header">
-        <a href="/pedidos" class="back-link"><i class="fas fa-arrow-left"></i> Voltar</a>
-        <div class="secure-badge"><i class="fas fa-lock"></i> Pagamento Seguro</div>
-    </header>
+    <%- include('../partials/header.ejs') %>
 
-    <main class="checkout-container">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1>Realizar Pagamento</h1>
-            <p>Pedido #<%= order.id.slice(0,6).toUpperCase() %> • Total: <strong>R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %></strong></p>
-        </div>
+    <main class="container" style="max-width: 600px; margin: 40px auto;">
+        <h2 style="text-align: center; font-family: 'Playfair Display';">Pagamento do Pedido #<%= order.id.slice(0,6) %></h2>
 
-        <form action="/pagar-pedido/<%= order.id %>" method="POST" class="checkout-form" id="rePaymentForm">
+        <form action="/pagar-pedido/<%= order.id %>" method="POST" id="paymentForm">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <input type="hidden" name="cpf" value="<%= order.user.cpf %>"> <!-- Usa o CPF salvo -->
+            <input type="hidden" name="cardToken" id="cardToken">
 
-            <div class="column">
-                <h2>Escolha a forma de pagamento:</h2>
-                
-                <div class="payment-methods">
-                    <label class="method-option">
+            <div class="payment-section">
+                <h3>Escolha como pagar:</h3>
+                <div class="payment-methods" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <label class="method-option" style="flex: 1; border: 1px solid #ddd; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center;">
                         <input type="radio" name="paymentMethod" value="pix" checked onclick="togglePayment('pix')">
-                        <span><i class="fab fa-pix"></i> PIX (Aprovação Imediata)</span>
+                        <div style="font-weight: bold; margin-top: 5px;"><i class="fab fa-pix"></i> PIX</div>
+                        <span style="font-size: 10px; background: #27ae60; color: white; padding: 2px 5px; border-radius: 4px;">5% OFF</span>
                     </label>
-                    <label class="method-option">
-                        <input type="radio" name="paymentMethod" value="credit_card" onclick="togglePayment('card')">
-                        <span><i class="far fa-credit-card"></i> Cartão de Crédito</span>
+                    <label class="method-option" style="flex: 1; border: 1px solid #ddd; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center;">
+                        <input type="radio" name="paymentMethod" value="credit_card" onclick="togglePayment('credit_card')">
+                        <div style="font-weight: bold; margin-top: 5px;"><i class="far fa-credit-card"></i> Cartão</div>
                     </label>
                 </div>
 
-                <!-- Formulário do Cartão -->
-                <div id="card-form" style="display: none; background: white; padding: 20px; border-radius: 4px; margin-top: 15px; border: 1px solid #eee;">
+                <!-- FORMULÁRIO DE CARTÃO (Escondido por padrão) -->
+                <div id="card-form" style="display: none;">
                     <div class="form-group">
-                        <label>Número do Cartão</label>
-                        <input type="text" name="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19">
-                    </div>
-                    <div class="form-group"><label>Nome no Cartão</label><input type="text" name="cardHolder"></div>
-                    <div class="form-row">
-                        <div class="form-group"><label>Validade</label><input type="text" name="cardExpiration" placeholder="MM/AA"></div>
-                        <div class="form-group"><label>CVV</label><input type="text" name="cardCvv" maxlength="4"></div>
+                        <label>Tipo de Cartão</label>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <label><input type="radio" name="cardType" value="credit" checked> Crédito</label>
+                            <label><input type="radio" name="cardType" value="debit"> Débito</label>
+                        </div>
                     </div>
                     <div class="form-group">
+                        <input type="text" id="cc-number" placeholder="Número do Cartão" oninput="maskCardNumber(this)" class="form-control">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="cc-exp" placeholder="MM/AA" oninput="maskDate(this)" class="form-control">
+                        <input type="text" id="cc-cvv" placeholder="CVV" oninput="maskCVV(this)" class="form-control">
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <input type="text" name="cardHolder" placeholder="Nome impresso no cartão" class="form-control">
+                    </div>
+                    <div class="form-group" id="installments-container">
                         <label>Parcelamento</label>
-                        <select name="installments">
-                            <option value="1">1x (À vista)</option>
-                            <option value="2">2x</option>
-                            <option value="3">3x</option>
-                        </select>
+                        <select name="installments" id="installments" class="form-control"></select>
                     </div>
                 </div>
+            </div>
 
-                <button type="submit" class="btn-finish" style="margin-top: 20px;">Pagar Agora</button>
+            <!-- RESUMO DO PAGAMENTO -->
+            <div class="order-summary" style="background: #f9f9f9; padding: 20px; border-radius: 12px; margin-top: 30px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>Subtotal</span>
+                    <span>R$ <%= (order.discountTotal || order.subtotal).toFixed(2).replace('.', ',') %></span>
+                </div>
+                <div id="pix-discount-row" style="display: flex; justify-content: space-between; color: #27ae60; font-weight: bold;">
+                    <span>Desconto PIX (5%)</span>
+                    <span>- R$ <%= ((order.discountTotal || order.subtotal) * 0.05).toFixed(2).replace('.', ',') %></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <span>Frete</span>
+                    <span>R$ <%= (order.shippingCost || 0).toFixed(2).replace('.', ',') %></span>
+                </div>
+                <hr>
+                <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                    <span>Total</span>
+                    <span id="totalDisplay">R$ 0,00</span>
+                </div>
+                <button type="submit" class="btn-finish" style="width: 100%; background: black; color: white; padding: 15px; border-radius: 30px; border: none; font-weight: bold; margin-top: 20px; cursor: pointer;">
+                    FINALIZAR PAGAMENTO
+                </button>
             </div>
         </form>
     </main>
 
-    <%- include('../partials/footer.ejs') %>
-    
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script>
+        const mp = new MercadoPago('SUA_CHAVE_PUBLICA_AQUI');
+        const baseProdutos = <%= order.discountTotal || order.subtotal %>;
+        const frete = <%= order.shippingCost || 0 %>;
+
         function togglePayment(method) {
             const cardForm = document.getElementById('card-form');
-            const inputs = cardForm.querySelectorAll('input, select');
-            if (method === 'card') {
-                cardForm.style.display = 'block';
-                inputs.forEach(i => i.setAttribute('required', 'true'));
-            } else {
+            const discountRow = document.getElementById('pix-discount-row');
+            const totalDisplay = document.getElementById('totalDisplay');
+
+            if (method === 'pix') {
                 cardForm.style.display = 'none';
-                inputs.forEach(i => i.removeAttribute('required'));
+                discountRow.style.display = 'flex';
+                const total = (baseProdutos * 0.95) + frete;
+                totalDisplay.innerText = 'R$ ' + total.toFixed(2).replace('.', ',');
+            } else {
+                cardForm.style.display = 'block';
+                discountRow.style.display = 'none';
+                const total = baseProdutos + frete;
+                totalDisplay.innerText = 'R$ ' + total.toFixed(2).replace('.', ',');
             }
         }
+
+        // Rodar ao carregar para definir o valor inicial (PIX selecionado)
+        window.onload = () => togglePayment('pix');
+
+        // Reutilize aqui as suas funções de máscara (maskCardNumber, maskDate, etc)
+        // e a lógica de gerar o token do Mercado Pago que você já tem no checkout.ejs
     </script>
 </body>
 </html>
-

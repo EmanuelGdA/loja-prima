@@ -48,7 +48,7 @@
                                         <div class="sub-links">
                                             <% cat.subcategories.forEach(sub => { %>
                                                 <!-- Link busca por categoria E texto da subcategoria -->
-                                                <a href="/search?q=<%= sub %>"><%= sub %></a>
+                                                <a href="/colecao/<%= cat.id %>/<%= sub %>"><%= sub %></a>
                                             <% }) %>
                                         </div>
                                     <% } %>

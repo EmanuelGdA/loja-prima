@@ -115,15 +115,12 @@
             <h1>Gerenciar Produtos</h1>
             
             <div style="display: flex; gap: 10px;">
-                <!-- BOTÃO DE FAXINA (NOVO) -->
-                <form action="/admin/sincronizar-menu" method="POST" onsubmit="return confirm('Isso vai apagar do menu todas as categorias que não têm produtos. Continuar?');">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button type="submit" class="btn-new" style="background: white; color: red; border: 1px solid red;">
-                        <i class="fas fa-sync"></i> Limpar Menu
-                    </button>
-                </form>
+                <!-- BOTÃO VER CATEGORIAS (NOVO) -->
+                <a href="/admin/categorias" class="btn-new" style="background: white; color: #333; border: 1px solid #ccc;">
+                    <i class="fas fa-list-ul"></i> Categorias
+                </a>
 
-                <!-- BOTÃO NOVO PRODUTO (JÁ EXISTIA) -->
+                <!-- BOTÃO NOVO PRODUTO -->
                 <a href="/admin/adicionar-produto" class="btn-new">
                     <i class="fas fa-plus"></i> Novo Produto
                 </a>

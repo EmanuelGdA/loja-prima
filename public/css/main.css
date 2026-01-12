@@ -654,6 +654,15 @@ ul { list-style: none; }
         align-items: center;
         z-index: 9999;
         box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        transition: transform 0.4s ease-in-out, opacity 0.4s;
+    }
+
+    /* CLASSE PARA ESCONDER */
+    .mobile-bottom-nav.nav-hidden {
+        transform: translate(-50%, 200%) !important; /* Desce muito */
+        opacity: 0 !important;
+        visibility: hidden !important; /* Desaparece para o mouse/dedo */
+        transition: all 0.3s ease-in-out !important;
     }
 
     /* SUBIR WHATSAPP (PARA NÃO FICAR ATRÁS DA BARRA) */
@@ -700,6 +709,36 @@ ul { list-style: none; }
     /* Mostra o item quando for celular */
     .mobile-only-item {
         display: block !important;
+    }
+
+    /* --- AJUSTE DO RODAPÉ NO CELULAR --- */
+    .main-footer {
+        padding: 40px 20px 80px; /* Mais espaço nas laterais e embaixo (pra não bater na barra flutuante) */
+        text-align: center; /* Centraliza tudo no celular */
+    }
+
+    .footer-content {
+        display: flex;
+        flex-direction: column;
+        gap: 30px; /* Espaço entre os blocos (Sobre, Ajuda, Pagamento) */
+    }
+
+    .footer-column {
+        width: 100%;
+        min-width: auto;
+        margin-bottom: 0;
+    }
+    
+    /* Aumenta um pouco os ícones para dedo */
+    .social-links a { font-size: 24px; margin: 0 10px; }
+
+    /* DENTRO DO @MEDIA MOBILE */
+    
+    .payment-icons {
+        justify-content: center !important; /* Força o centro */
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 15px;
     }
 }
 
@@ -862,4 +901,40 @@ ul { list-style: none; }
     font-weight: bold;
     text-decoration: none;
     border-bottom: 1px solid #d9534f;
+}
+
+/* --- PAGINAÇÃO (BOTÕES PREV/NEXT) --- */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 40px 0 20px;
+    padding-top: 20px;
+    border-top: 1px solid #f5f5f5;
+}
+
+.page-btn {
+    text-decoration: none;
+    padding: 10px 20px;
+    border: 1px solid #ccc;
+    border-radius: 30px;
+    color: #333;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    transition: 0.3s;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.page-btn:hover {
+    background-color: black;
+    color: white;
+    border-color: black;
+}
+
+.page-info {
+    font-size: 12px;
+    color: #888;
+    font-family: 'Montserrat', sans-serif;
 }

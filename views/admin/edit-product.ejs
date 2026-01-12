@@ -190,11 +190,7 @@
                             <% }) %>
                         <% } %>
 
-                        <!-- Opções Padrão -->
-                        <option value="vestidos" <%= (editing && product.category === 'vestidos') ? 'selected' : '' %>>Vestidos</option>
-                        <option value="blusas" <%= (editing && product.category === 'blusas') ? 'selected' : '' %>>Blusas</option>
-                        <option value="conjuntos" <%= (editing && product.category === 'conjuntos') ? 'selected' : '' %>>Conjuntos</option>
-                        
+                      
                         <!-- Opção para criar nova -->
                         <option value="new" style="color: blue; font-weight: bold;">+ Criar Nova Categoria</option>
                     </select>
@@ -205,10 +201,20 @@
                 
                 <!-- 2. SUBCATEGORIA (Adicionado aqui) -->
                 <div class="form-group">
-                    <label>Sub-Categoria (Ex: Longo, Festa)</label>
-                    <input type="text" name="subcategory" value="<%= editing ? product.subcategory : '' %>" placeholder="Digite a subcategoria">
-                </div>
-            </div>
+                    <label>Sub-Categoria</label>
+                
+                      <!-- 1. Select que será preenchido via JavaScript -->
+                      <select name="subcategorySelect" id="subCatSelect" onchange="toggleNewSubCat()" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                         <option value="new">Carregando...</option>
+                      </select>
+
+                        <!-- 2. Campo de Texto (Aparece se escolher "Criar Nova" ou se a categoria for nova) -->
+                       <input type="text" name="newSubcategory" id="newSubCatInput" 
+                       placeholder="Digite a nova subcategoria" 
+                       value="<%= editing ? product.subcategory : '' %>"
+                       style="display: block; margin-top: 10px;">
+                 </div>
+             </div>
 
             <!-- 3. CÓDIGO SKU (Mova para cá ou deixe logo abaixo do Nome da Peça) -->
             <div class="form-group" style="margin-top: 15px;">
@@ -269,8 +275,8 @@
                             <label class="color-option" title="<%= cor.n %>">
                                 <!-- O valor enviado será o código HEX para usarmos no visual do site depois -->
                                 <input type="checkbox" name="colors" value="<%= cor.c %>" 
-                                    onchange="updateSelectedColors()"
-                                    <%= (editing && product.colors && product.colors.includes(cor.c)) ? 'checked' : '' %>>
+    onchange="updateSelectedColors(); renderVariationGrid()" 
+    <%= (editing && product.colors && product.colors.includes(cor.c)) ? 'checked' : '' %>>
                                 <span class="color-swatch" style="background-color: <%= cor.c %>;"></span>
                             </label>
                         <% }) %>
@@ -297,17 +303,41 @@
                         <% ['PP', 'P', 'M', 'G', 'GG', 'U'].forEach(s => { %>
                             <label class="size-item">
                                 <input type="checkbox" name="sizes" value="<%= s %>" 
-                                    <%= (editing && product.sizes && product.sizes.includes(s)) ? 'checked' : '' %>>
+    onchange="renderVariationGrid()" 
+    <%= (editing && product.sizes && product.sizes.includes(s)) ? 'checked' : '' %>>
                                 <span><%= s %></span>
                             </label>
                         <% }) %>
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-top:15px;">
-                    <label>Estoque Total</label>
-                    <input type="number" name="stock" value="<%= editing ? product.stock : 1 %>" style="width: 100px;">
-                </div>
+                <!-- NOVA SEÇÃO: GRADE DE ESTOQUE POR VARIAÇÃO -->
+<div class="form-group" style="margin-top:20px; border-top: 1px solid #eee; padding-top: 20px;">
+    <label style="font-weight: bold; color: #333; margin-bottom: 10px; display: block;">
+        📦 Grade de Estoque (Quantidade por Cor e Tamanho)
+    </label>
+    
+    <div id="variation-grid-wrapper" style="background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid #ddd;">
+                    <th style="padding: 10px;">Cor</th>
+                    <th style="padding: 10px;">Tamanho</th>
+                    <th style="padding: 10px;">Quantidade em Estoque</th>
+                </tr>
+            </thead>
+            <tbody id="variation-table-body">
+                <!-- As linhas serão geradas aqui pelo JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- O Estoque Total agora é calculado automaticamente e fica apenas leitura -->
+    <div style="margin-top: 15px; font-weight: bold; background: #eee; padding: 10px; border-radius: 4px; display: inline-block;">
+        Estoque Total Geral: 
+        <input type="number" name="stock" id="totalStockInput" value="<%= editing ? product.stock : 0 %>" readonly style="background: transparent; border: none; font-weight: bold; width: 60px; outline: none;">
+    </div>
+</div>
             </div>
 
             <!-- 4. DESCRIÇÃO E DETALHES -->
@@ -511,7 +541,7 @@
                 </div>
             `;
             container.appendChild(row);
-        }
+        };
 
         // --- INICIALIZAÇÃO AO CARREGAR A PÁGINA ---
         window.addEventListener('load', () => {
@@ -531,6 +561,190 @@
                 addMeasureRow();
             <% } %>
         });
+
+        // --- DADOS DAS CATEGORIAS (Vindo do servidor) ---
+        // O <%- -%> imprime o JSON cru para o JS ler
+        const allCategoriesData = <%- JSON.stringify(menuCategories) %>;
+        
+        // Produto sendo editado (para selecionar o valor certo)
+        const currentSub = "<%= editing ? product.subcategory : '' %>";
+        const currentCat = "<%= editing ? product.category : '' %>";
+
+        // Função que roda quando muda a Categoria Principal
+        function updateSubcategories() {
+            const catSelect = document.getElementById('catSelect');
+            const subSelect = document.getElementById('subCatSelect');
+            const subInput = document.getElementById('newSubCatInput');
+            
+            const selectedCatId = catSelect.value;
+            
+            // Limpa o select de subcategorias
+            subSelect.innerHTML = '';
+
+            // Se escolheu "Nova Categoria", o select de sub vira inútil
+            if (selectedCatId === 'new') {
+                subSelect.innerHTML = '<option value="new">Criar Nova</option>';
+                subSelect.disabled = true;
+                toggleNewSubCat(); // Força mostrar o input
+                return;
+            }
+
+            subSelect.disabled = false;
+
+            // Encontra a categoria selecionada nos dados
+            const categoryData = allCategoriesData.find(c => c.id === selectedCatId);
+            
+            let foundCurrent = false;
+
+            if (categoryData && categoryData.subcategories && categoryData.subcategories.length > 0) {
+                // Adiciona opção padrão
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.text = "Selecione uma existente...";
+                subSelect.appendChild(defaultOpt);
+
+                // Preenche com as subcategorias existentes
+                categoryData.subcategories.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.text = sub;
+                    
+                    // Se estiver editando e for essa a subcategoria, marca ela
+                    if (sub === currentSub && categoryData.id === currentCat) {
+                        opt.selected = true;
+                        foundCurrent = true;
+                    }
+                    
+                    subSelect.appendChild(opt);
+                });
+            }
+
+            // Adiciona sempre a opção de criar nova no final
+            const newOpt = document.createElement('option');
+            newOpt.value = "new";
+            newOpt.text = "+ Criar Nova Subcategoria";
+            newOpt.style.color = "blue";
+            newOpt.style.fontWeight = "bold";
+            // Se o produto tem subcategoria mas ela não tá na lista (ex: lista foi apagada), marca como nova
+            if (currentSub && !foundCurrent && categoryData && categoryData.id === currentCat) {
+                 newOpt.selected = true;
+            }
+            subSelect.appendChild(newOpt);
+
+            // Atualiza a visibilidade do input
+            toggleNewSubCat();
+        }
+
+        // Função que mostra/esconde o input de texto da subcategoria
+        function toggleNewSubCat() {
+            const subSelect = document.getElementById('subCatSelect');
+            const subInput = document.getElementById('newSubCatInput');
+
+            if (subSelect.value === 'new') {
+                subInput.style.display = 'block';
+                subInput.required = true;
+            } else {
+                subInput.style.display = 'none';
+                subInput.required = false;
+            }
+        }
+
+        // Adiciona o "ouvinte" no select da categoria principal para rodar a função
+        document.getElementById('catSelect').addEventListener('change', () => {
+            // Se mudou a categoria principal, também roda a lógica de mostrar input dela
+            toggleNewCat(); 
+            // E atualiza as subs
+            updateSubcategories();
+        });
+
+        // Roda ao carregar a página (para preencher na edição)
+        window.addEventListener('load', () => {
+            // Garante que o toggle da categoria principal rode
+            toggleNewCat();
+            // Carrega as subcategorias
+            updateSubcategories();
+        });
+
+        // --- LÓGICA DA GRADE DE ESTOQUE DINÂMICA ---
+
+function renderVariationGrid() {
+    const selectedColors = Array.from(document.querySelectorAll('input[name="colors"]:checked')).map(cb => cb.value);
+    const selectedSizes = Array.from(document.querySelectorAll('input[name="sizes"]:checked')).map(cb => cb.value);
+    const tableBody = document.getElementById('variation-table-body');
+    
+    // IMPORTANTE: Tenta recuperar o que já estava escrito ou o que veio do banco (se estiver editando)
+    // Criamos um mapa temporário dos valores que já estão nos inputs da tela agora
+    const currentValues = {};
+    document.querySelectorAll('input[name^="v_stock_"]').forEach(input => {
+        currentValues[input.name] = input.value;
+    });
+
+    // Se estiver editando e for a primeira vez que carrega a página, usa os dados do produto
+    const savedVariations = <%- (editing && product.variations) ? JSON.stringify(product.variations) : '[]' %>;
+
+    tableBody.innerHTML = '';
+
+    if (selectedColors.length === 0 || selectedSizes.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="3" style="padding:15px; text-align:center; color:#999;">Selecione pelo menos uma cor e um tamanho para definir o estoque.</td></tr>';
+        return;
+    }
+
+    selectedColors.forEach(color => {
+        selectedSizes.forEach(size => {
+            // Remove o '#' da cor para criar um nome de campo seguro
+            const colorSafe = color.replace('#', '').toLowerCase();
+            const inputName = `v_stock_${colorSafe}_${size}`;
+            
+            // Lógica de prioridade de valor: 1. O que o usuário acabou de digitar | 2. O que veio do banco | 3. Zero
+            let stockValue = currentValues[inputName];
+            if (stockValue === undefined) {
+                const existing = savedVariations.find(v => v.color === color && v.size === size);
+                stockValue = existing ? existing.stock : 0;
+            }
+
+            const row = document.createElement('tr');
+            row.style.borderBottom = "1px solid #eee";
+            row.innerHTML = `
+                <td style="padding: 10px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="width:18px; height:18px; border-radius:50%; background:${color}; border:1px solid #ccc; display:inline-block;"></span>
+                        ${color}
+                    </div>
+                </td>
+                <td style="padding: 10px;"><strong>${size}</strong></td>
+                <td style="padding: 10px;">
+                    <input type="number" 
+                           name="${inputName}" 
+                           value="${stockValue}" 
+                           min="0" 
+                           style="width:70px; padding:5px; border:1px solid #ccc; border-radius:4px;"
+                           oninput="calculateTotalStock()">
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    });
+    calculateTotalStock();
+}
+
+function calculateTotalStock() {
+    const inputs = document.querySelectorAll('input[name^="v_stock_"]');
+    let total = 0;
+    inputs.forEach(input => total += parseInt(input.value || 0));
+    document.getElementById('totalStockInput').value = total;
+}
+
+// Vincula a geração da tabela aos cliques nos checkboxes de cores e tamanhos
+document.addEventListener('change', (e) => {
+    if (e.target.name === 'colors' || e.target.name === 'sizes') {
+        renderVariationGrid();
+    }
+});
+
+// Chame a renderização inicial caso esteja editando
+window.addEventListener('load', () => {
+    setTimeout(renderVariationGrid, 100); // Pequeno atraso para garantir que os checkboxes carreguem
+});
 
     </script>
 

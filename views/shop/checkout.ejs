@@ -82,10 +82,16 @@
         .option-price { font-weight: 700; font-size: 14px; color: #000; }
 
         .payment-methods { display: flex; gap: 10px; margin-bottom: 15px; }
-        .method-option { 
-            flex: 1; border: 1px solid #ccc; padding: 15px; border-radius: 4px; 
-            cursor: pointer; background: white; text-align: center; display: block;
-        }
+        .method-option {
+    display: flex;
+    align-items: center; /* Alinha tudo no meio verticalmente */
+    gap: 10px;           /* Espaço entre rádio, ícone e texto */
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
         .method-option:has(input:checked) { 
             border-color: black; background: #f0f0f0; font-weight: bold; 
         }
@@ -117,7 +123,49 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 14px; margin-right: 12px;
         }
-        
+
+        .discount-tag {
+    background-color: #e6f9ee; /* Verde clarinho de fundo fica mais elegante */
+    color: #27ae60;            /* Verde forte no texto */
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    white-space: nowrap;      /* FORÇA O TEXTO A FICAR EM UMA LINHA SÓ */
+    text-transform: uppercase;
+}
+    
+        /* Container base do resumo */
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center; /* Alinha o texto e o valor na mesma linha */
+    margin-bottom: 10px;
+}
+
+/* Estilo específico para a linha de desconto */
+.discount-row {
+    color: #27ae60 !important;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+.discount-label {
+    line-height: 1.2; /* Deixa o texto principal e o small mais juntinhos */
+    font-size: 14px;
+}
+
+.discount-label small {
+    font-weight: normal;
+    font-size: 11px;
+    color: #2ecc71;
+    display: block; /* Faz o texto pequeno ficar logo abaixo do nome */
+}
+
+.discount-value {
+    white-space: nowrap; /* Impede que o valor (R$) quebre linha */
+    font-size: 15px;
+}
         
     </style>
 </head>
@@ -244,6 +292,7 @@
                         <!-- Clicou aqui, manda 'pix' pro script -->
                         <input type="radio" name="paymentMethod" value="pix" checked onclick="togglePayment('pix')">
                         <span><i class="fab fa-pix"></i> PIX</span>
+                        <span class="discount-tag">5% de Desconto</span>
                     </label>
                     <label class="method-option">
                         <!-- CORREÇÃO: Clicou aqui, manda 'credit_card' pro script -->
@@ -347,6 +396,14 @@
                             <!-- Aqui é onde o valor vai aparecer -->
                             <span id="valorFreteVisual">-</span> 
                         </div>
+
+                        <div class="summary-row discount-row" id="pix-discount-row" style="display: none;">
+    <span class="discount-label">
+        Desconto PIX <br>
+        <small>(5% sobre o produto)</small>
+    </span>
+    <span id="valorDescontoPixVisual" class="discount-value">- R$ 0,00</span>
+</div>
                         
                         <hr style="margin: 10px 0; border: 0; border-top: 1px solid #eee;">
 
@@ -439,7 +496,7 @@
             
             // 5. Atualiza Visual na hora
             freteVisual.innerText = 'Grátis';
-            totalVisual.innerText = 'R$ ' + cartSubtotal.toFixed(2).replace('.', ',');
+            atualizarTotalGeral(); 
             
             // 6. Desmarca qualquer opção de frete que estava selecionada lá embaixo
             const radios = document.querySelectorAll('input[name="freteRadio"]');
@@ -583,8 +640,7 @@
         
         const totalVisual = document.getElementById('totalFinalDisplay');
         if(totalVisual) {
-            const novoTotal = cartSubtotal + valor;
-            totalVisual.innerText = 'R$ ' + novoTotal.toFixed(2).replace('.', ',');
+            atualizarTotalGeral(); 
         }
     }
 
@@ -599,6 +655,8 @@
             cardForm.style.display = 'none';
             inputs.forEach(i => i.removeAttribute('required'));
         }
+
+        atualizarTotalGeral(); 
     }
 
     // --- ENVIO DO FORMULÁRIO (Criptografia) ---
@@ -712,6 +770,33 @@
             btn.disabled = false;
         }
     });
+
+ function atualizarTotalGeral() {
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const shippingCost = parseFloat(document.getElementById('shippingCostInput').value) || 0;
+    
+    const discountRow = document.getElementById('pix-discount-row');
+    const discountVisual = document.getElementById('valorDescontoPixVisual');
+    const totalVisual = document.getElementById('totalFinalDisplay');
+
+    let valorDesconto = 0;
+    let valorProdutosFinal = cartSubtotal; // Subtotal dos produtos vindo do EJS
+
+    if (paymentMethod === 'pix') {
+        // Cálculo apenas sobre o subtotal dos produtos
+        valorDesconto = cartSubtotal * 0.05; 
+        valorProdutosFinal = cartSubtotal - valorDesconto;
+        
+        discountRow.style.display = 'flex';
+        discountVisual.innerText = '- R$ ' + valorDesconto.toFixed(2).replace('.', ',');
+    } else {
+        discountRow.style.display = 'none';
+    }
+
+    // O Total Final é: (Produto - Desconto) + Frete
+    const totalFinal = valorProdutosFinal + shippingCost;
+    totalVisual.innerText = 'R$ ' + totalFinal.toFixed(2).replace('.', ',');
+}
 </script>
 </body>
 </html>

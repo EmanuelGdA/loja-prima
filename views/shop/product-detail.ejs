@@ -58,7 +58,7 @@
 
                 <!-- Parcela -->
                 <span class="installments">
-                    ou em até 5x de R$ <%= (product.price / 5).toFixed(2).replace('.', ',') %> sem juros
+                    ou em até 4x de R$ <%= (product.price / 4).toFixed(2).replace('.', ',') %> sem juros
                 </span>
             </div>
 
@@ -115,22 +115,40 @@
                     </div>
                 </div>
 
-                <!-- LOGICA DE ESTOQUE (Mantida) -->
-                <% if (product.stock > 0 && product.stock <= 5) { %>
-                    <div class="stock-warning">
-                        <i class="fas fa-exclamation-circle"></i>
-                        Corra! Restam apenas <%= product.stock %> unidades.
-                    </div>
-                <% } else if (product.stock === 0) { %>
-                    <div class="stock-warning" style="color: #666;">
-                        <i class="fas fa-ban"></i> Produto Esgotado
-                    </div>
-                <% } %>
+                <!-- LÓGICA DE ESTOQUE ATUALIZADA -->
+<% if (product.stock > 0) { %>
+    <!-- Removi a trava de "menor que 5" aqui para o JS poder controlar a visibilidade -->
+    <div class="stock-warning" id="stock-warning-container" <% if (product.stock > 5) { %> style="display: none;" <% } %>>
+        <i class="fas fa-exclamation-circle"></i> 
+        Corra! Restam apenas <strong id="stock-count"><%= product.stock %></strong> <span id="stock-suffix">unidades.</span>
+    </div>
+<% } else { %>
+    <div class="stock-warning" style="color: #666;">
+        <i class="fas fa-ban"></i> Produto Esgotado
+    </div>
+<% } %>
 
-                <!-- BOTÃO COMPRAR (Visual Novo com Ícone) -->
-                <button type="submit" class="btn-add-cart">
-                    <i class="fas fa-shopping-bag"></i> ADICIONAR À SACOLA
-                </button>
+                <!-- VERIFICAÇÃO DE ESTOQUE VISUAL -->
+                <% if (product.stock > 0) { %>
+                    
+                    <!-- Botão Normal (Ativo) -->
+                    <button type="submit" class="btn-add-cart">
+                        <i class="fas fa-shopping-bag"></i> ADICIONAR À SACOLA
+                    </button>
+
+                <% } else { %>
+                    
+                    <!-- Botão Esgotado (Desabilitado) -->
+                    <button type="button" class="btn-add-cart" disabled style="background-color: #ccc; cursor: not-allowed;">
+                        <i class="fas fa-times-circle"></i> PRODUTO ESGOTADO
+                    </button>
+                    
+                    <!-- Link para avisar quando chegar (Opcional, só visual por enquanto) -->
+                    <p style="text-align:center; font-size:12px; margin-top:10px; color:#666;">
+                        Avise-me quando chegar
+                    </p>
+
+                <% } %>
                 
                 <!-- BOTÃO WHATSAPP DO PRODUTO (Mantido) -->
                 <button type="button" id="btnZapProduct" class="btn-whatsapp-product">
@@ -298,7 +316,7 @@
                                         <% } %>
                                         
                                         <small style="font-size: 10px; color: #888; margin-top: 4px;">
-                                            ou 5x de R$ <%= (p.price / 5).toFixed(2).replace('.', ',') %>
+                                            ou 4x de R$ <%= (p.price / 4).toFixed(2).replace('.', ',') %>
                                         </small>
                                     </div>
                                 </div>
@@ -691,7 +709,63 @@
             }
         });
         
-        // ... (seus outros scripts de zoom e whats continuam aqui) ...
+       const productVariations = <%- JSON.stringify(product.variations || []) %>;
+
+function syncVariations() {
+    const selectedColorInput = document.querySelector('input[name="color"]:checked');
+    const selectedSizeInput = document.querySelector('input[name="size"]:checked');
+    
+    if (!selectedColorInput) return;
+
+    const selectedColor = selectedColorInput.value;
+    const sizeInputs = document.querySelectorAll('input[name="size"]');
+    const stockCountDisplay = document.getElementById('stock-count');
+    const stockSuffixDisplay = document.getElementById('stock-suffix'); // Novo alvo
+    const warningContainer = document.getElementById('stock-warning-container');
+
+    // --- PARTE A: Bloqueia tamanhos sem estoque ---
+    sizeInputs.forEach(input => {
+        const sizeValue = input.value;
+        const variation = productVariations.find(v => v.color === selectedColor && v.size === sizeValue);
+        const sizeBox = input.nextElementSibling;
+
+        if (!variation || variation.stock <= 0) {
+            input.disabled = true;
+            if (input.checked) input.checked = false;
+            sizeBox.style.opacity = "0.3";
+            sizeBox.style.textDecoration = "line-through";
+        } else {
+            input.disabled = false;
+            sizeBox.style.opacity = "1";
+            sizeBox.style.textDecoration = "none";
+        }
+    });
+
+    // --- PARTE B: Atualiza o texto dinâmico ---
+    if (selectedColor && selectedSizeInput) {
+        const selectedSize = selectedSizeInput.value;
+        const variation = productVariations.find(v => v.color === selectedColor && v.size === selectedSize);
+        
+        if (variation) {
+            stockCountDisplay.innerText = variation.stock;
+            // MUDA O TEXTO AQUI:
+            stockSuffixDisplay.innerText = " no tamanho " + selectedSize;
+            
+            // Mostra o aviso apenas se tiver estoque
+            warningContainer.style.display = variation.stock > 0 ? 'block' : 'none';
+        }
+    } else {
+        // Caso nenhum tamanho esteja selecionado ainda
+        stockCountDisplay.innerText = "<%= product.stock %>";
+        stockSuffixDisplay.innerText = " unidades totais.";
+    }
+}
+
+// Manter os mesmos eventos de escuta (change e load) que já tínhamos
+document.querySelectorAll('input[name="color"], input[name="size"]').forEach(el => {
+    el.addEventListener('change', syncVariations);
+});
+window.addEventListener('load', syncVariations);
     </script>
 
 

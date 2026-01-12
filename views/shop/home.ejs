@@ -11,7 +11,7 @@
 
     <main>
       <!-- === LÓGICA DO BANNER === -->
-      <% if (path === '/') { %>
+      <% if (path === '/' && (typeof currentPage === 'undefined' || currentPage === 1)) { %>
       <!-- Adicionei id="heroBanner" aqui para o Script funcionar -->
       <section
         class="hero-banner"
@@ -222,7 +222,7 @@
                     <small
                       style="font-size: 10px; color: #888; margin-top: 4px"
                     >
-                      ou 5x de R$ <%= (p.price / 5).toFixed(2).replace('.', ',')
+                      ou 4x de R$ <%= (p.price / 4).toFixed(2).replace('.', ',')
                       %>
                     </small>
                   </div>
@@ -261,6 +261,37 @@
           </div>
           <% } %>
         </div>
+
+        
+            </div> 
+
+           
+            <% if (typeof totalPages !== 'undefined' && totalPages > 1 && path === '/') { %>
+                <div class="pagination-container">
+                    
+                  
+                    <% if (currentPage > 1) { %>
+                        <a href="/?page=<%= currentPage - 1 %>" class="page-btn">
+                            &larr; Anterior
+                        </a>
+                    <% } %>
+
+                  
+                    <span class="page-info">
+                        Página <%= currentPage %> de <%= totalPages %>
+                    </span>
+
+                    
+                    <% if (currentPage < totalPages) { %>
+                        <a href="/?page=<%= currentPage + 1 %>" class="page-btn">
+                            Próxima &rarr;
+                        </a>
+                    <% } %>
+                    
+                </div>
+            <% } %>
+            
+
       </section>
     </main>
 

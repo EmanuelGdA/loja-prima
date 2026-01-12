@@ -2,12 +2,24 @@
 <footer class="main-footer">
     <div class="footer-content">
         <div class="footer-column">
-            <h3>Sobre a Marca</h3>
-            <p>Moda atemporal e elegante para mulheres que buscam conforto e sofisticação.</p>
-            <div class="social-links">
-                <a href="https://www.instagram.com/maelycristinabrand?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank"><i class="fab fa-instagram"></i></a>
-                <a href="#"><i class="fab fa-facebook-f"></i></a>
-                <a href="#"><i class="fab fa-tiktok"></i></a>
+            <!-- Título -->
+            <h3 style="font-family: 'Playfair Display', serif; letter-spacing: 1px;">SOBRE A MC</h3>
+            
+            <!-- Texto Resumido (O segredo é colocar pouco texto aqui) -->
+            <p style="font-size: 13px; line-height: 1.6; color: #bbb; margin-bottom: 15px;">
+                A MC nasceu há 3 anos com o propósito de unir elegância e conforto. 
+                Cada peça é criada para fazer parte da sua história.
+            </p>
+
+            <!-- Link para a página completa -->
+            <a href="/institucional/quem-somos" style="color: white; text-decoration: underline; font-size: 12px; font-weight: bold;">
+                Ler nossa história completa &rarr;
+            </a>
+
+            <!-- Redes Sociais -->
+            <div class="social-links" style="margin-top: 20px;">
+                <a href="https://instagram.com/maelycristinabrand" target="_blank"><i class="fab fa-instagram"></i></a>
+                <a href="https://www.tiktok.com/@mcmaelycristina?_r=1&_t=ZS-92uOGwIdWez"><i class="fab fa-tiktok"></i></a>
             </div>
         </div>
 
@@ -23,21 +35,29 @@
 
         <div class="footer-column">
             <h3>Formas de Pagamento</h3>
-            <div class="payment-icons">
-                <i class="fab fa-cc-mastercard"></i>
-                <i class="fab fa-cc-visa"></i>
-                <i class="fas fa-barcode"></i> <!-- Boleto -->
-                <i class="fas fa-qrcode"></i> <!-- Pix -->
+            
+            <div class="payment-icons" style="display: flex; align-items: center; gap: 15px; margin-top: 10px;">
+                <!-- Cartões (Crédito e Débito) -->
+                <i class="fab fa-cc-mastercard" style="font-size: 28px;" title="Mastercard"></i>
+                <i class="fab fa-cc-visa" style="font-size: 28px;" title="Visa"></i>
+                <i class="fab fa-cc-amex" style="font-size: 28px;" title="Amex"></i>
+                
+                <!-- Ícone PIX (Estilizado) -->
+                <div style="display: flex; align-items: center; gap: 4px; border: 1px solid #ccc; padding: 3px 6px; border-radius: 4px;">
+                    <i class="fas fa-qrcode" style="font-size: 14px;"></i>
+                    <span style="font-weight: 800; font-size: 11px; font-family: sans-serif;">PIX</span>
+                </div>
             </div>
+            
             <h3>Segurança</h3>
             <div class="security-badges">
-                <span>SSL Seguro</span>
+                <span><i class="fas fa-lock"></i> Site Seguro</span>
             </div>
         </div>
     </div>
 
     <div class="footer-bottom">
-        <p>&copy; 2025 Maely Cristina. Todos os direitos reservados. CNPJ: 00.000.000/0001-00</p>
+        <p>&copy; 2026 Maely Cristina. Todos os direitos reservados. CNPJ: 54.751.749/0001-08</p>
     </div>
 </footer>
 
@@ -342,5 +362,8 @@
             console.log("Erro ao sincronizar favoritos");
         }
     });
+
+    
 </script>
+
 <% } %>

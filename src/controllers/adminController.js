@@ -26,7 +26,7 @@ exports.postAddProduct = async (req, res) => {
     try {
         const body = req.body;
         
-        // 1. Multifotos (Cloudinary) - MANTIDO
+        // 1. Multifotos (Cloudinary)
         let images = [];
         if (req.files && req.files.length > 0) {
             images = req.files.map(f => f.path);
@@ -34,12 +34,9 @@ exports.postAddProduct = async (req, res) => {
             return res.status(422).send("Pelo menos uma foto é obrigatória.");
         }
 
-        // --- LÓGICA NOVA: GUIA DE MEDIDAS DINÂMICO ---
+        // --- LÓGICA DE MEDIDAS DINÂMICO ---
         let measureList = [];
-        
-        // Verifica se o usuário adicionou alguma linha de medida
         if (body.measure_names) {
-            // Garante que sejam Arrays (se vier só 1 linha, o HTML manda string, aí convertemos)
             const names = Array.isArray(body.measure_names) ? body.measure_names : [body.measure_names];
             const pp = Array.isArray(body.measure_PP) ? body.measure_PP : [body.measure_PP];
             const p = Array.isArray(body.measure_P) ? body.measure_P : [body.measure_P];
@@ -47,9 +44,8 @@ exports.postAddProduct = async (req, res) => {
             const g = Array.isArray(body.measure_G) ? body.measure_G : [body.measure_G];
             const gg = Array.isArray(body.measure_GG) ? body.measure_GG : [body.measure_GG];
             
-            // Loop para montar o objeto de cada linha
             for (let i = 0; i < names.length; i++) {
-                if (names[i].trim() !== '') { // Só salva se tiver nome
+                if (names[i].trim() !== '') { 
                     measureList.push({
                         name: names[i],
                         PP: pp[i] || '-',
@@ -61,17 +57,52 @@ exports.postAddProduct = async (req, res) => {
                 }
             }
         }
-        // ----------------------------------------------
 
-        // 2. Categoria Dinâmica - MANTIDO
+        // 2. Definir Categoria (Final)
         const finalCategory = (body.categorySelect === 'new' && body.newCategory) ? body.newCategory : body.categorySelect;
 
-        // 3. Cores e Tamanhos - MANTIDO
-        let sizes = body.sizes || [];
-        if (!Array.isArray(sizes)) sizes = [sizes];
+        // 3. Definir Subcategoria (CORREÇÃO AQUI) ⚠️
+        // Lógica: Tenta pegar do Select. Se for 'new' ou vazio, pega do Input de Texto.
+        let finalSubcategory = body.subcategorySelect;
+        
+        if (finalSubcategory === 'new' || !finalSubcategory) {
+            finalSubcategory = body.newSubcategory;
+        }
+        
+        // Garantia final: Se ainda for vazio/undefined, vira string vazia
+        if (!finalSubcategory) finalSubcategory = '';
 
-        let colors = body.colors || [];
-        if (!Array.isArray(colors)) colors = [colors];
+        // 4. Tratamento de Arrays e Preços
+        let sizes = Array.isArray(body.sizes) ? body.sizes : (body.sizes ? [body.sizes] : []);
+        let colors = Array.isArray(body.colors) ? body.colors : (body.colors ? [body.colors] : []);
+
+        const price = parseCurrency(body.originalPrice);
+        const promo = body.promoPrice ? parseCurrency(body.promoPrice) : null;
+        
+        let finalPrice = price;
+        if (promo && promo > 0 && promo < price) finalPrice = promo;
+
+        let variations = [];
+        let totalStockCalculated = 0;
+
+        // Cruzamos as cores selecionadas com os tamanhos selecionados
+        colors.forEach(c => {
+            sizes.forEach(s => {
+                // MUDANÇA AQUI: .toLowerCase() é essencial
+                const cleanColor = c.replace('#', '').toLowerCase(); 
+                const fieldName = `v_stock_${cleanColor}_${s}`;
+                
+                const qty = parseInt(body[fieldName] || 0);
+
+                variations.push({
+                    color: c, 
+                    size: s,
+                    stock: qty
+                });
+
+                totalStockCalculated += qty;
+            });
+        });
 
         const newProduct = {
             // Dados Básicos
@@ -80,19 +111,20 @@ exports.postAddProduct = async (req, res) => {
             description: body.description,
             
             category: finalCategory,
-            subcategory: body.subcategory || '',
+            subcategory: finalSubcategory, // <--- Agora usa a variável calculada certa
             
             // Imagens
             images: images, 
             imageUrl: images[0], 
 
-            // Preços (Função parseCurrency deve estar no topo do arquivo)
-            price: parseCurrency(body.originalPrice), 
-            promoPrice: body.promoPrice ? parseCurrency(body.promoPrice) : null,
-            finalPrice: body.promoPrice ? parseCurrency(body.promoPrice) : parseCurrency(body.originalPrice),
+            // Preços
+            price: finalPrice, 
+            originalPrice: price,
+            promoPrice: promo,
 
             // Detalhes
-            stock: parseInt(body.stock) || 0,
+           stock: totalStockCalculated, // Agora usa a soma automática da grade
+           variations: variations,      // Salva o array com cada cor/tamanho
             material: body.material || '',
             
             // Arrays
@@ -101,6 +133,8 @@ exports.postAddProduct = async (req, res) => {
 
             // Visibilidade
             isActive: body.isActive === 'true',
+            isNew: body.isNew === 'true',
+            isFeatured: body.isFeatured === 'true', // Faltava esse
 
             // Frete
             weight: parseFloat(body.weight) || 0.3,
@@ -108,22 +142,22 @@ exports.postAddProduct = async (req, res) => {
             width: parseInt(body.width) || 20,
             length: parseInt(body.length) || 20,
 
-            // NOVA PROPRIEDADE: Salva a lista dinâmica que criamos acima
+            // Medidas Dinâmicas
             measures: measureList, 
 
             createdAt: new Date().toISOString()
         };
         
-        // Atualiza menu lateral
-        await updateCategoryList(finalCategory, body.subcategory);
+        // Atualiza menu lateral usando a mesma variável
+        await updateCategoryList(finalCategory, finalSubcategory);
         
         await db.collection('products').add(newProduct);
-        console.log('Produto Criado com Sucesso!');
+        console.log(`Produto Criado! Cat: ${finalCategory} | Sub: ${finalSubcategory}`);
         res.redirect('/admin/produtos');
 
     } catch (error) {
         console.log("Erro Add:", error);
-        res.status(500).send("Erro no servidor");
+        res.status(500).send("Erro no servidor: " + error.message);
     }
 };
 
@@ -212,6 +246,15 @@ exports.getProducts = async (req, res) => {
         const snapshot = await db.collection('products').get();
         const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+        // --- ORDENAÇÃO: MAIS RECENTE PRIMEIRO ---
+        products.sort((a, b) => {
+            // Se o produto for muito antigo e não tiver data, assume data 0
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA; // Data maior (mais nova) vem primeiro
+        });
+        // ----------------------------------------
+
         res.render('admin/products', {
             pageTitle: 'Gerenciar Produtos',
             path: '/admin/produtos',
@@ -276,13 +319,14 @@ exports.getEditProduct = async (req, res) => {
     }
 };
 
-// 8. SALVAR A EDIÇÃO (COM MEDIDAS DINÂMICAS)
+// 8. SALVAR A EDIÇÃO (CORRIGIDO E SEGURO)
 exports.postEditProduct = async (req, res) => {
+    console.log("CONTEÚDO DO BODY:", req.body);
     const prodId = req.body.productId;
     const body = req.body;
 
     try {
-        // 1. LÓGICA DE IMAGENS (MANTIDA)
+        // 1. LÓGICA DE IMAGENS
         let keptImages = body.keptImages || [];
         if (!Array.isArray(keptImages)) keptImages = [keptImages];
 
@@ -294,12 +338,9 @@ exports.postEditProduct = async (req, res) => {
         let finalImages = [...keptImages, ...newImages];
         if (finalImages.length === 0 && body.oldImageUrl) finalImages = [body.oldImageUrl];
 
-        // 2. LÓGICA DE MEDIDAS DINÂMICAS (NOVA)
-        // Substituímos o bloco antigo fixo por este que lê as linhas criadas
+        // 2. LÓGICA DE MEDIDAS DINÂMICAS
         let measureList = [];
-        
         if (body.measure_names) {
-            // Garante que sejam Arrays, mesmo se vier só uma linha
             const names = Array.isArray(body.measure_names) ? body.measure_names : [body.measure_names];
             const pp = Array.isArray(body.measure_PP) ? body.measure_PP : [body.measure_PP];
             const p = Array.isArray(body.measure_P) ? body.measure_P : [body.measure_P];
@@ -307,81 +348,87 @@ exports.postEditProduct = async (req, res) => {
             const g = Array.isArray(body.measure_G) ? body.measure_G : [body.measure_G];
             const gg = Array.isArray(body.measure_GG) ? body.measure_GG : [body.measure_GG];
             
-            // Percorre os arrays e monta os objetos
             for (let i = 0; i < names.length; i++) {
                 if (names[i] && names[i].trim() !== '') {
                     measureList.push({
                         name: names[i],
-                        PP: pp[i] || '-',
-                        P: p[i] || '-',
-                        M: m[i] || '-',
-                        G: g[i] || '-',
-                        GG: gg[i] || '-'
+                        PP: pp[i] || '-', P: p[i] || '-', M: m[i] || '-', G: g[i] || '-', GG: gg[i] || '-'
                     });
                 }
             }
         }
 
-        // 3. OUTRAS LÓGICAS (CATEGORIA, ARRAYS, PREÇOS - MANTIDAS)
+        // 3. CATEGORIA E SUBCATEGORIA
         const finalCategory = (body.categorySelect === 'new' && body.newCategory) ? body.newCategory : body.categorySelect;
+        let finalSubcategory = body.subcategorySelect === 'new' || !body.subcategorySelect ? body.newSubcategory : body.subcategorySelect;
+        if (!finalSubcategory) finalSubcategory = body.subcategory || '';
 
-        let sizes = body.sizes || []; if (!Array.isArray(sizes)) sizes = [sizes];
-        let colors = body.colors || []; if (!Array.isArray(colors)) colors = [colors];
-
+        // 4. PREÇOS E FORMATAÇÃO
         const price = parseCurrency(body.originalPrice);
         const promo = body.promoPrice ? parseCurrency(body.promoPrice) : null;
+        let finalPrice = (promo && promo > 0 && promo < price) ? promo : price;
 
-        // 4. MONTA O OBJETO FINAL
+        // 5. LÓGICA DE GRADE DE ESTOQUE (VARIAÇÕES)
+        let variations = [];
+        let totalStockCalculated = 0;
+        let colorsArray = Array.isArray(body.colors) ? body.colors : (body.colors ? [body.colors] : []);
+        let sizesArray = Array.isArray(body.sizes) ? body.sizes : (body.sizes ? [body.sizes] : []);
+
+        colorsArray.forEach(c => {
+            sizesArray.forEach(s => {
+                const cleanColor = c.replace('#', '').toLowerCase();
+                const fieldName = `v_stock_${cleanColor}_${s}`;
+                const qty = parseInt(req.body[fieldName] || 0);
+
+                variations.push({
+                    color: c,
+                    size: s,
+                    stock: qty
+                });
+                totalStockCalculated += qty;
+            });
+        });
+
+        // 6. MONTAGEM DO OBJETO ÚNICO (Sem duplicatas)
         const updatedProduct = {
             title: body.title || '',
             sku: body.sku || '', 
             description: body.description || '',
             category: finalCategory,
-            subcategory: body.subcategory || '',
-            
+            subcategory: finalSubcategory,
             images: finalImages,
             imageUrl: finalImages[0] || '', 
-
-            price: promo || price,
+            price: finalPrice,
             originalPrice: price,
             promoPrice: promo,
-
-            stock: parseInt(body.stock) || 0,
+            stock: totalStockCalculated,
+            variations: variations,
             material: body.material || '', 
-            
-            sizes: sizes,
-            colors: colors,
-            
-            // AQUI ENTRA A LISTA NOVA DE MEDIDAS
+            sizes: sizesArray,
+            colors: colorsArray,
             measures: measureList, 
-            
-            // Botões e Frete (Mantidos)
             isActive: body.isActive === 'true',
             isNew: body.isNew === 'true',
             isFeatured: body.isFeatured === 'true',
-
             weight: parseFloat(body.weight) || 0.3,
             height: parseInt(body.height) || 5,
             width: parseInt(body.width) || 20,
             length: parseInt(body.length) || 20,
-            
             updatedAt: new Date().toISOString()
         };
 
-        // 5. SALVAR NO BANCO
-        await updateCategoryList(finalCategory, body.subcategory);
+        // 7. ATUALIZA NO BANCO DE DADOS
+        await updateCategoryList(finalCategory, finalSubcategory);
         await db.collection('products').doc(prodId).update(updatedProduct);
         
-        console.log('Produto Editado com Medidas Dinâmicas!');
+        console.log('Produto Editado com Sucesso!');
         res.redirect('/admin/produtos');
 
     } catch (error) {
         console.log("Erro Edit:", error);
-        console.log("Dados recebidos:", JSON.stringify(body, null, 2)); 
         res.redirect('/admin/produtos');
     }
 };
-
 
 // --- FUNÇÃO AUXILIAR PARA LIMPAR CATEGORIAS VAZIAS ---
 async function cleanUpCategories(category, subcategory) {
@@ -497,51 +544,58 @@ exports.postDeleteCoupon = async (req, res) => {
     }
 };
 
-// --- FUNÇÃO AUXILIAR PARA ATUALIZAR O MENU (COM LOGS DE DEBUG) ---
+// --- FUNÇÃO AUXILIAR PARA ATUALIZAR O MENU (CORRIGIDA) ---
 async function updateCategoryList(category, subcategory) {
-    console.log(">>> TENTANDO ATUALIZAR MENU...");
-    console.log("Categoria recebida:", category);
+    // Validação básica
+    if (!category || typeof category !== 'string') return;
     
-    if (!category) {
-        console.log(">>> ERRO: Categoria vazia/nula.");
-        return;
-    }
-    
-    // Normaliza para minúsculo para usar como ID
+    // Normaliza para ID (sem espaços, minúsculo)
     const catId = category.toLowerCase().trim();
-    const catName = category.charAt(0).toUpperCase() + category.slice(1); 
-    const subName = subcategory ? (subcategory.charAt(0).toUpperCase() + subcategory.slice(1)) : null;
+    // Nome Bonito (Primeira Maiúscula)
+    const catName = category.charAt(0).toUpperCase() + category.slice(1);
+    
+    // Prepara a Subcategoria (se existir)
+    let subName = null;
+    if (subcategory && typeof subcategory === 'string' && subcategory.trim() !== '') {
+        const s = subcategory.trim();
+        subName = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); // Ex: "Festa"
+    }
 
     try {
         const catRef = db.collection('categories').doc(catId);
         const doc = await catRef.get();
 
         if (!doc.exists) {
-            console.log(">>> CRIANDO NOVA CATEGORIA NO BANCO:", catName);
+            // === CASO 1: CATEGORIA NOVA (AQUI ESTAVA O BUG) ===
+            // Cria a categoria JÁ COM a subcategoria dentro da lista
+            console.log(`Criando categoria nova: ${catName} com sub: ${subName}`);
             await catRef.set({
                 name: catName,
                 id: catId,
-                subcategories: subName ? [subName] : []
+                subcategories: subName ? [subName] : [] // Se tem sub, cria a lista com ela
             });
+
         } else {
-            console.log(">>> CATEGORIA JÁ EXISTE. VERIFICANDO SUBCATEGORIA...");
+            // === CASO 2: CATEGORIA JÁ EXISTE ===
+            // Apenas adiciona a subcategoria se ela não estiver lá
             if (subName) {
                 const data = doc.data();
-                const subs = data.subcategories || [];
-                if (!subs.includes(subName)) {
-                    console.log(">>> ADICIONANDO SUBCATEGORIA:", subName);
+                let subs = data.subcategories || [];
+
+                // Verifica duplicidade (ignorando maiúscula/minúscula)
+                const exists = subs.some(s => s.toLowerCase() === subName.toLowerCase());
+
+                if (!exists) {
+                    console.log(`Adicionando sub '${subName}' em '${catName}'`);
                     subs.push(subName);
                     await catRef.update({ subcategories: subs });
-                } else {
-                    console.log(">>> SUBCATEGORIA JÁ EXISTE.");
                 }
             }
         }
-        console.log(">>> MENU ATUALIZADO COM SUCESSO!");
     } catch (error) {
-        console.error(">>> ERRO GRAVE AO SALVAR CATEGORIA:", error);
+        console.error("Erro ao atualizar menu de categorias:", error);
     }
-};
+}
 
 // 10. SINCRONIZAR MENU (Limpar categorias vazias antigas)
 exports.postRefreshMenu = async (req, res) => {
@@ -591,5 +645,97 @@ exports.postDeleteOrder = async (req, res) => {
     } catch (error) {
         console.error("Erro ao excluir pedido:", error);
         res.redirect('/admin/pedidos');
+    }
+};
+
+// 11. GESTÃO DE CATEGORIAS (CORRIGIDO)
+exports.getManageCategories = async (req, res) => {
+    try {
+        // 1. Busca dados
+        const catSnap = await db.collection('categories').get();
+        const prodSnap = await db.collection('products').get();
+        
+        const products = prodSnap.docs.map(doc => doc.data());
+        const totalGlobal = products.length; 
+
+        let categories = [];
+
+        // 2. Monta a lista
+        catSnap.forEach(doc => {
+            const catData = doc.data();
+            const catId = doc.id; // Ex: "teste"
+            
+            // Filtra produtos dessa categoria principal (pelo ID para ser exato)
+            const catProducts = products.filter(p => 
+                (p.category || '').toLowerCase().trim() === catId.toLowerCase().trim()
+            );
+            const totalCat = catProducts.length;
+
+            // Analisa as Subcategorias
+            const rawSubs = catData.subcategories || [];
+            const subDetails = rawSubs.map(subName => {
+                
+                // --- AQUI ESTAVA O PROBLEMA ---
+                // Agora convertemos tudo para minúsculo e tiramos espaços antes de comparar
+                const count = catProducts.filter(p => 
+                    (p.subcategory || '').trim().toLowerCase() === subName.trim().toLowerCase()
+                ).length;
+                // ------------------------------
+
+                return { name: subName, count: count };
+            });
+
+            categories.push({
+                id: catId,
+                name: catData.name,
+                count: totalCat,
+                subs: subDetails 
+            });
+        });
+
+        res.render('admin/manage-categories', {
+            pageTitle: 'Gerenciar Categorias',
+            path: '/admin/categorias',
+            categories: categories,
+            totalGlobal: totalGlobal 
+        });
+
+    } catch (error) {
+        console.log("Erro ao carregar categorias:", error);
+        res.redirect('/admin/produtos');
+    }
+};
+
+// NOVA FUNÇÃO: EXCLUIR APENAS UMA SUBCATEGORIA
+exports.postDeleteSubCategory = async (req, res) => {
+    const { categoryId, subName } = req.body;
+    
+    // Importamos admin aqui caso não esteja no topo
+    const admin = require('firebase-admin');
+
+    try {
+        await db.collection('categories').doc(categoryId).update({
+            // Remove o item específico do array
+            subcategories: admin.firestore.FieldValue.arrayRemove(subName)
+        });
+        console.log(`Subcategoria '${subName}' removida de '${categoryId}'.`);
+        res.redirect('/admin/categorias');
+    } catch (error) {
+        console.error("Erro ao apagar subcategoria:", error);
+        res.redirect('/admin/categorias');
+    }
+};
+
+
+exports.postDeleteCategory = async (req, res) => {
+    const catId = req.body.categoryId;
+    try {
+        // Apaga a categoria do banco de menu
+        await db.collection('categories').doc(catId).delete();
+        console.log(`Categoria ${catId} removida.`);
+        res.redirect('/admin/categorias');
+    } catch (error) {
+        console.log(error);
+        res.redirect('/admin/categorias');
     }
 };

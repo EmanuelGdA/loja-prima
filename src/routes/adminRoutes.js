@@ -23,8 +23,12 @@ router.get('/editar-produto/:productId', isAdmin, adminController.getEditProduct
 router.post('/editar-produto', isAdmin, upload.array('images', 5), adminController.postEditProduct);
 
 
-// ROTA DA FAXINA 
-router.post('/sincronizar-menu', isAdmin, adminController.postRefreshMenu);
+
+// GESTÃO DE CATEGORIAS
+router.get('/categorias', isAdmin, adminController.getManageCategories);
+router.post('/excluir-categoria', isAdmin, adminController.postDeleteCategory);
+router.post('/excluir-subcategoria', isAdmin, adminController.postDeleteSubCategory);
+
 
 // ROTAS DE CUPONS (NOVAS)
 router.get('/cupons', isAdmin, adminController.getCoupons);

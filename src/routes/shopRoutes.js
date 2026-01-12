@@ -31,6 +31,8 @@ router.post('/pagar-pedido/:orderId', shopController.postPayOrder);
 // ROTA DE LANÇAMENTOS
 router.get('/colecao/lancamentos', shopController.getNewArrivals);
 
+router.get('/colecao/:categoryName/:subcategoryName', shopController.getSubCategory);
+
 // ROTA DE PROMOÇÕES 
 router.get('/colecao/promocao', shopController.getPromotions);
 
