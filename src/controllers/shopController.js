@@ -1297,6 +1297,48 @@ exports.getSubCategory = async (req, res) => {
   }
 };
 
+
+
+exports.mercadoPagoWebhook = async (req, res) => {
+    // Pegamos o ID do pagamento enviado pelo Mercado Pago
+    const paymentId = req.query.id || (req.body.data && req.body.data.id);
+
+    try {
+        if (paymentId) {
+            // 1. Consultamos o Mercado Pago para saber o status real
+            const response = await payment.get({ id: paymentId });
+            const status = response.status;
+            const orderId = response.external_reference; // O ID do pedido que enviamos
+
+            const orderRef = db.collection('orders').doc(orderId);
+            const orderDoc = await orderRef.get();
+
+            if (orderDoc.exists) {
+                const orderData = orderDoc.data();
+
+                // SE FOI APROVADO: Muda o status para Pago
+                if (status === 'approved' && orderData.status !== 'Pago / Aprovado') {
+                    await orderRef.update({ status: 'Pago / Aprovado', mercadoPagoId: paymentId.toString() });
+                    console.log(`Webhook: Pedido ${orderId} aprovado.`);
+                }
+
+                // SE FOI CANCELADO OU EXPIROU: Devolve o estoque
+                if ((status === 'cancelled' || status === 'expired') && orderData.status === 'Aguardando Pagamento') {
+                    if (!orderData.estoqueDevolvido) {
+                        await estornarEstoque(orderData.items); // Chama a função que vamos criar abaixo
+                        await orderRef.update({ status: 'Cancelado / Expirado', estoqueDevolvido: true });
+                        console.log(`Webhook: Estoque do pedido ${orderId} devolvido.`);
+                    }
+                }
+            }
+        }
+        res.sendStatus(200); // Responde OK para o Mercado Pago
+    } catch (error) {
+        console.error("Erro no Webhook:", error);
+        res.sendStatus(500);
+    }
+};
+
 // ✅ ADICIONE ISSO NO FINAL DO ARQUIVO (FORA DE TUDO)
 async function baixarEstoqueDasVariacoes(items) {
     for (const item of items) {
@@ -1315,5 +1357,28 @@ async function baixarEstoqueDasVariacoes(items) {
                 }
             }
         } catch (err) { console.error("Erro estoque:", err); }
+    }
+};
+
+// --- FUNÇÃO AUXILIAR PARA DEVOLVER ESTOQUE (SOMA AO INVÉS DE SUBTRAIR) ---
+async function estornarEstoque(items) {
+    for (const item of items) {
+        try {
+            const prodRef = db.collection('products').doc(item.productId);
+            const pDoc = await prodRef.get();
+            if (pDoc.exists) {
+                const productData = pDoc.data();
+                let variations = productData.variations || [];
+                let globalStock = parseInt(productData.stock || 0);
+
+                const varIndex = variations.findIndex(v => v.color === item.color && v.size === item.size);
+                if (varIndex > -1) {
+                    // SOMA as quantidades de volta
+                    variations[varIndex].stock = parseInt(variations[varIndex].stock) + item.qty;
+                    globalStock = globalStock + item.qty;
+                    await prodRef.update({ variations, stock: globalStock });
+                }
+            }
+        } catch (err) { console.error("Erro ao estornar estoque:", err); }
     }
 };

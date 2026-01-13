@@ -699,7 +699,7 @@ async function updateInstallments() {
         // Se for DÉBITO: Não busca parcelas, trava em 1x
         if (type === 'debit') {
             select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
-            installContainer.style.display = 'block';
+            document.getElementById('installments-container').style.display = 'block';
             return;
         }
 
