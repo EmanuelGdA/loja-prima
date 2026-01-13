@@ -667,17 +667,34 @@
 
     const mp = new MercadoPago('APP_USR-6ef4f872-b933-4bb5-bb93-ed386d5158a1'); // SUA CHAVE PÚBLICA
     
-    // --- FUNÇÃO QUE ATUALIZA AS PARCELAS ---
-    async function updateInstallments() {
-        const type = document.querySelector('input[name="cardType"]:checked').value;
-        const installContainer = document.getElementById('installments-container');
-        const select = document.getElementById('installments');
+    // --- FUNÇÃO QUE ATUALIZA AS PARCELAS (VERSÃO CORRIGIDA) ---
+async function updateInstallments() {
+    const type = document.querySelector('input[name="cardType"]:checked').value;
+    const installContainer = document.getElementById('installments-container');
+    const select = document.getElementById('installments');
+    
+    const cardNumber = document.getElementById('cc-number').value.replace(/\s/g, '');
+    if (cardNumber.length < 6) return;
+
+    const bin = cardNumber.substring(0, 6);
+    let freteValor = parseFloat(document.getElementById('shippingCostInput').value) || 0;
+    
+    // Importante: cartSubtotal já deve estar com desconto se for o caso
+    const totalFinal = cartSubtotal + freteValor;
+
+    try {
+        // 1. Identifica Bandeira (Visa, Master, etc)
+        const paymentMethods = await mp.getPaymentMethods({ bin: bin });
+        if (paymentMethods.results.length === 0) return;
         
-        // Pega o número do cartão para saber a bandeira (BIN)
-        const cardNumber = document.getElementById('cc-number').value.replace(/\s/g, '');
+        // --- AS DUAS LINHAS MÁGICAS QUE FALTAVAM: ---
+        const method = paymentMethods.results[0];
+        document.getElementById('paymentMethodId').value = method.id; // Salva 'visa', 'master', etc.
         
-        // Validação básica antes de chamar API
-        if (cardNumber.length < 6) return;
+        if (method.issuer) {
+            document.getElementById('issuerId').value = method.issuer.id; // Salva o banco emissor
+        }
+        // --------------------------------------------
 
         // Se for DÉBITO: Não busca parcelas, trava em 1x
         if (type === 'debit') {
@@ -686,40 +703,30 @@
             return;
         }
 
-        // Se for CRÉDITO: Busca no Mercado Pago
-        const bin = cardNumber.substring(0, 6);
-        let freteValor = parseFloat(document.getElementById('shippingCostInput').value) || 0;
-        const totalFinal = cartSubtotal + freteValor;
+        // 2. Busca Parcelas (Só para CRÉDITO)
+        const installments = await mp.getInstallments({
+            amount: String(totalFinal),
+            bin: bin,
+            paymentTypeId: 'credit_card'
+        });
 
-        try {
-            // 1. Identifica Bandeira
-            const paymentMethods = await mp.getPaymentMethods({ bin: bin });
-            if (paymentMethods.results.length === 0) return;
-            
-            // 2. Busca Parcelas
-            const installments = await mp.getInstallments({
-                amount: String(totalFinal),
-                bin: bin,
-                paymentTypeId: 'credit_card'
+        select.innerHTML = ''; // Limpa
+        
+        if (installments.length > 0) {
+            const opcoes = installments[0].payer_costs;
+            opcoes.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.installments;
+                option.text = opt.recommended_message; 
+                select.appendChild(option);
             });
-
-            select.innerHTML = ''; // Limpa
-            
-            if (installments.length > 0) {
-                const opcoes = installments[0].payer_costs;
-                opcoes.forEach(opt => {
-                    const option = document.createElement('option');
-                    option.value = opt.installments;
-                    option.text = opt.recommended_message; 
-                    select.appendChild(option);
-                });
-                installContainer.style.display = 'block'; // MOSTRA NA TELA
-            }
-
-        } catch (error) {
-            console.log("Erro ao buscar parcelas:", error);
+            installContainer.style.display = 'block'; 
         }
+
+    } catch (error) {
+        console.log("Erro ao identificar cartão/parcelas:", error);
     }
+}
 
     // --- GATILHO DO CVV (SÓ RODA QUANDO PREENCHER O CÓDIGO) ---
     document.getElementById('cc-cvv').addEventListener('input', function(e) {

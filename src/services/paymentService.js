@@ -46,29 +46,30 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
     }
 };
 
-// 2. PROCESSAR CARTÃO
-exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, installments, paymentMethodId) => {
+// 2. PROCESSAR CARTÃO MERCADO PAGO
+exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, installments, paymentMethodId, issuerId) => {
     try {
-        console.log("--- CARTÃO MERCADO PAGO ---");
+        console.log("--- ENVIANDO PAGAMENTO AO MERCADO PAGO ---");
 
         const body = {
             transaction_amount: parseFloat(pedido.totalPrice),
-            token: cardToken, // O token gerado no frontend
+            token: cardToken,
             description: `Pedido #${pedido.id}`,
-            installments: parseInt(installments), // Quantas parcelas
-            payment_method_id: paymentMethodId,   // ex: "master", "visa"
+            installments: parseInt(installments),
+            payment_method_id: paymentMethodId, // ex: "visa", "master"
+            issuer_id: issuerId ? parseInt(issuerId) : undefined, // Importante para alguns bancos
             payer: {
                 email: cliente.email,
                 identification: {
                     type: 'CPF',
                     number: cpf.replace(/\D/g, '')
                 }
-            }
+            },
+            notification_url: 'https://loja-prima.onrender.com/api/webhook/mp'
         };
 
         const response = await payment.create({ body });
         
-        // Mapeia o status do MP para o nosso sistema
         let statusFinal = 'Recusado';
         if (response.status === 'approved') statusFinal = 'Pago / Aprovado';
         if (response.status === 'in_process') statusFinal = 'Em Análise';
@@ -76,11 +77,11 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, insta
         return {
             id: response.id.toString(),
             status: statusFinal,
-            message: response.status_detail
+            message: response.status_detail // Detalha se foi falta de limite, CCV errado, etc.
         };
 
     } catch (error) {
-        console.error("Erro MP Cartão:", error);
-        throw new Error("Pagamento recusado.");
+        console.error("Erro detalhado MP:", error.cause ? error.cause[0] : error);
+        throw new Error("O cartão foi recusado ou os dados estão incorretos.");
     }
 };

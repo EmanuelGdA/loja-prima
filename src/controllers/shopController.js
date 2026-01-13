@@ -513,41 +513,44 @@ exports.postOrder = async (req, res) => {
         total: finalTotalPrice,
       });
     } else {
-      // --- CARTÃO MERCADO PAGO ---
+      // --- CARTÃO MERCADO PAGO (VERSÃO ATUALIZADA) ---
       const cardToken = req.body.cardToken;
-      const paymentMethodId = req.body.paymentMethodId; // ex: visa
+      const paymentMethodId = req.body.paymentMethodId; // ex: visa, master
+      const issuerId = req.body.issuerId;               // ID do Banco Emissor
       const installments = req.body.installments;
 
-      if (!cardToken)
-        throw new Error("Erro ao processar cartão (Token inválido).");
+      // Log para conferência no terminal
+      console.log(`Tentando cobrança: ${paymentMethodId} | Token: ${cardToken ? 'OK' : 'FALHOU'}`);
 
+      if (!cardToken || !paymentMethodId) {
+        throw new Error("Não foi possível identificar seu cartão. Verifique os dados e tente novamente.");
+      }
+
+      // Chamamos o serviço passando agora o issuerId como 7º parâmetro
       const cardResult = await paymentService.processarCartaoPagSeguro(
         { id: orderId, totalPrice: finalTotalPrice },
         user,
         cpf,
         cardToken,
         installments,
-        paymentMethodId
+        paymentMethodId,
+        issuerId // <--- ADICIONADO AQUI
       );
 
-      if (cardResult.status === "Pago / Aprovado") {
-        await orderRef.update({
-          status: "Pago / Aprovado",
-          pagseguroId: cardResult.id,
+      // Verificamos se o Mercado Pago aprovou
+      if (cardResult.status === 'Pago / Aprovado') {
+        await orderRef.update({ 
+            status: 'Pago / Aprovado', 
+            mercadoPagoId: cardResult.id 
         });
-        req.session.cart = null;
-        return res.render("shop/success", {
-          pageTitle: "Compra Aprovada!",
-          path: "",
-        });
+        
+        req.session.cart = null; // Limpa a sacola
+        return res.render('shop/success', { pageTitle: 'Compra Aprovada!', path: '' });
       } else {
-        await orderRef.update({ status: "Recusado" });
-        req.flash(
-          "error",
-          "Pagamento não aprovado. Motivo: " +
-            (cardResult.message || "Banco recusou")
-        );
-        return res.redirect("/checkout");
+        // Se o cartão for recusado (falta de limite, por exemplo)
+        await orderRef.update({ status: 'Recusado' });
+        req.flash('error', 'O pagamento não foi aprovado. Motivo: ' + (cardResult.message || 'Dados incorretos ou limite insuficiente.'));
+        return res.redirect('/checkout');
       }
     }
   } catch (error) {
