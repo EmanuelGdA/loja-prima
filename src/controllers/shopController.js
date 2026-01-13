@@ -429,17 +429,18 @@ exports.postOrder = async (req, res) => {
     const finalTotalPrice = parseFloat((finalPricePecas + shippingCost).toFixed(2));
 
     // Monta Pedido (Versão Corrigida sem duplicidade)
+    // Monta Pedido (Versão Corrigida)
     const orderData = {
       user: { id: user.id, email: user.email, name: user.name, cpf, phone },
       items: cart.items,
-      subtotal: cart.totalPrice,
-      baseProdutos: priceBasePecas,
-      pixDiscount: pixDiscountAmount, // Valor em reais do desconto de 5% (se houver)
-      discountTotal: priceBase, // Valor dos produtos após cupom e após PIX
+      subtotal: cart.totalPrice, // Valor bruto sem cupom
+      baseProdutos: priceBasePecas, // Valor com cupom, mas SEM desconto PIX
+      pixDiscount: pixDiscountAmount, 
+      discountTotal: finalPricePecas, // <--- CORRIGIDO (era aqui o erro de 'priceBase')
       shippingCost,
       shippingMethod,
       couponUsed: cart.coupon ? cart.coupon.code : null,
-      totalPrice: finalTotalPrice, // Valor final (Produtos com descontos + Frete)
+      totalPrice: finalTotalPrice, 
       address: {
         cep: req.body.cep,
         rua: req.body.rua,
@@ -456,22 +457,34 @@ exports.postOrder = async (req, res) => {
     const orderRef = await db.collection("orders").add(orderData);
     const orderId = orderRef.id;
 
+    // --- BAIXAR ESTOQUE DA GRADE (VARIAÇÕES) ---
     for (const item of cart.items) {
       try {
         const prodRef = db.collection("products").doc(item.productId);
-
-        // Pega o estoque atual do banco
         const pDoc = await prodRef.get();
+
         if (pDoc.exists) {
-          const currentStock = parseInt(pDoc.data().stock || 0);
+          const productData = pDoc.data();
+          let variations = productData.variations || [];
+          let globalStock = parseInt(productData.stock || 0);
 
-          // Diminui a quantidade comprada
-          let newStock = currentStock - item.qty;
-          if (newStock < 0) newStock = 0; // Evita número negativo
+          // 1. Encontra a variação exata que o cliente comprou
+          const varIndex = variations.findIndex(v => v.color === item.color && v.size === item.size);
 
-          // Salva o novo estoque
-          await prodRef.update({ stock: newStock });
-          console.log(`Estoque de ${item.title} atualizado para ${newStock}`);
+          if (varIndex > -1) {
+            // 2. Diminui o estoque da variação
+            variations[varIndex].stock = Math.max(0, parseInt(variations[varIndex].stock) - item.qty);
+            
+            // 3. Atualiza o estoque global (soma de tudo)
+            globalStock = Math.max(0, globalStock - item.qty);
+
+            // 4. Salva no banco os dois valores atualizados
+            await prodRef.update({ 
+              variations: variations,
+              stock: globalStock 
+            });
+            console.log(`Estoque atualizado: ${item.title} (${item.color} - ${item.size})`);
+          }
         }
       } catch (err) {
         console.error(`Erro ao baixar estoque do item ${item.title}:`, err);
