@@ -747,45 +747,61 @@ async function updateInstallments() {
 
     const form = document.getElementById('paymentForm');
 
-    form.addEventListener('submit', async function(e) {
+    // 1. Crie esta variável FORA do addEventListener para servir de trava
+let enviandoPedido = false; 
+
+form.addEventListener('submit', async function(e) {
+    e.preventDefault(); // Para o envio automático para termos controle total
+
+    if (enviandoPedido) return; // Se já estiver enviando, ignora novos cliques
+
     const method = document.querySelector('input[name="paymentMethod"]:checked').value;
-    
-    // 1. DESATIVA O BOTÃO IMEDIATAMENTE (Evita cliques duplos)
     const btn = document.querySelector('.btn-finish');
-    if (btn.disabled) return; // Se já estiver processando, não faz nada
-    
+
+    // Ativa a trava e muda o visual do botão
+    enviandoPedido = true;
+    btn.disabled = true;
     btn.innerText = 'Processando...';
     btn.style.opacity = '0.5';
-    btn.style.cursor = 'not-allowed';
 
     if (method === 'pix') {
-        // Se for PIX, deixa o formulário seguir normalmente
-        btn.disabled = true; // Bloqueia para não clicar de novo
+        // Se for PIX, não precisa de token, envia direto
+        form.submit();
         return; 
     }
 
-    // Se for Cartão, faz a lógica do token
-    e.preventDefault(); 
-    btn.disabled = true; // Trava o botão aqui também
-
+    // --- LÓGICA DE CARTÃO ---
     try {
         const tokenObj = await mp.createCardToken({
-            // ... (seus dados de captura do token)
+            cardNumber: document.getElementById('cc-number').value.replace(/\s/g, ''),
+            cardholderName: document.getElementsByName('cardHolder')[0].value,
+            cardExpirationMonth: document.getElementById('cc-exp').value.split('/')[0],
+            cardExpirationYear: "20" + document.getElementById('cc-exp').value.split('/')[1],
+            securityCode: document.getElementById('cc-cvv').value,
+            identificationType: "CPF",
+            identificationNumber: document.getElementsByName('cpf')[0].value.replace(/\D/g, '')
         });
 
-        document.getElementById('cardToken').value = tokenObj.id;
-        
-        // 2. ENVIA O FORMULÁRIO MANUALMENTE
-        form.submit();
+        if (tokenObj && tokenObj.id) {
+            document.getElementById('cardToken').value = tokenObj.id;
+            // O segredo: só envia o formulário DEPOIS que o token está no campo escondido
+            form.submit();
+        } else {
+            throw new Error("Não foi possível gerar o token do cartão.");
+        }
 
     } catch (error) {
-        console.error(error);
-        alert("Erro no cartão. Verifique os dados.");
+        console.error("Erro ao gerar token:", error);
+        alert("Erro nos dados do cartão. Verifique o número, validade e CVV.");
+        
+        // Se deu erro, liberamos o botão para o cliente tentar corrigir
+        enviandoPedido = false;
+        btn.disabled = false;
         btn.innerText = 'Finalizar Pedido';
-        btn.disabled = false; // Reativa apenas se der erro
         btn.style.opacity = '1';
     }
 });
+
  function atualizarTotalGeral() {
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
     const shippingCost = parseFloat(document.getElementById('shippingCostInput').value) || 0;
