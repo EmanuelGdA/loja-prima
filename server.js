@@ -42,15 +42,14 @@ app.use(express.static(path.join(__dirname, 'public'))); // Pasta pública (CSS/
 
 // 4. Configurar Sessão (AGORA SALVANDO NO FIREBASE)
 app.use(session({
-    
-    
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: { 
         httpOnly: true, 
         secure: process.env.NODE_ENV === 'production', 
-        maxAge: 1000 * 60 * 60 * 24 * 7 // Mantém logado por 7 dias
+        maxAge: 1000 * 60 * 60 * 24 * 7, // Mantém logado por 7 dias
+        sameSite: 'lax'
     }
 }));
 

@@ -745,29 +745,33 @@ async function updateInstallments() {
         }
     }
 
-    const form = document.getElementById('paymentForm');
 
-    // 1. Crie esta variável FORA do addEventListener para servir de trava
-let enviandoPedido = false; 
+  // 1. Defina a trava fora de tudo
+let processandoPedido = false;
+
+const form = document.getElementById('paymentForm');
 
 form.addEventListener('submit', async function(e) {
-    e.preventDefault(); // Para o envio automático para termos controle total
+    // Para o envio padrão do navegador imediatamente
+    e.preventDefault(); 
 
-    if (enviandoPedido) return; // Se já estiver enviando, ignora novos cliques
+    // Se já estiver processando, não faz absolutamente nada
+    if (processandoPedido) return false;
 
     const method = document.querySelector('input[name="paymentMethod"]:checked').value;
     const btn = document.querySelector('.btn-finish');
 
-    // Ativa a trava e muda o visual do botão
-    enviandoPedido = true;
+    // Ativa a trava e muda o visual
+    processandoPedido = true;
     btn.disabled = true;
     btn.innerText = 'Processando...';
     btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
 
     if (method === 'pix') {
-        // Se for PIX, não precisa de token, envia direto
+        // Se for PIX, envia o formulário original manualmente
         form.submit();
-        return; 
+        return;
     }
 
     // --- LÓGICA DE CARTÃO ---
@@ -784,21 +788,24 @@ form.addEventListener('submit', async function(e) {
 
         if (tokenObj && tokenObj.id) {
             document.getElementById('cardToken').value = tokenObj.id;
-            // O segredo: só envia o formulário DEPOIS que o token está no campo escondido
-            form.submit();
+            
+            // O SEGREDO: Usamos o método submit() do protótipo para evitar 
+            // que o evento de 'submit' deste listener seja disparado de novo
+            HTMLFormElement.prototype.submit.call(form);
         } else {
-            throw new Error("Não foi possível gerar o token do cartão.");
+            throw new Error("Token não gerado.");
         }
 
     } catch (error) {
-        console.error("Erro ao gerar token:", error);
-        alert("Erro nos dados do cartão. Verifique o número, validade e CVV.");
+        console.error("Erro no token:", error);
+        alert("Dados do cartão inválidos. Verifique os números e o CVV.");
         
-        // Se deu erro, liberamos o botão para o cliente tentar corrigir
-        enviandoPedido = false;
+        // Se deu erro, liberamos o botão para o cliente tentar de novo
+        processandoPedido = false;
         btn.disabled = false;
         btn.innerText = 'Finalizar Pedido';
         btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
     }
 });
 
