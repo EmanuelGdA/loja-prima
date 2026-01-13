@@ -1,29 +1,121 @@
 const { db } = require('../config/firebase');
 const admin = require('firebase-admin');
+const bcrypt = require('bcryptjs'); // Para as senhas
 
-// 1. TELA DE LOGIN (Única tela necessária agora)
+// 1. TELA DE LOGIN/CADASTRO
 exports.getLogin = (req, res) => {
-    // Se já estiver logado, manda pra home
-    if (req.session.isLoggedIn) {
-        return res.redirect('/');
-    }
+    if (req.session.isLoggedIn) return res.redirect('/');
     
     res.render('user/login', { 
-        pageTitle: 'Entrar', 
-        path: '/login' 
+        pageTitle: 'Entrar ou Criar Conta', 
+        path: '/login',
+        errorMessage: req.flash('error')[0] || null
     });
 };
 
-// 2. LOGIN/CADASTRO COM GOOGLE (O "Coração" do sistema agora)
+// 2. CADASTRO MANUAL (Email, Telefone e Senha)
+exports.postSignup = async (req, res) => {
+    const { name, email, phone, password } = req.body;
+    
+    // Limpeza do telefone (deixa só números)
+    const cleanPhone = phone.replace(/\D/g, '');
+
+    try {
+        const userRef = db.collection('users');
+
+        // Verifica se o Email ou Telefone já existem
+        const emailCheck = await userRef.where('email', '==', email).get();
+        const phoneCheck = await userRef.where('phone', '==', cleanPhone).get();
+
+        if (!emailCheck.empty) {
+            req.flash('error', 'Este e-mail já está cadastrado.');
+            return res.redirect('/login');
+        }
+        if (!phoneCheck.empty && cleanPhone !== '') {
+            req.flash('error', 'Este telefone já está cadastrado.');
+            return res.redirect('/login');
+        }
+
+        // Criptografa a senha
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        const newUser = {
+            name,
+            email: email.toLowerCase(),
+            phone: cleanPhone,
+            password: hashedPassword,
+            isAdmin: false,
+            createdAt: new Date().toISOString(),
+            cart: { items: [], totalQty: 0, totalPrice: 0 }
+        };
+
+        await userRef.add(newUser);
+        req.flash('success', 'Conta criada com sucesso! Agora você pode entrar.');
+        res.redirect('/login');
+
+    } catch (error) {
+        console.error("Erro no Cadastro:", error);
+        res.redirect('/login');
+    }
+};
+
+// 3. LOGIN MANUAL (Aceita Email OU Telefone)
+exports.postLogin = async (req, res) => {
+    const { loginIdentifier, password } = req.body;
+    const input = loginIdentifier.toLowerCase().trim();
+
+    try {
+        const userRef = db.collection('users');
+        let userDoc = null;
+
+        // 1. Tenta buscar por E-mail
+        const emailSnapshot = await userRef.where('email', '==', input).get();
+        
+        if (!emailSnapshot.empty) {
+            userDoc = emailSnapshot.docs[0];
+        } else {
+            // 2. Se não achou, limpa o input e tenta por Telefone
+            const cleanPhone = input.replace(/\D/g, '');
+            const phoneSnapshot = await userRef.where('phone', '==', cleanPhone).get();
+            if (!phoneSnapshot.empty) {
+                userDoc = phoneSnapshot.docs[0];
+            }
+        }
+
+        if (!userDoc) {
+            req.flash('error', 'E-mail ou Telefone não cadastrados.');
+            return res.redirect('/login');
+        }
+
+        const userData = userDoc.data();
+        
+        // 3. Verifica se o usuário tem senha (pode ter criado via Google antes)
+        if (!userData.password) {
+            req.flash('error', 'Esta conta usa login do Google. Clique no botão abaixo.');
+            return res.redirect('/login');
+        }
+
+        const doMatch = await bcrypt.compare(password, userData.password);
+        if (doMatch) {
+            // ... (Lógica de criar sessão igual ao GoogleLogin)
+            req.session.isLoggedIn = true;
+            req.session.user = { id: userDoc.id, name: userData.name, email: userData.email, isAdmin: userData.isAdmin };
+            return req.session.save(() => res.redirect('/'));
+        }
+
+        req.flash('error', 'Senha incorreta.');
+        res.redirect('/login');
+    } catch (err) { console.log(err); res.redirect('/login'); }
+};
+
+// 4. LOGIN COM GOOGLE (Mantido e melhorado)
 exports.googleLogin = async (req, res) => {
     const idToken = req.body.token;
 
     try {
-        // A) Valida o token com o Google
         const decodedToken = await admin.auth().verifyIdToken(idToken);
         const { uid, email, name } = decodedToken;
 
-        // B) Verifica se o usuário já existe no nosso banco
         const userRef = db.collection('users');
         const snapshot = await userRef.where('email', '==', email).get();
 
@@ -31,66 +123,34 @@ exports.googleLogin = async (req, res) => {
         let userData;
 
         if (snapshot.empty) {
-            // ---> CLIENTE NOVO: Cria a conta automaticamente <---
-            console.log("Criando novo usuário via Google:", email);
-            
             const newUser = {
                 name: name || 'Usuário Google',
                 email: email,
-                phone: '', // Google não passa telefone, pegamos no checkout depois
-                isAdmin: false, // Por padrão ninguém é admin
-                isVerified: true, // Google é confiável
+                phone: '',
+                isAdmin: false,
                 googleId: uid,
-                cart: null, // Carrinho vazio inicialmente
+                cart: { items: [], totalQty: 0, totalPrice: 0 },
                 createdAt: new Date().toISOString()
             };
-            
             const docRef = await userRef.add(newUser);
             userDocId = docRef.id;
             userData = newUser;
         } else {
-            // ---> CLIENTE EXISTENTE: Só pega os dados <---
-            console.log("Usuário Google retornou:", email);
             const doc = snapshot.docs[0];
             userDocId = doc.id;
             userData = doc.data();
         }
 
-        // C) Recuperar Carrinho (Sincronização)
-        // Se o usuário tinha um carrinho salvo no banco, carregamos na sessão
-        if (userData.cart && userData.cart.items.length > 0) {
-            req.session.cart = userData.cart;
-        } 
-        // Se ele não tinha no banco, mas montou um agora deslogado, salvamos no banco
-        else if (req.session.cart && req.session.cart.items.length > 0) {
-            await db.collection('users').doc(userDocId).update({
-                cart: req.session.cart
-            });
-        }
-
-        // D) Cria a Sessão Final
         req.session.isLoggedIn = true;
-        req.session.user = { 
-            id: userDocId, 
-            name: userData.name, 
-            email: userData.email,
-            isAdmin: userData.isAdmin || false // Garante que Admin funcione
-        };
-
-        req.session.save(() => {
-            res.json({ status: 'success' });
-        });
+        req.session.user = { id: userDocId, name: userData.name, email: userData.email, isAdmin: userData.isAdmin };
+        
+        req.session.save(() => res.json({ status: 'success' }));
 
     } catch (error) {
-        console.error("Erro Google Login:", error);
-        res.status(401).json({ status: 'error', message: 'Falha na autenticação com Google.' });
+        res.status(401).json({ status: 'error' });
     }
 };
 
-// 3. LOGOUT
 exports.postLogout = (req, res) => {
-    req.session.destroy(() => {
-        res.redirect('/');
-    });
+    req.session.destroy(() => res.redirect('/'));
 };
-

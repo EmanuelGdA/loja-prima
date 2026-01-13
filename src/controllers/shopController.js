@@ -412,22 +412,28 @@ exports.postOrder = async (req, res) => {
         .catch(() => {});
     }
 
-    // Cálculo Total com Desconto PIX de 5% (Somente sobre os produtos)
-    let priceBase = cart.totalWithDiscount || cart.totalPrice;
+   // --- CÁLCULO TOTAL (ATUALIZADO) ---
+    // 1. Criamos a âncora: Preço das peças com cupom, mas SEM o desconto do PIX ainda.
+    const priceBasePecas = cart.totalWithDiscount || cart.totalPrice; 
+    
     let pixDiscountAmount = 0;
+    let finalPricePecas = priceBasePecas; // Variável que pode ou não sofrer desconto
 
+    // 2. Se for PIX, calculamos o desconto, mas a "priceBasePecas" continua intacta.
     if (paymentMethod === "pix") {
-      pixDiscountAmount = priceBase * 0.05; // Calcula os 5%
-      priceBase = priceBase - pixDiscountAmount; // Aplica o desconto
+      pixDiscountAmount = priceBasePecas * 0.05; 
+      finalPricePecas = priceBasePecas - pixDiscountAmount; 
     }
 
-    const finalTotalPrice = parseFloat((priceBase + shippingCost).toFixed(2));
+    // 3. O total final é a soma do preço das peças (com ou sem desconto) + frete.
+    const finalTotalPrice = parseFloat((finalPricePecas + shippingCost).toFixed(2));
 
     // Monta Pedido (Versão Corrigida sem duplicidade)
     const orderData = {
       user: { id: user.id, email: user.email, name: user.name, cpf, phone },
       items: cart.items,
       subtotal: cart.totalPrice,
+      baseProdutos: priceBasePecas,
       pixDiscount: pixDiscountAmount, // Valor em reais do desconto de 5% (se houver)
       discountTotal: priceBase, // Valor dos produtos após cupom e após PIX
       shippingCost,
@@ -1071,14 +1077,24 @@ exports.postPayOrder = async (req, res) => {
         const cpf = req.body.cpf || user.cpf || order.user.cpf;
 
         // --- LÓGICA DE DESCONTO PIX (5% sobre os produtos) ---
-        const baseProdutos = order.discountTotal || order.subtotal;
-        let valorFinalRecalculado = order.totalPrice; // CORRIGIDO: Nome sem espaço
+        // --- NOVA LÓGICA DE CÁLCULO (RECUPERA VALOR CHEIO) ---
+// 1. Pegamos o valor das peças sem o desconto do PIX anterior.
+// Priorizamos 'baseProdutos' (que já tem cupom), se não tiver usamos o 'subtotal'.
+const valorProdutosSemPix = order.baseProdutos || order.subtotal;
+const valorFrete = order.shippingCost || 0;
 
-        if (paymentMethod === 'pix') {
-            const descontoPix = baseProdutos * 0.05;
-            valorFinalRecalculado = (baseProdutos - descontoPix) + (order.shippingCost || 0);
-        }
-        
+let valorFinalRecalculado;
+
+if (paymentMethod === 'pix') {
+    // Se escolheu PIX: Aplica o desconto de 5% sobre o valor base das peças
+    const descontoPix = valorProdutosSemPix * 0.05;
+    valorFinalRecalculado = (valorProdutosSemPix - descontoPix) + valorFrete;
+    console.log("Re-pagamento PIX: Aplicando 5% de desconto.");
+} else {
+    // Se escolheu Cartão: Cobra o valor cheio das peças + frete
+    valorFinalRecalculado = valorProdutosSemPix + valorFrete;
+    console.log("Re-pagamento Cartão: Cobrando valor integral.");
+}
         const valorFinalFormatado = parseFloat(valorFinalRecalculado.toFixed(2));
 
         // --- INTEGRAÇÃO MERCADO PAGO ---

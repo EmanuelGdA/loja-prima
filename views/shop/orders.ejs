@@ -120,11 +120,23 @@
                                 <span class="status-tag <%= sClass %>"><%= order.status %></span>
                             </div>
                             <div class="header-right">
-                                <span class="order-total">R$ <%= parseFloat(order.totalPrice).toFixed(2).replace('.', ',') %></span>
-                                <div class="expand-btn">
-                                    Ver detalhes <i class="fas fa-chevron-down arrow" id="arrow-<%= order.id %>"></i>
-                                </div>
-                            </div>
+    <% 
+        // LÓGICA DE EXIBIÇÃO INTELIGENTE:
+        // Se o pedido está pendente, mostramos o valor base (peças + frete).
+        // Se já foi pago, mostramos o valor final que foi cobrado.
+        let valorExibicao = order.totalPrice;
+
+        if (order.status === 'Aguardando Pagamento') {
+            // Soma o valor base das peças (após cupom) + o custo do frete
+            const basePecas = order.baseProdutos || order.subtotal;
+            valorExibicao = basePecas + (order.shippingCost || 0);
+        }
+    %>
+    <span class="order-total">R$ <%= parseFloat(valorExibicao).toFixed(2).replace('.', ',') %></span>
+    <div class="expand-btn">
+        Ver detalhes <i class="fas fa-chevron-down arrow" id="arrow-<%= order.id %>"></i>
+    </div>
+</div>
                         </div>
 
                         <!-- CORPO (Detalhes) -->

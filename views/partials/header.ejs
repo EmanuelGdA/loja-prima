@@ -100,18 +100,14 @@
                  <!-- BOTÃO DE SAIR (COM CLASSE PARA APARECER SÓ NO MOBILE) -->
                 <% if (typeof isAuthenticated !== 'undefined' && isAuthenticated) { %>
                     <li class="mobile-only-item" style="margin-top: 20px; border-top: 1px solid #eee;">
-                        <form action="/logout" method="POST" style="width: 100%;">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <button type="submit" style="
-                                background: none; border: none; width: 100%; text-align: left;
-                                padding: 15px 25px; color: #d9534f; font-weight: bold;
-                                font-family: 'Montserrat', sans-serif; font-size: 14px;
-                                text-transform: uppercase; cursor: pointer; letter-spacing: 1px;
-                                display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-sign-out-alt"></i> Sair da Conta
-                            </button>
-                        </form>
-                    </li>
+        <a href="/logout" style="
+            display: flex; align-items: center; gap: 10px;
+            padding: 15px 25px; color: #d9534f; font-weight: bold;
+            font-family: 'Montserrat', sans-serif; font-size: 14px;
+            text-transform: uppercase; text-decoration: none; letter-spacing: 1px;">
+            <i class="fas fa-sign-out-alt"></i> Sair da Conta
+        </a>
+    </li>
                 <% } else { %>
                     <!-- SE NÃO TIVER LOGADO, MOSTRA ENTRAR (SÓ NO MOBILE) -->
                     <li class="mobile-only-item" style="margin-top: 20px; border-top: 1px solid #eee;">
@@ -140,16 +136,12 @@
             </a>
 
             <% if (isAuthenticated) { %>
-                <!-- Link para Pedidos -->
                 <a href="/pedidos" title="Meus Pedidos"><i class="fas fa-user"></i></a>
-                
-                <!-- BOTÃO DE SAIR (RESTAURADO) -->
-                <form action="/logout" method="POST" style="display:inline; margin-left: 5px;">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button type="submit" class="btn-logout" title="Sair" style="background:none; border:none; cursor:pointer; font-size:16px;">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </button>
-                </form>
+    
+    <!-- LINK DE SAIR CORRIGIDO -->
+    <a href="/logout" title="Sair" style="margin-left: 10px; color: #000; text-decoration: none; font-size: 16px;">
+        <i class="fas fa-sign-out-alt"></i>
+    </a>
             <% } else { %>
                 <a href="/login"><i class="far fa-user"></i></a>
             <% } %>
