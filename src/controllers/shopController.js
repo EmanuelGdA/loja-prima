@@ -421,6 +421,7 @@ exports.postOrder = async (req, res) => {
 
     // 2. Se for PIX, calculamos o desconto, mas a "priceBasePecas" continua intacta.
     if (paymentMethod === "pix") {
+      await baixarEstoqueDasVariacoes(cart.items);
       pixDiscountAmount = priceBasePecas * 0.05; 
       finalPricePecas = priceBasePecas - pixDiscountAmount; 
     }
@@ -457,39 +458,7 @@ exports.postOrder = async (req, res) => {
     const orderRef = await db.collection("orders").add(orderData);
     const orderId = orderRef.id;
 
-    // --- BAIXAR ESTOQUE DA GRADE (VARIAÇÕES) ---
-    for (const item of cart.items) {
-      try {
-        const prodRef = db.collection("products").doc(item.productId);
-        const pDoc = await prodRef.get();
-
-        if (pDoc.exists) {
-          const productData = pDoc.data();
-          let variations = productData.variations || [];
-          let globalStock = parseInt(productData.stock || 0);
-
-          // 1. Encontra a variação exata que o cliente comprou
-          const varIndex = variations.findIndex(v => v.color === item.color && v.size === item.size);
-
-          if (varIndex > -1) {
-            // 2. Diminui o estoque da variação
-            variations[varIndex].stock = Math.max(0, parseInt(variations[varIndex].stock) - item.qty);
-            
-            // 3. Atualiza o estoque global (soma de tudo)
-            globalStock = Math.max(0, globalStock - item.qty);
-
-            // 4. Salva no banco os dois valores atualizados
-            await prodRef.update({ 
-              variations: variations,
-              stock: globalStock 
-            });
-            console.log(`Estoque atualizado: ${item.title} (${item.color} - ${item.size})`);
-          }
-        }
-      } catch (err) {
-        console.error(`Erro ao baixar estoque do item ${item.title}:`, err);
-      }
-    }
+    
 
     // 3. PAGAMENTO
     if (paymentMethod === "pix") {
@@ -539,6 +508,7 @@ exports.postOrder = async (req, res) => {
 
       // Verificamos se o Mercado Pago aprovou
       if (cardResult.status === 'Pago / Aprovado') {
+        await baixarEstoqueDasVariacoes(cart.items);
         await orderRef.update({ 
             status: 'Pago / Aprovado', 
             mercadoPagoId: cardResult.id 
@@ -1325,4 +1295,25 @@ exports.getSubCategory = async (req, res) => {
     console.log(error);
     res.redirect("/colecao/" + categoryName);
   }
+};
+
+// ✅ ADICIONE ISSO NO FINAL DO ARQUIVO (FORA DE TUDO)
+async function baixarEstoqueDasVariacoes(items) {
+    for (const item of items) {
+        try {
+            const prodRef = db.collection("products").doc(item.productId);
+            const pDoc = await prodRef.get();
+            if (pDoc.exists) {
+                const productData = pDoc.data();
+                let variations = productData.variations || [];
+                let globalStock = parseInt(productData.stock || 0);
+                const varIndex = variations.findIndex(v => v.color === item.color && v.size === item.size);
+                if (varIndex > -1) {
+                    variations[varIndex].stock = Math.max(0, parseInt(variations[varIndex].stock) - item.qty);
+                    globalStock = Math.max(0, globalStock - item.qty);
+                    await prodRef.update({ variations, stock: globalStock });
+                }
+            }
+        } catch (err) { console.error("Erro estoque:", err); }
+    }
 };

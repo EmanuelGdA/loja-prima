@@ -748,36 +748,44 @@ async function updateInstallments() {
     const form = document.getElementById('paymentForm');
 
     form.addEventListener('submit', async function(e) {
-        const method = document.querySelector('input[name="paymentMethod"]:checked').value;
-        if (method !== 'credit_card') return; 
+    const method = document.querySelector('input[name="paymentMethod"]:checked').value;
+    
+    // 1. DESATIVA O BOTÃO IMEDIATAMENTE (Evita cliques duplos)
+    const btn = document.querySelector('.btn-finish');
+    if (btn.disabled) return; // Se já estiver processando, não faz nada
+    
+    btn.innerText = 'Processando...';
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
 
-        e.preventDefault(); 
-        const btn = document.querySelector('.btn-finish');
-        btn.innerText = 'Processando...';
-        btn.disabled = true;
+    if (method === 'pix') {
+        // Se for PIX, deixa o formulário seguir normalmente
+        btn.disabled = true; // Bloqueia para não clicar de novo
+        return; 
+    }
 
-        try {
-            const tokenObj = await mp.createCardToken({
-                cardNumber: document.getElementById('cc-number').value.replace(/\s/g, ''),
-                cardholderName: document.getElementsByName('cardHolder')[0].value,
-                cardExpirationMonth: document.getElementById('cc-exp').value.split('/')[0],
-                cardExpirationYear: "20" + document.getElementById('cc-exp').value.split('/')[1],
-                securityCode: document.getElementById('cc-cvv').value,
-                identificationType: "CPF",
-                identificationNumber: document.getElementsByName('cpf')[0].value.replace(/\D/g, '')
-            });
+    // Se for Cartão, faz a lógica do token
+    e.preventDefault(); 
+    btn.disabled = true; // Trava o botão aqui também
 
-            document.getElementById('cardToken').value = tokenObj.id;
-            form.submit();
+    try {
+        const tokenObj = await mp.createCardToken({
+            // ... (seus dados de captura do token)
+        });
 
-        } catch (error) {
-            console.error(error);
-            alert("Erro no cartão. Verifique os dados.");
-            btn.innerText = 'Finalizar Pedido';
-            btn.disabled = false;
-        }
-    });
+        document.getElementById('cardToken').value = tokenObj.id;
+        
+        // 2. ENVIA O FORMULÁRIO MANUALMENTE
+        form.submit();
 
+    } catch (error) {
+        console.error(error);
+        alert("Erro no cartão. Verifique os dados.");
+        btn.innerText = 'Finalizar Pedido';
+        btn.disabled = false; // Reativa apenas se der erro
+        btn.style.opacity = '1';
+    }
+});
  function atualizarTotalGeral() {
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
     const shippingCost = parseFloat(document.getElementById('shippingCostInput').value) || 0;
