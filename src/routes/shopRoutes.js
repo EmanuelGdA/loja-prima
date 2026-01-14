@@ -59,6 +59,5 @@ router.get('/institucional/:page', shopController.getInstitucional);
 // Rota de segurança
 router.get('/api/pagseguro-key', shopController.getPagSeguroKey);
 
-router.post('/api/webhook/mp', shopController.mercadoPagoWebhook);
 
 module.exports = router;

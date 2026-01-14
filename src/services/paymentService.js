@@ -29,8 +29,8 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
                     type: 'CPF',
                     number: cpf.replace(/\D/g, '')
                 }
-            },
-            notification_url: 'https://loja-prima.onrender.com/api/webhook/mp'
+            }
+            
         };
 
         const response = await payment.create({ body });
@@ -68,8 +68,8 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, insta
                     type: 'CPF',
                     number: cpf.replace(/\D/g, '')
                 }
-            },
-            notification_url: 'https://loja-prima.onrender.com/api/webhook/mp'
+            }
+            
         };
 
         const response = await payment.create({ body });

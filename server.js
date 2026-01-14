@@ -9,6 +9,7 @@ const session = require('express-session');
 const csrf = require('csurf');
 const helmet = require('helmet');
 const flash = require('connect-flash');
+const shopController = require('./src/controllers/shopController');
 
 // Inicializa o App
 const app = express();
@@ -54,6 +55,8 @@ app.use(session({
 }));
 
 // 5. Proteção CSRF (Deve vir depois da sessão e cookie parser)
+app.post('/api/webhook/mp', shopController.mercadoPagoWebhook);
+
 const csrfProtection = csrf();
 app.use(csrfProtection);
 

@@ -166,6 +166,8 @@
     white-space: nowrap; /* Impede que o valor (R$) quebre linha */
     font-size: 15px;
 }
+
+
         
     </style>
 </head>
@@ -683,34 +685,48 @@ async function updateInstallments() {
     const totalFinal = cartSubtotal + freteValor;
 
     try {
-        // 1. Identifica Bandeira (Visa, Master, etc)
+        // 1. Identifica os métodos de pagamento possíveis para esse BIN
         const paymentMethods = await mp.getPaymentMethods({ bin: bin });
         if (paymentMethods.results.length === 0) return;
-        
-        // --- AS DUAS LINHAS MÁGICAS QUE FALTAVAM: ---
-        const method = paymentMethods.results[0];
-        document.getElementById('paymentMethodId').value = method.id; // Salva 'visa', 'master', etc.
-        
-        if (method.issuer) {
-            document.getElementById('issuerId').value = method.issuer.id; // Salva o banco emissor
-        }
-        // --------------------------------------------
 
-        // Se for DÉBITO: Não busca parcelas, trava em 1x
+        // --- LÓGICA DE FILTRO PARA DÉBITO OU CRÉDITO ---
+        let method;
+        
         if (type === 'debit') {
-            select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
-            document.getElementById('installments-container').style.display = 'block';
-            return;
-        }
+            // Procura na lista um método que seja especificamente "debit_card"
+            method = paymentMethods.results.find(m => m.payment_type_id === 'debit_card');
+            
+            // Se não achar um específico de débito, usamos o primeiro e avisamos
+            if (!method) method = paymentMethods.results[0];
 
-        // 2. Busca Parcelas (Só para CRÉDITO)
+            // Trava o visual em 1x e esconde busca de parcelas
+            select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
+            installContainer.style.display = 'block';
+            
+            // Preenche os campos ocultos com o ID de débito (ex: debvisa)
+            document.getElementById('paymentMethodId').value = method.id;
+            if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
+            
+            return; // Encerra aqui, pois débito não precisa buscar parcelas no MP
+        } 
+        else {
+            // Se for CRÉDITO, procura o método "credit_card"
+            method = paymentMethods.results.find(m => m.payment_type_id === 'credit_card');
+            if (!method) method = paymentMethods.results[0];
+            
+            document.getElementById('paymentMethodId').value = method.id;
+            if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
+        }
+        // ------------------------------------------------
+
+        // 2. Busca Parcelas (Executado apenas se for CRÉDITO)
         const installments = await mp.getInstallments({
             amount: String(totalFinal),
             bin: bin,
             paymentTypeId: 'credit_card'
         });
 
-        select.innerHTML = ''; // Limpa
+        select.innerHTML = ''; 
         
         if (installments.length > 0) {
             const opcoes = installments[0].payer_costs;
