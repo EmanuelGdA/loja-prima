@@ -681,45 +681,46 @@ async function updateInstallments() {
     const bin = cardNumber.substring(0, 6);
     let freteValor = parseFloat(document.getElementById('shippingCostInput').value) || 0;
     
-    // Importante: cartSubtotal já deve estar com desconto se for o caso
+    // cartSubtotal já inclui o desconto de 5% se for o caso (se você implementou a lógica de recalcular)
     const totalFinal = cartSubtotal + freteValor;
 
     try {
-        // 1. Identifica os métodos de pagamento possíveis para esse BIN
+        // 1. Pergunta ao Mercado Pago quais métodos esse cartão aceita
         const paymentMethods = await mp.getPaymentMethods({ bin: bin });
         if (paymentMethods.results.length === 0) return;
 
-        // --- LÓGICA DE FILTRO PARA DÉBITO OU CRÉDITO ---
         let method;
-        
+
+        // --- LOGICA DE SELEÇÃO DE DÉBITO OU CRÉDITO ---
         if (type === 'debit') {
-            // Procura na lista um método que seja especificamente "debit_card"
+            // Tenta encontrar o ID específico de débito (ex: debvisa, debmaster)
             method = paymentMethods.results.find(m => m.payment_type_id === 'debit_card');
             
-            // Se não achar um específico de débito, usamos o primeiro e avisamos
-            if (!method) method = paymentMethods.results[0];
+            if (!method) {
+                // Se o cartão não tiver função débito, avisa o usuário
+                alert("Este cartão não possui função débito disponível. Selecionando crédito.");
+                method = paymentMethods.results[0];
+            }
 
-            // Trava o visual em 1x e esconde busca de parcelas
+            // Trava o visual em 1x
             select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
             installContainer.style.display = 'block';
-            
-            // Preenche os campos ocultos com o ID de débito (ex: debvisa)
-            document.getElementById('paymentMethodId').value = method.id;
-            if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
-            
-            return; // Encerra aqui, pois débito não precisa buscar parcelas no MP
-        } 
-        else {
-            // Se for CRÉDITO, procura o método "credit_card"
-            method = paymentMethods.results.find(m => m.payment_type_id === 'credit_card');
-            if (!method) method = paymentMethods.results[0];
-            
-            document.getElementById('paymentMethodId').value = method.id;
-            if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
-        }
-        // ------------------------------------------------
 
-        // 2. Busca Parcelas (Executado apenas se for CRÉDITO)
+            // Preenche os campos escondidos para o servidor ler
+            document.getElementById('paymentMethodId').value = method.id;
+            if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
+
+            return; // Interrompe aqui, pois débito não precisa buscar parcelas
+        } 
+        
+        // --- SE FOR CRÉDITO ---
+        method = paymentMethods.results.find(m => m.payment_type_id === 'credit_card') || paymentMethods.results[0];
+        
+        // Preenche os campos escondidos
+        document.getElementById('paymentMethodId').value = method.id;
+        if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
+
+        // 2. Busca as parcelas no Mercado Pago (Só para crédito)
         const installments = await mp.getInstallments({
             amount: String(totalFinal),
             bin: bin,

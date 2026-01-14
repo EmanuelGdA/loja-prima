@@ -3,6 +3,13 @@ const { db } = require("../config/firebase");
 const QRCode = require("qrcode");
 const paymentService = require("../services/paymentService");
 const admin = require("firebase-admin");
+const { MercadoPagoConfig, Payment } = require('mercadopago');
+
+// Inicializa o Mercado Pago para que o Webhook consiga consultar os pagamentos
+const client = new MercadoPagoConfig({ 
+    accessToken: process.env.MP_ACCESS_TOKEN 
+});
+const payment = new Payment(client);
 
 // ==========================================
 // 1. VITRINE E PRODUTOS
