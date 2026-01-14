@@ -688,29 +688,38 @@ async function updateInstallments() {
         // 1. Pergunta ao Mercado Pago quais métodos esse cartão aceita
         const paymentMethods = await mp.getPaymentMethods({ bin: bin });
         if (paymentMethods.results.length === 0) return;
-// --- LOGICA DE SELEÇÃO DE DÉBITO OU CRÉDITO (VERSÃO PERMISSIVA) ---
+
+        // --- LOGICA DE SELEÇÃO DE DÉBITO OU CRÉDITO (FORÇANDO DÉBITO) ---
         let method;
 
         if (type === 'debit') {
-            // 1. Tenta achar o ID específico de débito
+            // 1. Tenta achar o ID de débito oficial (ex: debvisa, debmaster)
             method = paymentMethods.results.find(m => m.payment_type_id === 'debit_card');
             
-            // 2. Se não achar (como aconteceu com você), usa o primeiro que encontrar (a bandeira)
+            let finalMethodId;
+
             if (!method) {
-                method = paymentMethods.results[0];
-                console.log("Aviso: Função débito não retornada explicitamente pelo BIN, usando ID da bandeira.");
+                // SE NÃO ACHOU: Pegamos o ID da bandeira (ex: 'master') e forçamos o prefixo 'deb'
+                let brandId = paymentMethods.results[0].id; 
+                finalMethodId = brandId.startsWith('deb') ? brandId : 'deb' + brandId;
+                
+                console.log("Forçando ID de débito manual:", finalMethodId);
+                method = paymentMethods.results[0]; // Usamos os dados da bandeira como base
+            } else {
+                finalMethodId = method.id;
             }
 
-            // 3. Trava o visual em 1x e preenche os campos escondidos
+            // 2. Trava o visual em 1x
             select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
             installContainer.style.display = 'block';
             
-            document.getElementById('paymentMethodId').value = method.id;
+            // 3. Preenche os campos com o ID forçado
+            document.getElementById('paymentMethodId').value = finalMethodId;
             if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
 
-            return; // Interrompe aqui para não buscar parcelas
+            return; 
         }
-        
+
         // --- SE FOR CRÉDITO ---
         method = paymentMethods.results.find(m => m.payment_type_id === 'credit_card') || paymentMethods.results[0];
         
