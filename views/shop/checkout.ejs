@@ -688,30 +688,28 @@ async function updateInstallments() {
         // 1. Pergunta ao Mercado Pago quais métodos esse cartão aceita
         const paymentMethods = await mp.getPaymentMethods({ bin: bin });
         if (paymentMethods.results.length === 0) return;
-
+// --- LOGICA DE SELEÇÃO DE DÉBITO OU CRÉDITO (VERSÃO PERMISSIVA) ---
         let method;
 
-        // --- LOGICA DE SELEÇÃO DE DÉBITO OU CRÉDITO ---
         if (type === 'debit') {
-            // Tenta encontrar o ID específico de débito (ex: debvisa, debmaster)
+            // 1. Tenta achar o ID específico de débito
             method = paymentMethods.results.find(m => m.payment_type_id === 'debit_card');
             
+            // 2. Se não achar (como aconteceu com você), usa o primeiro que encontrar (a bandeira)
             if (!method) {
-                // Se o cartão não tiver função débito, avisa o usuário
-                alert("Este cartão não possui função débito disponível. Selecionando crédito.");
                 method = paymentMethods.results[0];
+                console.log("Aviso: Função débito não retornada explicitamente pelo BIN, usando ID da bandeira.");
             }
 
-            // Trava o visual em 1x
+            // 3. Trava o visual em 1x e preenche os campos escondidos
             select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
             installContainer.style.display = 'block';
-
-            // Preenche os campos escondidos para o servidor ler
+            
             document.getElementById('paymentMethodId').value = method.id;
             if (method.issuer) document.getElementById('issuerId').value = method.issuer.id;
 
-            return; // Interrompe aqui, pois débito não precisa buscar parcelas
-        } 
+            return; // Interrompe aqui para não buscar parcelas
+        }
         
         // --- SE FOR CRÉDITO ---
         method = paymentMethods.results.find(m => m.payment_type_id === 'credit_card') || paymentMethods.results[0];
