@@ -459,7 +459,10 @@ exports.postOrder = async (req, res) => {
       },
       date: new Date().toISOString(),
       status: "Aguardando Pagamento",
-      paymentMethod: paymentMethod === "pix" ? "PIX" : "Cartão de Crédito",
+      // Se for pix, salva PIX. Se não, verifica se é débito ou crédito.
+      paymentMethod: paymentMethod === "pix" 
+      ? "PIX" 
+      : (req.body.cardType === "debit" ? "Cartão de Débito" : "Cartão de Crédito"),
     };
 
     const orderRef = await db.collection("orders").add(orderData);
@@ -549,7 +552,11 @@ exports.getOrders = async (req, res) => {
       .collection("orders")
       .where("user.id", "==", req.session.user.id)
       .get();
+    
     const orders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    // --- ADICIONE ESTA LINHA ABAIXO PARA ORDENAR (Mais novo primeiro) ---
+    orders.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.render("shop/orders", {
       pageTitle: "Meus Pedidos",
@@ -1132,12 +1139,18 @@ if (paymentMethod === 'pix') {
             );
 
             if (cardResult.status === 'Pago / Aprovado') {
-                await orderRef.update({ 
-                    status: 'Pago / Aprovado', 
-                    mercadoPagoId: cardResult.id,
-                    paymentMethod: "Cartão (Re-tentativa)"
-                });
-                return res.render('shop/success', { pageTitle: 'Pagamento Aprovado', path: '' });
+        // --- ADICIONE ESTA LÓGICA DE NOME ---
+        const tipoCartao = req.body.cardType === 'debit' ? "Cartão de Débito" : "Cartão de Crédito";
+        
+        await orderRef.update({ 
+            status: 'Pago / Aprovado', 
+            mercadoPagoId: cardResult.id,
+            // Salva o nome correto (Ex: Cartão de Débito (Re-tentativa))
+            paymentMethod: tipoCartao + " (Re-tentativa)" 
+        });
+        
+        return res.render('shop/success', { pageTitle: 'Pagamento Aprovado', path: '' });
+      
             } else {
                 req.flash('error', 'Pagamento recusado: ' + (cardResult.message || 'Verifique os dados'));
                 return res.redirect("/pagar-pedido/" + orderId);

@@ -116,7 +116,10 @@
                         <div class="card-header" onclick="toggleDetails('<%= order.id %>')">
                             <div class="header-left">
                                 <span class="order-id">#<%= order.id.slice(0,6).toUpperCase() %></span>
-                                <span class="order-date"><%= new Date(order.date).toLocaleDateString('pt-BR') %></span>
+<span class="order-date">
+    <%= new Date(order.date).toLocaleDateString('pt-BR') %> às 
+    <%= new Date(order.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) %>
+</span>
                                 <span class="status-tag <%= sClass %>"><%= order.status %></span>
                             </div>
                             <div class="header-right">
