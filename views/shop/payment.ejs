@@ -2,113 +2,193 @@
 <html lang="pt-br">
 <head>
     <%- include('../partials/head.ejs') %>
-    <link rel="stylesheet" href="/css/checkout.css"> <!-- Reaproveita o CSS -->
+    <link rel="stylesheet" href="/css/checkout.css">
+    <link rel="stylesheet" href="/css/cart.css">
 </head>
 <body>
     <%- include('../partials/header.ejs') %>
 
-    <main class="container" style="max-width: 600px; margin: 40px auto;">
-        <h2 style="text-align: center; font-family: 'Playfair Display';">Pagamento do Pedido #<%= order.id.slice(0,6) %></h2>
+    <main class="checkout-container" style="max-width: 600px; margin: 40px auto; padding: 20px;">
+        <h1 style="text-align: center; font-family: 'Playfair Display'; font-size: 28px; margin-bottom: 30px;">
+            Pagamento do Pedido #<%= order.id.slice(0,6).toUpperCase() %>
+        </h1>
 
         <form action="/pagar-pedido/<%= order.id %>" method="POST" id="paymentForm">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="cardToken" id="cardToken">
+            <input type="hidden" name="paymentMethodId" id="paymentMethodId">
+            <input type="hidden" name="issuerId" id="issuerId">
 
+            <!-- SELEÇÃO DE PAGAMENTO -->
             <div class="payment-section">
-                <h3>Escolha como pagar:</h3>
-                <div class="payment-methods" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <label class="method-option" style="flex: 1; border: 1px solid #ddd; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center;">
+                <h2>Escolha a forma de pagamento:</h2>
+                <div class="payment-methods" style="display: flex; gap: 10px; margin-bottom: 25px;">
+                    <label class="method-option" style="flex: 1; border: 2px solid #eee; padding: 15px; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s;">
                         <input type="radio" name="paymentMethod" value="pix" checked onclick="togglePayment('pix')">
                         <div style="font-weight: bold; margin-top: 5px;"><i class="fab fa-pix"></i> PIX</div>
-                        <span style="font-size: 10px; background: #27ae60; color: white; padding: 2px 5px; border-radius: 4px;">5% OFF</span>
+                        <span style="font-size: 10px; background: #e6f9ee; color: #27ae60; padding: 2px 8px; border-radius: 4px; font-weight: 800;">5% OFF</span>
                     </label>
-                    <label class="method-option" style="flex: 1; border: 1px solid #ddd; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center;">
+                    <label class="method-option" style="flex: 1; border: 2px solid #eee; padding: 15px; border-radius: 12px; cursor: pointer; text-align: center; transition: 0.3s;">
                         <input type="radio" name="paymentMethod" value="credit_card" onclick="togglePayment('credit_card')">
                         <div style="font-weight: bold; margin-top: 5px;"><i class="far fa-credit-card"></i> Cartão</div>
                     </label>
                 </div>
 
-                <!-- FORMULÁRIO DE CARTÃO (Escondido por padrão) -->
-                <div id="card-form" style="display: none;">
-                    <div class="form-group">
-                        <label>Tipo de Cartão</label>
-                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                            <label><input type="radio" name="cardType" value="credit" checked> Crédito</label>
-                            <label><input type="radio" name="cardType" value="debit"> Débito</label>
+                <!-- DADOS DO CARTÃO (Escondido por padrão) -->
+                <div id="card-form" style="display: none; background: #fdfdfd; padding: 20px; border-radius: 12px; border: 1px solid #eee;">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label>Função do Cartão</label>
+                        <div style="display: flex; gap: 20px; margin-top: 5px;">
+                            <label><input type="radio" name="cardType" value="credit" checked onchange="updateInstallments()"> Crédito</label>
+                            <label><input type="radio" name="cardType" value="debit" onchange="updateInstallments()"> Débito</label>
                         </div>
                     </div>
                     <div class="form-group">
-                        <input type="text" id="cc-number" placeholder="Número do Cartão" oninput="maskCardNumber(this)" class="form-control">
+                        <input type="text" id="cc-number" placeholder="0000 0000 0000 0000" oninput="maskCardNumber(this)" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="cc-exp" placeholder="MM/AA" oninput="maskDate(this)" class="form-control">
-                        <input type="text" id="cc-cvv" placeholder="CVV" oninput="maskCVV(this)" class="form-control">
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <input type="text" id="cc-exp" placeholder="MM/AA" oninput="maskDate(this)" style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
+                        <input type="text" id="cc-cvv" placeholder="CVV" oninput="maskCVV(this)" style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                     </div>
                     <div class="form-group" style="margin-top: 10px;">
-                        <input type="text" name="cardHolder" placeholder="Nome impresso no cartão" class="form-control">
+                        <input type="text" name="cardHolder" placeholder="Nome como no cartão" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;">
                     </div>
-                    <div class="form-group" id="installments-container">
-                        <label>Parcelamento</label>
-                        <select name="installments" id="installments" class="form-control"></select>
+                    <div class="form-group" id="installments-container" style="margin-top: 15px;">
+                        <label>Parcelamento:</label>
+                        <select name="installments" id="installments" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;"></select>
                     </div>
                 </div>
             </div>
 
-            <!-- RESUMO DO PAGAMENTO -->
-            <div class="order-summary" style="background: #f9f9f9; padding: 20px; border-radius: 12px; margin-top: 30px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <!-- RESUMO FIXO -->
+            <div class="cart-summary" style="margin-top: 30px; box-shadow: none; border: 1px solid #eee;">
+                <div class="summary-row">
                     <span>Subtotal</span>
-                    <span>R$ <%= (order.discountTotal || order.subtotal).toFixed(2).replace('.', ',') %></span>
+                    <span>R$ <%= valorPeçasSemPix.toFixed(2).replace('.', ',') %></span>
                 </div>
-                <div id="pix-discount-row" style="display: flex; justify-content: space-between; color: #27ae60; font-weight: bold;">
+                
+                <div id="pix-discount-row" class="summary-row" style="color: #27ae60; font-weight: bold;">
                     <span>Desconto PIX (5%)</span>
-                    <span>- R$ <%= ((order.discountTotal || order.subtotal) * 0.05).toFixed(2).replace('.', ',') %></span>
+                    <span id="pix-val">- R$ <%= (valorPeçasSemPix * 0.05).toFixed(2).replace('.', ',') %></span>
                 </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+
+                <div class="summary-row">
                     <span>Frete</span>
                     <span>R$ <%= (order.shippingCost || 0).toFixed(2).replace('.', ',') %></span>
                 </div>
                 <hr>
-                <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                <div class="summary-row total" style="font-size: 22px;">
                     <span>Total</span>
                     <span id="totalDisplay">R$ 0,00</span>
                 </div>
-                <button type="submit" class="btn-finish" style="width: 100%; background: black; color: white; padding: 15px; border-radius: 30px; border: none; font-weight: bold; margin-top: 20px; cursor: pointer;">
+
+                <button type="button" onclick="enviarPedidoFinal()" class="btn-finish" style="width: 100%; margin-top: 20px; background: #000; color: #fff; padding: 18px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer;">
                     FINALIZAR PAGAMENTO
                 </button>
             </div>
         </form>
     </main>
 
+    <%- include('../partials/footer.ejs') %>
+
     <script src="https://sdk.mercadopago.com/js/v2"></script>
     <script>
-        const mp = new MercadoPago('SUA_CHAVE_PUBLICA_AQUI');
-        const baseProdutos = <%= order.discountTotal || order.subtotal %>;
+        // Use a sua chave real aqui ou a variável vinda do controller
+        const mp = new MercadoPago('APP_USR-6ef4f872-b933-4bb5-bb93-ed386d5158a1'); 
+        
+        const valorBase = <%= valorPeçasSemPix %>;
         const frete = <%= order.shippingCost || 0 %>;
+        let jaProcessando = false;
 
         function togglePayment(method) {
             const cardForm = document.getElementById('card-form');
-            const discountRow = document.getElementById('pix-discount-row');
+            const pixRow = document.getElementById('pix-discount-row');
             const totalDisplay = document.getElementById('totalDisplay');
 
             if (method === 'pix') {
                 cardForm.style.display = 'none';
-                discountRow.style.display = 'flex';
-                const total = (baseProdutos * 0.95) + frete;
+                pixRow.style.display = 'flex';
+                const total = (valorBase * 0.95) + frete;
                 totalDisplay.innerText = 'R$ ' + total.toFixed(2).replace('.', ',');
             } else {
                 cardForm.style.display = 'block';
-                discountRow.style.display = 'none';
-                const total = baseProdutos + frete;
+                pixRow.style.display = 'none';
+                const total = valorBase + frete;
                 totalDisplay.innerText = 'R$ ' + total.toFixed(2).replace('.', ',');
             }
         }
 
-        // Rodar ao carregar para definir o valor inicial (PIX selecionado)
-        window.onload = () => togglePayment('pix');
+        async function updateInstallments() {
+            const type = document.querySelector('input[name="cardType"]:checked').value;
+            const cardNumber = document.getElementById('cc-number').value.replace(/\s/g, '');
+            const select = document.getElementById('installments');
+            
+            if (cardNumber.length < 6) return;
+            const bin = cardNumber.substring(0, 6);
 
-        // Reutilize aqui as suas funções de máscara (maskCardNumber, maskDate, etc)
-        // e a lógica de gerar o token do Mercado Pago que você já tem no checkout.ejs
+            try {
+                const methods = await mp.getPaymentMethods({ bin: bin });
+                if (methods.results.length === 0) return;
+
+                let method = methods.results[0];
+                if (type === 'debit') {
+                    const deb = methods.results.find(m => m.payment_type_id === 'debit_card');
+                    const finalId = deb ? deb.id : (method.id.startsWith('deb') ? method.id : 'deb' + method.id);
+                    document.getElementById('paymentMethodId').value = finalId;
+                    select.innerHTML = '<option value="1">1x no Débito (À vista)</option>';
+                    return;
+                }
+
+                // Crédito
+                document.getElementById('paymentMethodId').value = method.id;
+                const installments = await mp.getInstallments({ amount: String(valorBase + frete), bin: bin, paymentTypeId: 'credit_card' });
+                select.innerHTML = '';
+                installments[0].payer_costs.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt.installments;
+                    option.text = opt.recommended_message;
+                    select.appendChild(option);
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        async function enviarPedidoFinal() {
+            if (jaProcessando) return;
+            const btn = document.querySelector('.btn-finish');
+            const method = document.querySelector('input[name="paymentMethod"]:checked').value;
+            const form = document.getElementById('paymentForm');
+
+            jaProcessando = true;
+            btn.disabled = true;
+            btn.innerText = 'Processando...';
+
+            if (method === 'pix') { form.submit(); return; }
+
+            try {
+                const exp = document.getElementById('cc-exp').value;
+                const tokenObj = await mp.createCardToken({
+                    cardNumber: document.getElementById('cc-number').value.replace(/\s/g, ''),
+                    cardholderName: document.getElementsByName('cardHolder')[0].value,
+                    cardExpirationMonth: exp.split('/')[0],
+                    cardExpirationYear: "20" + exp.split('/')[1],
+                    securityCode: document.getElementById('cc-cvv').value,
+                    identificationType: "CPF",
+                    identificationNumber: "<%= order.user.cpf.replace(/\D/g, '') %>"
+                });
+                document.getElementById('cardToken').value = tokenObj.id;
+                form.submit();
+            } catch (error) {
+                alert("Verifique os dados do cartão.");
+                jaProcessando = false; btn.disabled = false; btn.innerText = 'FINALIZAR PAGAMENTO';
+            }
+        }
+
+        // Máscaras Básicas
+        function maskCardNumber(i) { i.value = i.value.replace(/\D/g, "").substring(0, 16).replace(/(\d{4})(\d)/g, "$1 $2"); if(i.value.length >= 7) updateInstallments(); }
+        function maskDate(i) { i.value = i.value.replace(/\D/g, "").replace(/^(\d{2})(\d)/, "$1/$2"); }
+        function maskCVV(i) { i.value = i.value.replace(/\D/g, "").substring(0, 4); }
+
+        window.onload = () => togglePayment('pix');
     </script>
 </body>
 </html>

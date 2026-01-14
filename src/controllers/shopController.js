@@ -1048,16 +1048,23 @@ exports.getPayOrder = async (req, res) => {
     order.id = doc.id;
 
     // Segurança: Só o dono do pedido pode pagar
-    if (order.user.id !== req.session.user.id) {
+    if (!req.session.user || order.user.id !== req.session.user.id) {
       return res.redirect("/pedidos");
     }
+
+    // --- LÓGICA PARA EVITAR O DESCONTO DUPLICADO ---
+    // Pegamos o valor que salvamos como 'baseProdutos' (valor das peças com cupom mas SEM PIX).
+    // Caso o pedido seja antigo e não tenha esse campo, usamos o 'subtotal' como reserva.
+    const valorBaseDasPecas = order.baseProdutos || order.subtotal;
 
     res.render("shop/payment", {
       pageTitle: "Realizar Pagamento",
       order: order,
+      valorPeçasSemPix: valorBaseDasPecas, // Enviamos este valor "limpo" para a página
+      path: '/pedidos'
     });
   } catch (error) {
-    console.log(error);
+    console.log("Erro ao carregar página de pagamento:", error);
     res.redirect("/pedidos");
   }
 };
