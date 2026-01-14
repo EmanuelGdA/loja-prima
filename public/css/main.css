@@ -390,6 +390,9 @@ ul { list-style: none; }
     display: none !important;
 }
 
+.mobile-bottom-nav {
+    display: none !important;
+}
 
 /* ========================================= */
 /*      RESPONSIVIDADE (CELULAR) - FINAL     */
