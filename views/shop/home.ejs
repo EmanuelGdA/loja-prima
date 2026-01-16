@@ -10,24 +10,25 @@
     <%- include('../partials/header.ejs') %>
 
     <main>
-      <!-- === LÓGICA DO BANNER === -->
-      <% if (path === '/' && (typeof currentPage === 'undefined' || currentPage === 1)) { %>
-      <!-- Adicionei id="heroBanner" aqui para o Script funcionar -->
-      <section
-        class="hero-banner"
-        id="heroBanner"
-        onclick="window.location.href='#destaques'"
-        style="cursor: pointer"
-      >
-        <div class="hero-content">
-          <h2>Nova Coleção</h2>
-          <h1>Elegância &<br />Sofisticação</h1>
-          <p>Peças exclusivas selecionadas para você.</p>
-          <a href="#destaques" class="btn-hero">Ver Coleção</a>
+    
+      <!-- === LÓGICA DO BANNER (VERSÃO LIMPA PARA ARTES DO CANVA) === -->
+<% if (path === '/' && (typeof currentPage === 'undefined' || currentPage === 1) && typeof banners !== 'undefined' && banners.length > 0) { %>
+    
+    <section
+      class="hero-banner" 
+      id="heroBanner" 
+      style="background-image: url('<%= banners[0].imageDesktop %>'); cursor: pointer;"
+      onclick="if('<%= banners[0].link %>') window.location.href='<%= banners[0].link %>'"
+    >
+        <!-- BOLINHAS INDICADORAS (Agora dentro da section para ficarem por cima da foto) -->
+        <div class="banner-dots" id="bannerDots">
+            <% banners.forEach((_, index) => { %>
+                <span class="dot <%= index === 0 ? 'active' : '' %>" onclick="event.stopPropagation(); goToBanner(<%= index %>)"></span>
+            <% }) %>
         </div>
-      </section>
-      <% } %>
-      <!-- ======================== -->
+    </section>
+
+<% } %>
 
       <!-- Conteúdo específico da Home -->
       <section class="products-section" id="destaques">
@@ -298,45 +299,91 @@
     
     <%- include('../partials/footer.ejs') %>
 
-    <!-- === SCRIPT PARA TROCAR OS BANNERS (CARROSSEL) === -->
     <script>
-      // 1. Lista de imagens para CELULAR (Verticais)
-      // Certifique-se de que esses arquivos existem na pasta public/img
-      const bannersMobile = [
-        "/img/banner-mobile.png", // Foto Principal
-        "/img/banner-mobile.png", // (Coloque outras fotos aqui quando tiver, ex: banner2.jpg)
-      ];
+    // 1. Pega todos os banners do banco
+    const allDbBanners = <%- JSON.stringify(banners || []) %>;
+    
+    // 2. FILTRO: Identifica se é mobile e filtra apenas os banners que têm imagem para este dispositivo
+    const isMobile = window.innerWidth <= 768;
+    const activeBanners = allDbBanners.filter(b => isMobile ? b.imageMobile : b.imageDesktop);
 
-      // 2. Lista de imagens para COMPUTADOR (Horizontais)
-      const bannersDesktop = [
-        "https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=2073", // Foto 1
-        "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070", // Foto 2
-      ];
+    let currentIdx = 0;
+    const hero = document.getElementById("heroBanner");
+    const dotsContainer = document.getElementById("bannerDots");
+    let bannerTimer;
 
-      let currentBannerIndex = 0;
-      const heroBanner = document.getElementById("heroBanner");
+    // 3. CRIA AS BOLINHAS DINAMICAMENTE (Apenas para os banners que sobraram no filtro)
+    function renderDots() {
+        if (!dotsContainer) return;
+        dotsContainer.innerHTML = ''; // Limpa antes de criar
+        activeBanners.forEach((_, i) => {
+            const span = document.createElement('span');
+            span.className = `dot ${i === 0 ? 'active' : ''}`;
+            // event.stopPropagation() impede que o clique na bolinha abra o link do banner
+            span.onclick = (e) => { e.stopPropagation(); goToBanner(i); };
+            dotsContainer.appendChild(span);
+        });
+    }
 
-      function changeBanner() {
-        if (!heroBanner) return;
+    function updateBanner(index) {
+        if (!hero || activeBanners.length === 0) {
+            if(hero) hero.style.display = 'none'; // Esconde a seção se não houver banner pro dispositivo
+            return;
+        }
+        
+        currentIdx = index;
+        const banner = activeBanners[currentIdx];
+        const imgUrl = isMobile ? banner.imageMobile : banner.imageDesktop;
 
-        // Verifica se a tela é de celular (menor que 768px)
-        const isMobile = window.innerWidth <= 768;
+        // Aplica a imagem e o link
+        hero.style.backgroundImage = `url('${imgUrl}')`;
+        hero.onclick = () => { if (banner.link) window.location.href = banner.link; };
 
-        // Escolhe qual lista de fotos usar
-        const images = isMobile ? bannersMobile : bannersDesktop;
+        // Atualiza as bolinhas (somente as que existem no DOM agora)
+        const allDots = document.querySelectorAll('.dot');
+        allDots.forEach((dot, i) => {
+            dot.classList.toggle('active', i === currentIdx);
+        });
 
-        // Troca a imagem de fundo
-        heroBanner.style.backgroundImage = `url('${images[currentBannerIndex]}')`;
+        resetTimer();
+    }
 
-        // Prepara o índice para a próxima foto (loop infinito)
-        currentBannerIndex = (currentBannerIndex + 1) % images.length;
-      }
+    window.goToBanner = (index) => updateBanner(index);
 
-      // Só roda o script se o banner existir na página (para não dar erro na busca)
-      if (heroBanner) {
-        changeBanner(); // Carrega a primeira imediatamente
-        setInterval(changeBanner, 4000); // Troca a cada 4 segundos
-      }
-    </script>
+    function nextBanner() {
+        if (activeBanners.length === 0) return;
+        updateBanner((currentIdx + 1) % activeBanners.length);
+    }
+
+    function prevBanner() {
+        if (activeBanners.length === 0) return;
+        updateBanner((currentIdx - 1 + activeBanners.length) % activeBanners.length);
+    }
+
+    // 4. LÓGICA DE ARRASTAR (SWIPE)
+    let touchStartX = 0;
+    let touchEndX = 0;
+    hero.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, {passive: true});
+    hero.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        if (touchEndX < touchStartX - 50) nextBanner();
+        if (touchEndX > touchStartX + 50) prevBanner();
+    }, {passive: true});
+
+    function resetTimer() {
+        clearInterval(bannerTimer);
+        if (activeBanners.length > 1) {
+            bannerTimer = setInterval(nextBanner, 5000);
+        }
+    }
+
+    // Inicia o processo
+    if (activeBanners.length > 0) {
+        renderDots();
+        updateBanner(0);
+    } else {
+        if(hero) hero.style.display = 'none';
+    }
+</script>
   </body>
 </html>

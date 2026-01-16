@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <%- include('../partials/head.ejs') %>
+    <style>
+        .banner-admin-container { max-width: 900px; margin: 40px auto; padding: 20px; font-family: 'Montserrat', sans-serif; }
+        .page-title { font-family: 'Playfair Display', serif; font-weight: 800; margin-bottom: 20px; }
+        
+        /* Box de Orientações */
+        .guidelines-box { background: #f8f9fa; border-left: 5px solid #000; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .guidelines-box strong { display: block; margin-bottom: 10px; color: #333; }
+        .size-info { display: flex; flex-wrap: wrap; gap: 20px; font-size: 14px; color: #555; }
+
+        /* Estilo do Formulário */
+        .banner-form { background: white; padding: 25px; border-radius: 15px; border: 1px solid #eee; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .upload-group { background: #fafafa; padding: 15px; border-radius: 10px; border: 1px dashed #ccc; text-align: center; }
+        .upload-label { font-weight: bold; display: block; margin-bottom: 10px; font-size: 13px; color: #444; }
+
+        /* Preview da Imagem */
+        .preview-wrapper { position: relative; display: none; margin-bottom: 10px; }
+        .preview-wrapper img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; border: 1px solid #ddd; }
+        .btn-remove-preview { position: absolute; top: -10px; right: -10px; background: #ff4d4d; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        .input-text { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-top: 5px; }
+        .btn-submit { width: 100%; background: #000; color: #fff; padding: 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; transition: 0.3s; }
+        .btn-submit:hover { background: #333; }
+
+        /* Lista de Banners Ativos */
+        .active-banners-title { margin-top: 50px; font-size: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .banner-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 12px; margin-bottom: 15px; transition: 0.3s; }
+        .banner-item:hover { border-color: #000; }
+        .banner-info { display: flex; align-items: center; gap: 15px; }
+        .banner-thumb { width: 60px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #eee; }
+        .btn-delete { background: #ffeeee; color: #ff4d4d; border: none; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .btn-delete:hover { background: #ff4d4d; color: #fff; }
+
+        @media (max-width: 600px) {
+            .banner-item { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .btn-delete { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="banner-admin-container">
+        <h1 class="page-title">Gerenciar Banners</h1>
+
+        <!-- MENSAGENS DE FEEDBACK -->
+        <% if (errorMessage) { %>
+            <div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><%= errorMessage %></div>
+        <% } %>
+        <% if (successMessage) { %>
+            <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 20px;"><%= successMessage %></div>
+        <% } %>
+
+        <!-- BOX DE ORIENTAÇÃO -->
+        <div class="guidelines-box">
+            <strong>📏 Tamanhos Recomendados:</strong>
+            <div class="size-info">
+                <span><strong>PC (Desktop):</strong> 1920x600px (Largo)</span>
+                <span><strong>Celular (Mobile):</strong> 1024x1536px (Em pé)</span>
+            </div>
+        </div>
+
+        <!-- FORMULÁRIO DE UPLOAD -->
+        <% if (banners.length < 10) { %>
+            <form action="/admin/banners/adicionar?_csrf=<%= csrfToken %>" method="POST" enctype="multipart/form-data" class="banner-form" id="bannerForm">
+                
+                <p style="font-size: 12px; color: #666; margin-bottom: 15px;">* Escolha pelo menos um dos formatos (PC ou Celular).</p>
+
+                <div class="form-grid">
+                    <!-- UPLOAD DESKTOP -->
+                    <div class="upload-group">
+                        <label class="upload-label">Versão Desktop (PC)</label>
+                        <div class="preview-wrapper" id="wrapper-pc">
+                            <img id="img-pc" src="#">
+                            <button type="button" class="btn-remove-preview" onclick="clearImage('imageDesktop', 'wrapper-pc')">&times;</button>
+                        </div>
+                        <input type="file" name="imageDesktop" id="imageDesktop" accept="image/*" onchange="previewImage(this, 'img-pc', 'wrapper-pc')">
+                    </div>
+
+                    <!-- UPLOAD MOBILE -->
+                    <div class="upload-group">
+                        <label class="upload-label">Versão Mobile (Celular)</label>
+                        <div class="preview-wrapper" id="wrapper-mobile">
+                            <img id="img-mobile" src="#">
+                            <button type="button" class="btn-remove-preview" onclick="clearImage('imageMobile', 'wrapper-mobile')">&times;</button>
+                        </div>
+                        <input type="file" name="imageMobile" id="imageMobile" accept="image/*" onchange="previewImage(this, 'img-mobile', 'wrapper-mobile')">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: bold; font-size: 13px;">Link de Destino (Opcional)</label>
+                    <input type="text" name="link" class="input-text" placeholder="Ex: /colecao/novidades">
+                </div>
+
+                <button type="submit" class="btn-submit">Publicar Banner</button>
+            </form>
+        <% } else { %>
+            <div style="padding: 20px; background: #fff3cd; color: #856404; border-radius: 8px; text-align: center; font-weight: bold;">
+                ⚠️ Limite de 5 banners atingido. Remova um para adicionar outro.
+            </div>
+        <% } %>
+
+        <!-- LISTA DE BANNERS -->
+        <h2 class="active-banners-title">Banners Ativos (<%= banners.length %>/10)</h2>
+        <div style="margin-top: 20px;">
+            <% if (banners.length === 0) { %>
+                <p style="color: #999; text-align: center; margin-top: 20px;">Nenhum banner cadastrado no momento.</p>
+            <% } %>
+
+            <% banners.forEach(b => { %>
+                <div class="banner-item">
+                    <div class="banner-info">
+                        <img src="<%= b.imageMobile || b.imageDesktop %>" class="banner-thumb">
+                        <div>
+                            <span style="font-size: 12px; color: #888; display: block;">Criado em: <%= new Date(b.createdAt).toLocaleDateString('pt-BR') %></span>
+                            <small style="color: #333; font-weight: 600;">Link: <%= b.link || '/' %></small>
+                        </div>
+                    </div>
+                    
+                    <form action="/admin/banners/excluir" method="POST" onsubmit="return confirm('Deseja realmente excluir este banner?')">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="bannerId" value="<%= b.id %>">
+                        <button type="submit" class="btn-delete" title="Excluir Banner">
+                            <i class="fas fa-trash-alt"></i> Excluir
+                        </button>
+                    </form>
+                </div>
+            <% }) %>
+        </div>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+
+    <script>
+        // Função para mostrar o preview da imagem selecionada
+        function previewImage(input, imgId, wrapperId) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById(imgId).src = e.target.result;
+                    document.getElementById(wrapperId).style.display = 'block';
+                    input.style.display = 'none'; // Esconde o seletor original
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Função do botão "X" para resetar o campo
+        function clearImage(inputId, wrapperId) {
+            const input = document.getElementById(inputId);
+            input.value = ""; // Limpa o arquivo no input
+            input.style.display = 'block'; // Mostra o seletor de novo
+            document.getElementById(wrapperId).style.display = 'none'; // Esconde o preview
+        }
+    </script>
+</body>
+</html>

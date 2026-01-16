@@ -94,20 +94,18 @@ ul { list-style: none; }
 
 /* --- HERO BANNER (DESKTOP) --- */
 .hero-banner {
-    /* Imagem Padrão (será substituída pelo JS) */
-    background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=2070');
-    background-size: cover;
+ background-size: cover;
     background-position: center;
-    background-attachment: fixed; /* Efeito Parallax no PC */
-    height: 600px;
+    background-repeat: no-repeat;
+    background-attachment: scroll !important; /* FAZ A IMAGEM ROLAR NORMALMENTE */
+    height: 600px; /* Altura para PC */
     width: 100%;
+    position: relative;
+    cursor: pointer;
+    transition: background-image 0.8s ease-in-out;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    color: white;
-    margin-bottom: 50px;
-    transition: background-image 1s ease-in-out;
 }
 
 .hero-content h2 {
@@ -424,32 +422,22 @@ ul { list-style: none; }
     .search-form { display: none !important; } /* Esconde caixa de busca no mobile */
 
     /* 2. BANNER MOBILE (Ajuste de Altura) */
-    .hero-banner {
-        position: relative;
-        background-image: url('/img/banner-mobile.png') !important;
-        
+.hero-banner {
+     height: 160vw; /* Altura que você definiu para aparecer os pés */
+        max-height: 90vh;
         background-attachment: scroll !important;
-        background-position: center top !important; /* Começa do topo */
-        background-size: cover;
-        
-        /* AUMENTAMOS AQUI: De 130vw para 160vw */
-        /* Isso faz o banner ficar mais alto, revelando os pés */
-        height: 160vw; 
-        max-height: 90vh; /* Limite de segurança */
-        
-        box-shadow: none;
-        margin-bottom: 10px !important;
-    }
+}
 
     .hero-banner::after {
     content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 60px; /* Altura do esfumaçado */
-    background: linear-gradient(to bottom, transparent, #ffffff); /* Do transparente para o branco */
-    pointer-events: none; /* Permite clicar nos botões mesmo com o efeito por cima */
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60px; /* Altura do esfumaçado branco */
+        background: linear-gradient(to bottom, transparent, #ffffff);
+        pointer-events: none;
+        display: block !important; /* Garante que apareça */
     }
 
     /* Tira a margem de cima do título e diminui a fonte */
@@ -940,4 +928,49 @@ ul { list-style: none; }
     font-size: 12px;
     color: #888;
     font-family: 'Montserrat', sans-serif;
+}
+
+/* Container das bolinhas minimalista */
+.banner-dots {
+    position: absolute;
+    bottom: 25px; /* Ajuste para não ficar em cima do degradê */
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 10;
+}
+
+/* Estilo do ponto inativo: bem pequeno e discreto */
+.dot {
+    width: 6px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.4); /* Transparente */
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: none;
+}
+
+/* Estilo do ponto ativo: ele expande para um traço fino */
+.dot.active {
+    width: 20px; /* Vira um traço */
+    background: #fff; /* Branco sólido */
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* No mobile, subimos um pouco por causa do menu inferior */
+@media (max-width: 768px) {
+    .banner-dots {
+        bottom: 60px; 
+    }
+    .dot {
+        width: 5px; /* Ainda menor no mobile */
+        height: 5px;
+    }
+    .dot.active {
+        width: 15px;
+    }
 }

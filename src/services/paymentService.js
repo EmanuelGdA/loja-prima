@@ -18,7 +18,7 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
         const body = {
             transaction_amount: parseFloat(pedido.totalPrice),
             external_reference: pedido.id, // <--- ESSENCIAL PARA O WEBHOOK SABER QUAL PEDIDO É
-            notification_url: "https://loja-prima.onrender.com/api/webhook/mp", // <--- URL NO RENDER
+            notification_url: "https://www.maelycristina.com.br/api/webhook/mp",
             description: `Pedido #${pedido.id}`,
             payment_method_id: 'pix',
             payer: {
@@ -56,7 +56,7 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, insta
         const body = {
             transaction_amount: parseFloat(pedido.totalPrice),
             external_reference: pedido.id, // <--- ESSENCIAL PARA O WEBHOOK SABER QUAL PEDIDO É
-            notification_url: "https://loja-prima.onrender.com/api/webhook/mp", // <--- URL NO RENDER
+            notification_url: "https://www.maelycristina.com.br/api/webhook/mp",
             token: cardToken,
             description: `Pedido #${pedido.id}`,
             installments: parseInt(installments),

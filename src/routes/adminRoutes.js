@@ -5,6 +5,14 @@ const isAdmin = require('../middlewares/isAdmin');
 const multer = require('multer');
 const { storage } = require('../config/cloudinary'); 
 const upload = multer({ storage: storage }); 
+const bannerController = require('../controllers/bannerController');
+
+
+// Configuração do Multer p/ os dois campos
+const bannerUpload = upload.fields([
+    { name: 'imageDesktop', maxCount: 1 },
+    { name: 'imageMobile', maxCount: 1 }
+]);
 
 // Rotas de Produtos (Protegidas)
 
@@ -40,5 +48,11 @@ router.post('/excluir-cupom', isAdmin, adminController.postDeleteCoupon);
 router.get('/pedidos', isAdmin, adminController.getOrders);
 router.post('/atualizar-status', isAdmin, adminController.postUpdateStatus);
 router.post('/excluir-pedido', isAdmin, adminController.postDeleteOrder);
+
+
+// Rotas de Banners (Admin) - ADICIONADO isAdmin para segurança
+router.get('/banners', isAdmin, bannerController.getManageBanners);
+router.post('/banners/adicionar', isAdmin, bannerUpload, bannerController.postAddBanner);
+router.post('/banners/excluir', isAdmin, bannerController.postDeleteBanner);
 
 module.exports = router;

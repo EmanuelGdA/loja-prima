@@ -16,42 +16,41 @@ const payment = new Payment(client);
 // ==========================================
 
 exports.getIndex = async (req, res) => {
-  // Configuração: Quantos produtos por página?
   const ITENS_POR_PAGINA = 16;
-
-  // Pega o número da página atual da URL (ex: ?page=2). Se não tiver, é 1.
   const page = parseInt(req.query.page) || 1;
 
   try {
+    // --- 1. BUSCA OS PRODUTOS (Sua lógica atual) ---
     const snapshot = await db.collection("products").get();
     let allProducts = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     }));
 
-    // 1. ORDENAÇÃO (Mais recente primeiro)
-    // O código compara as datas de criação. Se não tiver data, joga pro final.
+    // --- 2. BUSCA OS BANNERS (CÓDIGO NOVO) ---
+    const bannerSnapshot = await db.collection("banners").orderBy("createdAt", "desc").get();
+    const banners = bannerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // 1. ORDENAÇÃO PRODUTOS
     allProducts.sort((a, b) => {
       const dateA = new Date(a.createdAt || 0);
       const dateB = new Date(b.createdAt || 0);
-      return dateB - dateA; // B - A = Decrescente (Novo -> Velho)
+      return dateB - dateA;
     });
 
-    // 2. PAGINAÇÃO (Cálculos Matemáticos)
+    // 2. PAGINAÇÃO
     const totalItems = allProducts.length;
     const totalPages = Math.ceil(totalItems / ITENS_POR_PAGINA);
-
-    // Corta a lista para pegar só os produtos da página atual
     const startIndex = (page - 1) * ITENS_POR_PAGINA;
     const endIndex = page * ITENS_POR_PAGINA;
     const paginatedProducts = allProducts.slice(startIndex, endIndex);
 
+    // --- 3. RENDERIZA COM OS BANNERS ---
     res.render("shop/home", {
       pageTitle: "Home - Maely Cristina",
-      products: paginatedProducts, // Envia só os 8 da vez
+      products: paginatedProducts,
+      banners: banners, // <--- ADICIONADO AQUI
       path: "/",
-
-      // Envia dados da paginação para o HTML criar os botões
       currentPage: page,
       totalPages: totalPages,
       totalItems: totalItems,
@@ -61,6 +60,7 @@ exports.getIndex = async (req, res) => {
     res.render("shop/home", {
       pageTitle: "Home",
       products: [],
+      banners: [], // <--- GARANTE QUE NÃO QUEBRE SE DER ERRO
       path: "/",
       currentPage: 1,
       totalPages: 1,

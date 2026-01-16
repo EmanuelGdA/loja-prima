@@ -84,7 +84,7 @@ exports.sendOrderStatusEmail = async (toEmail, userName, orderId, status) => {
         <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
             ${messageHtml}
             <div style="text-align: center; margin-top: 30px;">
-                <a href="https://loja-prima.onrender.com/pedidos" style="background: black; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px;">Ver Meus Pedidos</a>
+                <a href="https://www.maelycristina.com.br/pedidos" style="background: black; color: white; padding: 12px 20px; text-decoration: none; border-radius: 4px;">Ver Meus Pedidos</a>
             </div>
         </div>
     `;
