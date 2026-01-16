@@ -693,19 +693,21 @@ exports.getSearch = async (req, res) => {
 // ==========================================
 
 exports.postApplyCoupon = async (req, res) => {
-  // Garante que o código venha limpo e maiúsculo
-  const code = req.body.couponCode
-    ? req.body.couponCode.trim().toUpperCase()
-    : "";
+  const code = req.body.couponCode ? req.body.couponCode.trim().toUpperCase() : "";
   const cart = req.session.cart;
+  const user = req.session.user; // Pega o usuário da sessão
 
   if (!cart) return res.redirect("/carrinho");
 
+  // --- TRAVA: Usuário precisa estar logado para usar cupom com limite ---
+  if (!req.session.isLoggedIn || !user) {
+    req.flash("error", "Você precisa estar logado para aplicar cupons.");
+    return res.redirect("/login");
+  }
+
   try {
-    // Busca o cupom no banco
     const doc = await db.collection("coupons").doc(code).get();
 
-    // 1. Verifica se existe
     if (!doc.exists) {
       req.flash("error", "Cupom inválido.");
       return res.redirect("/carrinho");
@@ -713,17 +715,29 @@ exports.postApplyCoupon = async (req, res) => {
 
     const couponData = doc.data();
 
-    // 2. Verifica Validade (Data)
+    // 1. Verifica Validade (Data)
     const now = new Date();
     const expiresAt = new Date(couponData.expiresAt);
-
     if (now > expiresAt) {
-      req.flash(
-        "error",
-        `Este cupom venceu em ${expiresAt.toLocaleDateString("pt-BR")}.`
-      );
+      req.flash("error", `Este cupom venceu em ${expiresAt.toLocaleDateString("pt-BR")}.`);
       return res.redirect("/carrinho");
     }
+
+    // --- 2. NOVA TRAVA: LIMITE POR USUÁRIO ---
+    const usageLimit = couponData.usageLimit || 1; // Padrão é 1 se não definido
+
+    // Busca pedidos do usuário que usaram este cupom e foram PAGOS ou estão em andamento
+    const userOrders = await db.collection('orders')
+        .where('user.id', '==', user.id)
+        .where('couponUsed', '==', code)
+        .where('status', 'in', ['Pago / Aprovado', 'Enviado', 'Aguardando Retirada'])
+        .get();
+
+    if (userOrders.size >= usageLimit) {
+      req.flash("error", `Você já atingiu o limite de uso deste cupom (${usageLimit}x).`);
+      return res.redirect("/carrinho");
+    }
+    // ------------------------------------------
 
     // 3. Aplica o Desconto
     const discountPercent = couponData.discount;
@@ -734,15 +748,15 @@ exports.postApplyCoupon = async (req, res) => {
       percent: discountPercent,
     };
 
-    // Calcula o novo total com desconto
     cart.totalWithDiscount = cart.totalPrice * discountFactor;
 
     req.session.save(() => {
       req.flash("success", `Cupom ${code} aplicado (-${discountPercent}%)!`);
       res.redirect("/carrinho");
     });
+
   } catch (error) {
-    console.log(error);
+    console.log("Erro ao aplicar cupom:", error);
     res.redirect("/carrinho");
   }
 };

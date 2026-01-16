@@ -504,30 +504,33 @@ exports.postAddCoupon = async (req, res) => {
     try {
         const code = req.body.code.trim().toUpperCase();
         const discount = parseInt(req.body.discount);
-        const expiryDateRaw = req.body.expiryDate; // Vem como "2025-12-31"
+        const expiryDateRaw = req.body.expiryDate; 
+        
+        // --- NOVO: Captura o limite de uso (padrão 1 se vier vazio) ---
+        const usageLimit = parseInt(req.body.usageLimit) || 1;
 
         if (!code || !discount || !expiryDateRaw) {
             return res.redirect('/admin/cupons');
         }
 
-        // Configura a data para vencer no FINAL do dia escolhido (23:59:59)
         const expiryDate = new Date(expiryDateRaw);
         expiryDate.setHours(23, 59, 59, 999);
 
-        // Usamos o código como ID
+        // Salva no Firestore
         await db.collection('coupons').doc(code).set({
             code: code,
             discount: discount,
-            expiresAt: expiryDate.toISOString(), // Salva data padrão
+            usageLimit: usageLimit, // <--- SALVANDO O LIMITE AQUI
+            expiresAt: expiryDate.toISOString(),
             active: true,
             createdAt: new Date().toISOString()
         });
 
-        console.log('Cupom criado:', code);
+        console.log(`Cupom ${code} criado com limite de ${usageLimit} por cliente.`);
         res.redirect('/admin/cupons');
 
     } catch (error) {
-        console.log(error);
+        console.log("Erro ao criar cupom:", error);
         res.status(500).send("Erro ao criar cupom");
     }
 };

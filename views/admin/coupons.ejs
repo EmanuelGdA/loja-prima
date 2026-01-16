@@ -6,10 +6,14 @@
         .admin-container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
         
         .create-box {
-            background: #f9f9f9; padding: 25px; border-radius: 12px; border: 1px solid #eee;
-            margin-bottom: 30px; display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 15px;
-            align-items: end; box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
+    background: #f9f9f9; padding: 25px; border-radius: 12px; border: 1px solid #eee;
+    margin-bottom: 30px; 
+    display: grid; 
+    grid-template-columns: 2fr 1fr 1fr 1fr auto; /* Adicionei mais um 1fr aqui */
+    gap: 15px;
+    align-items: end; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+}
         
         .form-group label { font-weight: bold; font-size: 12px; display: block; margin-bottom: 5px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
@@ -66,6 +70,12 @@
             </div>
 
             <div class="form-group">
+    <label>Uso por Cliente</label>
+    <!-- Define quantas vezes cada CPF pode usar -->
+    <input type="number" name="usageLimit" placeholder="1" min="1" value="1" required>
+</div>
+
+            <div class="form-group">
                 <label>Válido Até</label>
                 <!-- date input: O calendário nativo é a melhor máscara -->
                 <input type="date" name="expiryDate" required>
@@ -100,6 +110,7 @@
                             <div class="coupon-meta">
                                 <span><i class="fas fa-percent"></i> <%= c.discount %>% OFF</span>
                                 <span><i class="far fa-calendar-alt"></i> Vence: <%= expireDate.toLocaleDateString('pt-BR') %></span>
+                                <span><i class="fas fa-user-lock"></i> Limite: <%= c.usageLimit || 1 %> por cliente</span>
                             </div>
                         </div>
                         
