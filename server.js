@@ -32,8 +32,7 @@ app.use(
   helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
-    // ESSA É A LINHA MÁGICA QUE RESOLVE O PROBLEMA DO GOOGLE:
-    crossOriginOpenerPolicy: false, 
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
   })
 );
 app.use(bodyParser.urlencoded({ extended: false })); // Para ler formulários
