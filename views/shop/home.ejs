@@ -360,29 +360,38 @@
         updateBanner((currentIdx - 1 + activeBanners.length) % activeBanners.length);
     }
 
-    // 4. LÓGICA DE ARRASTAR (SWIPE)
+    // 4. LÓGICA DE ARRASTAR (SWIPE) - PROTEGIDA
     let touchStartX = 0;
     let touchEndX = 0;
-    hero.addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX, {passive: true});
-    hero.addEventListener('touchend', e => {
-        touchEndX = e.changedTouches[0].screenX;
-        if (touchEndX < touchStartX - 50) nextBanner();
-        if (touchEndX > touchStartX + 50) prevBanner();
-    }, {passive: true});
+
+    // SÓ ADICIONA OS EVENTOS SE O BANNER EXISTIR NA PÁGINA
+    if (hero) {
+        hero.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        hero.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            if (touchEndX < touchStartX - 50) nextBanner();
+            if (touchEndX > touchStartX + 50) prevBanner();
+        }, {passive: true});
+    }
 
     function resetTimer() {
         clearInterval(bannerTimer);
-        if (activeBanners.length > 1) {
+        // Só ativa o timer se houver mais de um banner ativo
+        if (typeof activeBanners !== 'undefined' && activeBanners.length > 1) {
             bannerTimer = setInterval(nextBanner, 5000);
         }
     }
 
     // Inicia o processo
-    if (activeBanners.length > 0) {
+    if (hero && typeof activeBanners !== 'undefined' && activeBanners.length > 0) {
         renderDots();
         updateBanner(0);
-    } else {
-        if(hero) hero.style.display = 'none';
+    } else if (hero) {
+        // Se houver a seção mas não houver banners, esconde a seção
+        hero.style.display = 'none';
     }
 </script>
   </body>
