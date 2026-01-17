@@ -642,7 +642,9 @@ exports.getCategory = async (req, res) => {
       pageTitle: categoryName.charAt(0).toUpperCase() + categoryName.slice(1),
       products: products,
       path: "/colecao",
-
+      banners: [], // <--- ADICIONE ESTA LINHA (Evita o erro 500)
+      currentPage: 1, // Adicionei para evitar erros de paginação se houver no HTML
+      totalPages: 1 ,
       // 4. IMPORTANTE: Envia os filtros de volta para a tela
       // (para o select continuar marcado na opção certa)
       activeFilters: { ordem, tamanho },
@@ -681,6 +683,9 @@ exports.getSearch = async (req, res) => {
       pageTitle: `Busca: "${query}"`,
       products: filteredProducts,
       path: "/search",
+      banners: [], 
+      currentPage: 1, 
+      totalPages: 1 
     });
   } catch (error) {
     console.log(error);
@@ -850,6 +855,9 @@ exports.getNewArrivals = async (req, res) => {
       pageTitle: "Lançamentos da Semana",
       products: newProducts,
       path: "/colecao/lancamentos", // Para o menu saber onde estamos
+      banners: [], 
+      currentPage: 1,
+      totalPages: 1 
     });
   } catch (error) {
     console.log("Erro Lançamentos:", error);
@@ -881,6 +889,9 @@ exports.getPromotions = async (req, res) => {
       pageTitle: "Ofertas Imperdíveis", // Título que vai aparecer na página
       products: promoProducts,
       path: "/colecao/promocao",
+      banners: [], 
+      currentPage: 1, 
+      totalPages: 1 
     });
   } catch (error) {
     console.log("Erro Promoções:", error);
@@ -1331,6 +1342,9 @@ exports.getSubCategory = async (req, res) => {
       pageTitle: `${subcategoryName} em ${categoryName}`,
       products: products,
       path: "/colecao",
+      banners: [], 
+      currentPage: 1, 
+      totalPages: 1 
     });
   } catch (error) {
     console.log(error);
