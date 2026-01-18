@@ -6,6 +6,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const session = require('express-session');
+const FirestoreStore = require('connect-session-firestore')(session);
 const csrf = require('csurf');
 const helmet = require('helmet');
 const flash = require('connect-flash');
@@ -40,15 +41,21 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public'))); // Pasta pública (CSS/IMG)
 
-// 4. Configurar Sessão (AGORA SALVANDO NO FIREBASE)
+// 4. Configurar Sessão (SALVANDO NO FIREBASE DE VERDADE)
 app.use(session({
+    // --- ESTA É A PARTE QUE FALTA NO SEU ---
+    store: new FirestoreStore({
+        database: db // Certifique-se de que a variável 'db' foi definida acima no server.js
+    }),
+    // ---------------------------------------
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    proxy: true, // Adicione isso! Ajuda o Render a manter a sessão no HTTPS
     cookie: { 
         httpOnly: true, 
         secure: process.env.NODE_ENV === 'production', 
-        maxAge: 1000 * 60 * 60 * 24 * 7, // Mantém logado por 7 dias
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 dias
         sameSite: 'lax'
     }
 }));
