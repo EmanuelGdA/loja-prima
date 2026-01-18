@@ -428,6 +428,15 @@
    
 
 <script>
+
+    // Impede que o formulário seja enviado ao apertar "Enter" nos campos
+window.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.nodeName === 'INPUT') {
+        e.preventDefault();
+        return false;
+    }
+});
+
     // Valor dos produtos (Fixo)
     const cartSubtotal = parseFloat('<%= (cart.totalWithDiscount || cart.totalPrice) %>');
 
@@ -729,7 +738,7 @@ async function updateInstallments() {
 
         // 2. Busca as parcelas no Mercado Pago (Só para crédito)
         const installments = await mp.getInstallments({
-            amount: String(totalFinal),
+            amount: totalFinal.toFixed(2),
             bin: bin,
             paymentTypeId: 'credit_card'
         });
@@ -842,22 +851,27 @@ form.addEventListener('submit', async function(e) {
     const totalVisual = document.getElementById('totalFinalDisplay');
 
     let valorDesconto = 0;
-    let valorProdutosFinal = cartSubtotal; // Subtotal dos produtos vindo do EJS
+    let valorProdutosFinal = cartSubtotal; 
 
     if (paymentMethod === 'pix') {
-        // Cálculo apenas sobre o subtotal dos produtos
         valorDesconto = cartSubtotal * 0.05; 
         valorProdutosFinal = cartSubtotal - valorDesconto;
-        
-        discountRow.style.display = 'flex';
-        discountVisual.innerText = '- R$ ' + valorDesconto.toFixed(2).replace('.', ',');
+        if(discountRow) discountRow.style.display = 'flex';
+        if(discountVisual) discountVisual.innerText = '- R$ ' + valorDesconto.toFixed(2).replace('.', ',');
     } else {
-        discountRow.style.display = 'none';
+        if(discountRow) discountRow.style.display = 'none';
     }
 
-    // O Total Final é: (Produto - Desconto) + Frete
     const totalFinal = valorProdutosFinal + shippingCost;
     totalVisual.innerText = 'R$ ' + totalFinal.toFixed(2).replace('.', ',');
+
+    // --- CORREÇÃO DO BUG 2: ATUALIZAR PARCELAS ---
+    // Se não for PIX e o usuário já tiver digitado o início do cartão, 
+    // precisamos avisar o Mercado Pago que o valor total mudou para ele refazer as parcelas.
+    const cardNumber = document.getElementById('cc-number').value.replace(/\s/g, '');
+    if (paymentMethod !== 'pix' && cardNumber.length >= 6) {
+        updateInstallments(); 
+    }
 }
 </script>
 </body>

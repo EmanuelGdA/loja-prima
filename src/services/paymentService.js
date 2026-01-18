@@ -1,7 +1,7 @@
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 require('dotenv').config();
 
-// Configura o Cliente com o Access Token (Privado)
+// Configura o Cliente com o Access Token (Privado) da Maely
 const client = new MercadoPagoConfig({ 
     accessToken: process.env.MP_ACCESS_TOKEN, 
     options: { timeout: 10000 } 
@@ -9,17 +9,16 @@ const client = new MercadoPagoConfig({
 
 const payment = new Payment(client);
 
-// 1. GERAR PIX
-exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
-    // Mantive o nome da função antigo para não quebrar o controller
+// 1. GERAR PIX MERCADO PAGO
+exports.gerarPixMercadoPago = async (pedido, cliente, cpf) => {
     try {
-        console.log("--- PIX MERCADO PAGO ---");
+        console.log("--- GERANDO PIX NO MERCADO PAGO ---");
 
         const body = {
             transaction_amount: parseFloat(pedido.totalPrice),
-            external_reference: pedido.id, // <--- ESSENCIAL PARA O WEBHOOK SABER QUAL PEDIDO É
-            notification_url: "https://www.maelycristina.com.br/api/webhook/mp",
-            description: `Pedido #${pedido.id}`,
+            description: `Pedido #${pedido.id} - Maely Cristina`,
+            external_reference: pedido.id, // VITAL para o Webhook saber qual pedido atualizar
+            notification_url: "https://www.maelycristina.com.br/api/webhook/mp", // URL oficial
             payment_method_id: 'pix',
             payer: {
                 email: cliente.email,
@@ -30,7 +29,6 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
                     number: cpf.replace(/\D/g, '')
                 }
             }
-            
         };
 
         const response = await payment.create({ body });
@@ -39,29 +37,28 @@ exports.gerarPixPagSeguro = async (pedido, cliente, cpf) => {
             id: response.id.toString(),
             status: 'Aguardando Pagamento',
             qrCodeText: response.point_of_interaction.transaction_data.qr_code,
-            // O MP já devolve a imagem em Base64 pronta
             qrCodeBase64: response.point_of_interaction.transaction_data.qr_code_base64
         };
     } catch (error) {
         console.error("Erro MP Pix:", error);
-        throw new Error("Erro ao gerar Pix.");
+        throw new Error("Não foi possível gerar o PIX. Tente novamente.");
     }
 };
 
 // 2. PROCESSAR CARTÃO MERCADO PAGO
-exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, installments, paymentMethodId, issuerId) => {
+exports.processarCartaoMercadoPago = async (pedido, cliente, cpf, cardToken, installments, paymentMethodId, issuerId) => {
     try {
-        console.log("--- ENVIANDO PAGAMENTO AO MERCADO PAGO ---");
+        console.log("--- ENVIANDO CARTÃO AO MERCADO PAGO ---");
 
         const body = {
             transaction_amount: parseFloat(pedido.totalPrice),
-            external_reference: pedido.id, // <--- ESSENCIAL PARA O WEBHOOK SABER QUAL PEDIDO É
-            notification_url: "https://www.maelycristina.com.br/api/webhook/mp",
             token: cardToken,
-            description: `Pedido #${pedido.id}`,
+            description: `Pedido #${pedido.id} - Maely Cristina`,
+            external_reference: pedido.id, // VITAL para o Webhook
+            notification_url: "https://www.maelycristina.com.br/api/webhook/mp",
             installments: parseInt(installments),
-            payment_method_id: paymentMethodId, // ex: "visa", "master"
-            issuer_id: issuerId ? parseInt(issuerId) : undefined, // Importante para alguns bancos
+            payment_method_id: paymentMethodId, 
+            issuer_id: issuerId ? parseInt(issuerId) : undefined,
             payer: {
                 email: cliente.email,
                 identification: {
@@ -69,11 +66,11 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, insta
                     number: cpf.replace(/\D/g, '')
                 }
             }
-            
         };
 
         const response = await payment.create({ body });
         
+        // Mapeia o status do MP para o sistema da loja
         let statusFinal = 'Recusado';
         if (response.status === 'approved') statusFinal = 'Pago / Aprovado';
         if (response.status === 'in_process') statusFinal = 'Em Análise';
@@ -81,10 +78,11 @@ exports.processarCartaoPagSeguro = async (pedido, cliente, cpf, cardToken, insta
         return {
             id: response.id.toString(),
             status: statusFinal,
-            message: response.status_detail // Detalha se foi falta de limite, CCV errado, etc.
+            message: response.status_detail
         };
 
     } catch (error) {
+        // Log detalhado para você ver no Render caso o cartão seja recusado
         console.error("Erro detalhado MP:", error.cause ? error.cause[0] : error);
         throw new Error("O cartão foi recusado ou os dados estão incorretos.");
     }

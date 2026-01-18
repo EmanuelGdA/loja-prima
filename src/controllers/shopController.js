@@ -106,6 +106,7 @@ exports.getProduct = async (req, res) => {
       relatedProducts: relatedProducts,
       reviews: reviews,
       path: "/produtos",
+      banners: [] 
     });
   } catch (error) {
     console.log(error);
@@ -1065,31 +1066,43 @@ exports.getUserFavoritesAPI = async (req, res) => {
 // Tela de escolher pagamento novamente
 exports.getPayOrder = async (req, res) => {
   const orderId = req.params.orderId;
+  
   try {
     const doc = await db.collection("orders").doc(orderId).get();
+    
+    // 1. VERIFICAÇÃO: O pedido existe?
     if (!doc.exists) return res.redirect("/pedidos");
 
     const order = doc.data();
     order.id = doc.id;
 
-    // Segurança: Só o dono do pedido pode pagar
+    // 2. SEGURANÇA: Só o dono do pedido pode acessar
     if (!req.session.user || order.user.id !== req.session.user.id) {
       return res.redirect("/pedidos");
     }
 
-    // --- LÓGICA PARA EVITAR O DESCONTO DUPLICADO ---
-    // Pegamos o valor que salvamos como 'baseProdutos' (valor das peças com cupom mas SEM PIX).
-    // Caso o pedido seja antigo e não tenha esse campo, usamos o 'subtotal' como reserva.
+    // 3. TRAVA DE STATUS: Só permite pagar se o pedido estiver pendente
+    // Isso evita o erro de o cliente pagar duas vezes o mesmo pedido ou pagar algo cancelado
+    if (order.status !== 'Aguardando Pagamento') {
+        req.flash('error', 'Este pedido já foi processado ou cancelado.');
+        return res.redirect('/pedidos');
+    }
+
+    // 4. LÓGICA DE VALOR LIMPO:
+    // Pegamos o valor com Cupom, mas sem o desconto de 5% do PIX anterior.
     const valorBaseDasPecas = order.baseProdutos || order.subtotal;
 
     res.render("shop/payment", {
       pageTitle: "Realizar Pagamento",
       order: order,
-      valorPeçasSemPix: valorBaseDasPecas, // Enviamos este valor "limpo" para a página
-      path: '/pedidos'
+      valorPeçasSemPix: valorBaseDasPecas, // O JavaScript do payment.ejs usará isso p/ calcular na tela
+      path: '/pedidos',
+      // Passamos mensagens de erro caso venham do postPayOrder (cartão recusado)
+      errorMessage: req.flash('error')[0] || null 
     });
+
   } catch (error) {
-    console.log("Erro ao carregar página de pagamento:", error);
+    console.error("Erro crítico ao carregar página de pagamento:", error);
     res.redirect("/pedidos");
   }
 };
@@ -1097,7 +1110,7 @@ exports.getPayOrder = async (req, res) => {
 // Processar o novo pagamento (CORRIGIDO)
 exports.postPayOrder = async (req, res) => {
     const orderId = req.params.orderId;
-    const paymentMethod = req.body.paymentMethod; // 'pix' ou 'credit_card'
+    const paymentMethod = req.body.paymentMethod; 
 
     try {
         const orderRef = db.collection("orders").doc(orderId);
@@ -1105,31 +1118,31 @@ exports.postPayOrder = async (req, res) => {
         if (!doc.exists) return res.redirect("/pedidos");
 
         const order = doc.data();
+
+        // --- 1. TRAVA DE SEGURANÇA: Bloqueia se já estiver pago ---
+        if (order.status !== 'Aguardando Pagamento') {
+            req.flash('error', 'Este pedido já foi pago ou não permite mais tentativas.');
+            return res.redirect("/pedidos");
+        }
+
         const user = req.session.user;
         const cpf = req.body.cpf || user.cpf || order.user.cpf;
 
-        // --- LÓGICA DE DESCONTO PIX (5% sobre os produtos) ---
-        // --- NOVA LÓGICA DE CÁLCULO (RECUPERA VALOR CHEIO) ---
-// 1. Pegamos o valor das peças sem o desconto do PIX anterior.
-// Priorizamos 'baseProdutos' (que já tem cupom), se não tiver usamos o 'subtotal'.
-const valorProdutosSemPix = order.baseProdutos || order.subtotal;
-const valorFrete = order.shippingCost || 0;
+        // --- 2. RECUPERA VALOR BASE E RECALCULA ---
+        const valorProdutosSemPix = order.baseProdutos || order.subtotal;
+        const valorFrete = order.shippingCost || 0;
 
-let valorFinalRecalculado;
-
-if (paymentMethod === 'pix') {
-    // Se escolheu PIX: Aplica o desconto de 5% sobre o valor base das peças
-    const descontoPix = valorProdutosSemPix * 0.05;
-    valorFinalRecalculado = (valorProdutosSemPix - descontoPix) + valorFrete;
-    console.log("Re-pagamento PIX: Aplicando 5% de desconto.");
-} else {
-    // Se escolheu Cartão: Cobra o valor cheio das peças + frete
-    valorFinalRecalculado = valorProdutosSemPix + valorFrete;
-    console.log("Re-pagamento Cartão: Cobrando valor integral.");
-}
+        let valorFinalRecalculado;
+        if (paymentMethod === 'pix') {
+            const descontoPix = valorProdutosSemPix * 0.05;
+            valorFinalRecalculado = (valorProdutosSemPix - descontoPix) + valorFrete;
+        } else {
+            valorFinalRecalculado = valorProdutosSemPix + valorFrete;
+        }
+        
         const valorFinalFormatado = parseFloat(valorFinalRecalculado.toFixed(2));
 
-        // --- INTEGRAÇÃO MERCADO PAGO ---
+        // --- 3. PROCESSAMENTO MERCADO PAGO ---
         if (paymentMethod === "pix") {
             const pixData = await paymentService.gerarPixMercadoPago(
                 { id: orderId, totalPrice: valorFinalFormatado },
@@ -1137,60 +1150,55 @@ if (paymentMethod === 'pix') {
                 cpf
             );
             
-            // Certifique-se de ter o QRCode importado no topo do seu arquivo
             const qrCodeImage = await QRCode.toDataURL(pixData.qrCodeText);
 
+            // Atualiza o pedido com o NOVO valor (caso tenha mudado de cartão p/ pix)
             await orderRef.update({
+                totalPrice: valorFinalFormatado,
                 pixCode: pixData.qrCodeText,
                 mercadoPagoId: pixData.id,
-                status: "Aguardando Pagamento",
                 paymentMethod: "PIX (Re-tentativa)"
             });
 
             return res.render('shop/success-pix', {
                 pageTitle: 'Pagar com PIX',
-                path: '',
                 qrCodeImage,
                 pixCode: pixData.qrCodeText,
                 total: valorFinalFormatado
             });
 
         } else {
-            // CARTÃO MERCADO PAGO
-            const cardToken = req.body.cardToken;
-            const installments = req.body.installments;
-            const paymentMethodId = req.body.paymentMethodId;
+            // --- CARTÃO (CRÉDITO OU DÉBITO) ---
+            const { cardToken, installments, paymentMethodId, issuerId } = req.body;
+
+            if (!cardToken || !paymentMethodId) {
+                throw new Error("Não foi possível identificar o cartão. Tente novamente.");
+            }
 
             const cardResult = await paymentService.processarCartaoMercadoPago(
                 { id: orderId, totalPrice: valorFinalFormatado },
-                user,
-                cpf,
-                cardToken,
-                installments,
-                paymentMethodId
+                user, cpf, cardToken, installments, paymentMethodId, issuerId
             );
 
             if (cardResult.status === 'Pago / Aprovado') {
-        // --- ADICIONE ESTA LÓGICA DE NOME ---
-        const tipoCartao = req.body.cardType === 'debit' ? "Cartão de Débito" : "Cartão de Crédito";
-        
-        await orderRef.update({ 
-            status: 'Pago / Aprovado', 
-            mercadoPagoId: cardResult.id,
-            // Salva o nome correto (Ex: Cartão de Débito (Re-tentativa))
-            paymentMethod: tipoCartao + " (Re-tentativa)" 
-        });
-        
-        return res.render('shop/success', { pageTitle: 'Pagamento Aprovado', path: '' });
-      
+                const tipoCartao = req.body.cardType === 'debit' ? "Cartão de Débito" : "Cartão de Crédito";
+                
+                await orderRef.update({ 
+                    totalPrice: valorFinalFormatado, // Atualiza o valor real pago
+                    status: 'Pago / Aprovado', 
+                    mercadoPagoId: cardResult.id,
+                    paymentMethod: tipoCartao + " (Re-tentativa)" 
+                });
+                
+                return res.render('shop/success', { pageTitle: 'Pagamento Aprovado' });
             } else {
-                req.flash('error', 'Pagamento recusado: ' + (cardResult.message || 'Verifique os dados'));
+                req.flash('error', 'Pagamento recusado: ' + (cardResult.message || 'Verifique seus dados.'));
                 return res.redirect("/pagar-pedido/" + orderId);
             }
         }
     } catch (error) {
         console.error("ERRO REPAGAMENTO:", error);
-        req.flash("error", "Erro ao processar pagamento.");
+        req.flash('error', 'Erro ao processar: ' + error.message);
         res.redirect("/pagar-pedido/" + orderId);
     }
 };
