@@ -474,7 +474,7 @@ exports.postOrder = async (req, res) => {
     // 3. PAGAMENTO
     if (paymentMethod === "pix") {
       // Lógica do Pix
-      const pixData = await paymentService.gerarPixPagSeguro(
+      const pixData = await paymentService.gerarPixMercadoPago(
         { id: orderId, totalPrice: finalTotalPrice },
         { ...user, phone },
         cpf
@@ -507,7 +507,7 @@ exports.postOrder = async (req, res) => {
       }
 
       // Chamamos o serviço passando agora o issuerId como 7º parâmetro
-      const cardResult = await paymentService.processarCartaoPagSeguro(
+      const cardResult = await paymentService.processarCartaoMercadoPago(
         { id: orderId, totalPrice: finalTotalPrice },
         user,
         cpf,
