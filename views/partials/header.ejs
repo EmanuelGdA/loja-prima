@@ -97,6 +97,14 @@
                             <div class="dropdown-item">
                                 <a href="/admin/cupons" class="cat-title" style="color: #333 !important;">CUPONS</a>
                             </div>
+
+                            <div class="dropdown-item">
+                               <a href="/admin/clientes" class="cat-title" style="color: #333 !important;">CLIENTES / MIMOS 🎁</a>
+                            </div>
+
+                            <div class="dropdown-item">
+                                <a href="/admin/aniversariantes" class="cat-title" style="color: #333 !important;">ANIVERSARIANTES 🎂</a>
+                            </div>
                         </div>
                     </li>
 
@@ -164,5 +172,65 @@
             <span>FRETE GRÁTIS PARA TODO O BRASIL EM COMPRAS ACIMA DE R$ 499,00  •  ENVIAMOS PARA TODO O BRASIL</span>
         </div>
     </div>
+
+    <!-- AVISO DE PERFIL INCOMPLETO -->
+<% if (typeof isAuthenticated !== 'undefined' && isAuthenticated && isProfileIncomplete) { %>
+    <div class="profile-alert-bar">
+        <div class="container-alert">
+            <i class="fas fa-gift"></i>
+            <span>Olá! Complete seu cadastro para ganhar mimos.</span>
+            <a href="/pedidos">Completar Agora</a>
+        </div>
+    </div>
+
+    <style>
+        .profile-alert-bar {
+            background-color: #fff9db;
+            color: #856404;
+            padding: 10px 0;
+            font-size: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ffe066;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .container-alert {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap; /* Permite que os itens quebrem linha */
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        .profile-alert-bar i {
+            margin-right: 8px;
+            color: #d9ae50;
+        }
+
+        .profile-alert-bar a {
+            color: #856404;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-left: 10px;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+
+        /* --- AJUSTE PARA CELULAR --- */
+        @media (max-width: 600px) {
+            .profile-alert-bar span {
+                display: inline; /* Mantém o texto principal na linha do ícone */
+            }
+            .profile-alert-bar a {
+                display: block; /* Força o link a ir para a linha de baixo */
+                width: 100%;    /* Garante que ocupe a largura toda para centralizar */
+                margin-left: 0; /* Remove a margem da esquerda que existia no desktop */
+                margin-top: 5px; /* Dá um espacinho entre o texto e o botão */
+            }
+        }
+    </style>
+<% } %>
 
 </header>

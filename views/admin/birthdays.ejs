@@ -1,0 +1,56 @@
+<%- include('../partials/head.ejs') %>
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="container" style="max-width: 900px; margin: 40px auto; padding: 20px;">
+        <h1 style="font-family: 'Playfair Display'; text-align: center; margin-bottom: 40px;">🎂 Aniversariantes</h1>
+
+        <!-- SEÇÃO: ANIVERSARIANTES DE HOJE -->
+        <section style="margin-bottom: 50px;">
+            <h2 style="color: #d9534f; font-size: 18px; border-bottom: 2px solid #f8d7da; padding-bottom: 10px;">
+                🌟 Fazem Aniversário HOJE
+            </h2>
+            
+            <% if (hoje.length > 0) { %>
+                <% hoje.forEach(user => { %>
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: #fff5f5; padding: 20px; border-radius: 12px; margin-top: 15px; border: 1px solid #f8d7da;">
+                        <div>
+                            <strong style="font-size: 16px;"><%= user.name %></strong>
+                            <span style="display: block; font-size: 12px; color: #666;"><%= user.email %></span>
+                        </div>
+                        
+                        <!-- BOTÃO WHATSAPP MÁGICO -->
+                        <% 
+                            const msg = `Oi ${user.name}! Tudo bem? A Maely Cristina passando para te desejar um Feliz Aniversário! 🎉 Preparamos um presente: use o cupom PARABENS15 e ganhe 15% OFF em qualquer peça hoje! 🎁`;
+                            const waLink = `https://api.whatsapp.com/send?phone=55${user.phone.replace(/\D/g, '')}&text=${encodeURIComponent(msg)}`;
+                        %>
+                        <a href="<%= waLink %>" target="_blank" style="background: #25d366; color: white; padding: 10px 20px; border-radius: 30px; text-decoration: none; font-weight: bold; font-size: 13px;">
+                            <i class="fab fa-whatsapp"></i> ENVIAR PRESENTE
+                        </a>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p style="color: #999; margin-top: 15px;">Ninguém faz aniversário hoje.</p>
+            <% } %>
+        </section>
+
+        <!-- SEÇÃO: RESTANTE DO MÊS -->
+        <section>
+            <h2 style="font-size: 18px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                📅 Próximos do Mês
+            </h2>
+            <div style="margin-top: 15px;">
+                <% doMes.forEach(user => { %>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee;">
+                        <span><strong>Dia <%= user.day %></strong> - <%= user.name %></span>
+                        <a href="https://api.whatsapp.com/send?phone=55<%= user.phone.replace(/\D/g, '') %>" target="_blank" style="color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold;">
+                            <i class="fab fa-whatsapp"></i> Chamar
+                        </a>
+                    </div>
+                <% }) %>
+            </div>
+        </section>
+    </main>
+
+    <%- include('../partials/footer.ejs') %>
+</body>

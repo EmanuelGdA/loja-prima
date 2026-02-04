@@ -49,10 +49,14 @@ router.get('/pedidos', isAdmin, adminController.getOrders);
 router.post('/atualizar-status', isAdmin, adminController.postUpdateStatus);
 router.post('/excluir-pedido', isAdmin, adminController.postDeleteOrder);
 
+router.get('/aniversariantes', isAdmin, adminController.getBirthdays);
+
 
 // Rotas de Banners (Admin) - ADICIONADO isAdmin para segurança
 router.get('/banners', isAdmin, bannerController.getManageBanners);
 router.post('/banners/adicionar', isAdmin, bannerUpload, bannerController.postAddBanner);
 router.post('/banners/excluir', isAdmin, bannerController.postDeleteBanner);
+
+router.get('/clientes', isAdmin, adminController.getUsers);
 
 module.exports = router;

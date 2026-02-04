@@ -70,7 +70,7 @@ app.use(csrfProtection);
 app.use(flash());
 
 // 7. Variáveis Globais para as Views
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
     res.locals.isAuthenticated = req.session.isLoggedIn;
     
     // NOVO: Verifica se é admin e manda para o HTML
@@ -80,6 +80,23 @@ app.use((req, res, next) => {
     res.locals.errorMessage = req.flash('error');
     res.locals.successMessage = req.flash('success');
     
+    res.locals.isProfileIncomplete = false;
+    
+    if (req.session.isLoggedIn && req.session.user) {
+        // Se ainda não sabemos se o perfil está completo nesta sessão, verificamos uma vez
+        if (req.session.user.profileIncomplete === undefined) {
+            try {
+                const userDoc = await db.collection('users').doc(req.session.user.id).get();
+                const u = userDoc.data();
+                // Consideramos incompleto se faltar Aniversário OU Telefone OU CEP
+                const incomplete = (!u.birthday || !u.phone || !u.cep);
+                req.session.user.profileIncomplete = incomplete;
+            } catch (e) { 
+                req.session.user.profileIncomplete = false; 
+            }
+        }
+        res.locals.isProfileIncomplete = req.session.user.profileIncomplete;
+    }
     // Carrinho (mantenha o código do carrinho aqui...)
     let cartCount = 0;
     if (req.session.cart) {

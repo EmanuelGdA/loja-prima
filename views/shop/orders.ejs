@@ -92,6 +92,62 @@
             .btn-pay { width: 100%; }
         }
         @keyframes slideDown { from {opacity:0; transform:translateY(-10px);} to {opacity:1; transform:translateY(0);} }
+
+        /* NOVOS ESTILOS: ABAS E PERFIL */
+        .account-tabs { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; border-bottom: 1px solid #eee; }
+        .tab-link { padding: 10px 20px; cursor: pointer; font-weight: 600; color: #999; border-bottom: 2px solid transparent; transition: 0.3s; font-family: 'Montserrat', sans-serif; font-size: 14px; }
+        .tab-link.active { color: #000; border-bottom-color: #000; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .profile-card { 
+            background: white; padding: 30px; border-radius: 12px; border: 1px solid #eee; 
+            max-width: 500px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+        }
+        .form-group-profile { margin-bottom: 20px; text-align: left; }
+        .form-group-profile label { display: block; font-size: 11px; font-weight: bold; margin-bottom: 8px; color: #666; text-transform: uppercase; }
+        .form-group-profile input { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; 
+            background: #f9f9f9; font-family: 'Montserrat'; box-sizing: border-box;
+        }
+        .form-group-profile input[readonly] { color: #999; cursor: not-allowed; }
+        .btn-update { 
+            width: 100%; background: black; color: white; padding: 15px; border-radius: 30px; 
+            border: none; font-weight: bold; cursor: pointer; transition: 0.3s; 
+        }
+        .btn-update:hover { opacity: 0.8; }
+
+        /* Estilo do Alerta de Sucesso */
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #c3e6cb;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    justify-content: center;
+}
+
+/* Deixa o Calendário (Input Date) mais bonito */
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    color: #333;
+    font-family: 'Montserrat', sans-serif;
+    cursor: pointer;
+    background-color: #f9f9f9;
+}
+
+/* Ajuste para o ícone do calendário ficar visível e clicável */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0.5); /* Deixa o ícone cinza elegante */
+}
     </style>
 </head>
 <body>
@@ -99,6 +155,20 @@
 
     <main class="page-container">
         <h1 class="page-title">Meus Pedidos</h1>
+
+        <% if (successMessage && successMessage.length > 0) { %>
+    <div class="alert-success" style="background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #c3e6cb; font-weight: bold;">
+        <i class="fas fa-check-circle"></i> <%= successMessage %>
+    </div>
+<% } %>
+
+        <!-- SELETOR DE ABAS -->
+        <div class="account-tabs">
+            <div class="tab-link active" onclick="openTab(event, 'tab-pedidos')">Meus Pedidos</div>
+            <div class="tab-link" onclick="openTab(event, 'tab-dados')">Meus Dados</div>
+        </div>
+
+        <div id="tab-pedidos" class="tab-content active">
 
         <% if (orders.length > 0) { %>
             <div>
@@ -262,20 +332,178 @@
                 <h3>Nenhum pedido encontrado.</h3>
                 <a href="/" style="text-decoration: underline;">Voltar à loja</a>
             </div>
+
         <% } %>
+
+        </div> <!-- FECHA A ABA DE PEDIDOS -->
+
+<!-- ADICIONE TODO ESSE BLOCO: ABA DE MEUS DADOS -->
+<div id="tab-dados" class="tab-content">
+    <div class="profile-card">
+        <form action="/perfil/atualizar" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            
+            <div class="form-group-profile">
+                <label>E-mail (Login)</label>
+                <input type="text" value="<%= user.email %>" readonly>
+            </div>
+
+            <div class="form-group-profile">
+                <label>Nome Completo</label>
+                <input type="text" name="name" value="<%= user.name %>" required>
+            </div>
+
+            <!-- WHATSAPP E DATA DE NASCIMENTO -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group-profile">
+                    <label>WhatsApp</label>
+                    <input type="text" name="phone" value="<%= user.phone || '' %>" placeholder="(00) 00000-0000" oninput="maskPhone(this)" required>
+                </div>
+                <div class="form-group-profile" style="background: #fff9db; padding: 10px; border-radius: 8px; border: 1px solid #ffe066;">
+                    <label style="color: #856404; font-size: 10px;">🎁 Aniversário</label>
+                    <input type="date" name="birthday" value="<%= user.birthday || '' %>" required style="background: white; border-color: #ffe066; padding: 8px;">
+                </div>
+            </div>
+
+            <!-- ENDEREÇO PARA MIMOS -->
+            <h3 style="font-size: 14px; margin: 20px 0 15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">Endereço para Mimos 🏠</h3>
+            
+            <div class="form-group-profile">
+                <label>CEP</label>
+                <input type="text" name="cep" id="cep" value="<%= user.cep || '' %>" placeholder="00000-000" oninput="maskCEP(this)" onblur="buscarCepPerfil()" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 3fr 1fr; gap: 10px;">
+                <div class="form-group-profile">
+                    <label>Rua</label>
+                    <input type="text" name="rua" id="rua" value="<%= user.rua || '' %>" required>
+                </div>
+                <div class="form-group-profile">
+                    <label>Nº</label>
+                    <input type="text" name="numero" value="<%= user.numero || '' %>" required>
+                </div>
+            </div>
+
+            <div class="form-group-profile">
+                <label>Bairro</label>
+                <input type="text" name="bairro" id="bairro" value="<%= user.bairro || '' %>" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group-profile">
+                    <label>Cidade</label>
+                    <input type="text" name="cidade" id="cidade" value="<%= user.cidade || '' %>" required>
+                </div>
+                <div class="form-group-profile">
+                    <label>Estado</label>
+                    <input type="text" name="estado" id="estado" value="<%= user.estado || '' %>" required maxlength="2">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-update">SALVAR MEUS DADOS</button>
+        </form>
+    </div>
+</div>
     </main>
 
     <%- include('../partials/footer.ejs') %>
 
     <script>
-        function toggleDetails(id) {
-            const body = document.getElementById('body-' + id);
-            const arrow = document.getElementById('arrow-' + id);
-            const header = body.previousElementSibling;
+    // 1. Lógica do Acordeão de Pedidos (Mantida)
+    function toggleDetails(id) {
+        const body = document.getElementById('body-' + id);
+        const arrow = document.getElementById('arrow-' + id);
+        const header = body.previousElementSibling;
 
+        if (body && arrow && header) {
             body.classList.toggle('open');
             header.classList.toggle('active');
         }
-    </script>
+    }
+
+    // 2. Lógica de Troca de Abas (Mantida)
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        tablinks = document.getElementsByClassName("tab-link");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        if (evt) {
+            evt.currentTarget.classList.add("active");
+        }
+    }
+
+    // 3. Máscara de WhatsApp (NOVA)
+    function maskPhone(i) {
+        let v = i.value.replace(/\D/g, ""); // Remove tudo que não é número
+        if (v.length > 11) v = v.substring(0, 11); // Limita a 11 dígitos
+        
+        v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); // Coloca parênteses no DDD
+        
+        // Se tem 11 dígitos (celular novo), o traço fica após o 5º número do corpo
+        if (v.length > 9) {
+            v = v.replace(/(\d{5})(\d)/, "$1-$2");
+        } else {
+            // Se tem 10 (fixo), o traço fica após o 4º
+            v = v.replace(/(\d{4})(\d)/, "$1-$2");
+        }
+        i.value = v;
+    }
+
+    // 4. Máscara de CEP (Mantida)
+    function maskCEP(i) {
+        i.value = i.value.replace(/\D/g, "").replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
+    }
+
+    // 5. Busca de CEP Automática (Mantida e Melhorada)
+    async function buscarCepPerfil() {
+        const cep = document.getElementById('cep').value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const data = await response.json();
+                if (!data.erro) {
+                    document.getElementById('rua').value = data.logradouro;
+                    document.getElementById('bairro').value = data.bairro;
+                    document.getElementById('cidade').value = data.localidade;
+                    document.getElementById('estado').value = data.uf;
+                } else {
+                    alert("CEP não encontrado.");
+                }
+            } catch (err) {
+                console.error("Erro ao buscar CEP:", err);
+            }
+        }
+    }
+
+    // 6. Inteligência de Aba: Se houver mensagem de sucesso, abre na aba "Meus Dados"
+    window.onload = function() {
+        <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+            // Simula o clique na aba de dados para o usuário ver a confirmação lá
+            const tabBtnDados = document.querySelector('.tab-link[onclick*="tab-dados"]');
+            if (tabBtnDados) tabBtnDados.click();
+        <% } %>
+    };
+
+    // Este código roda assim que a página termina de carregar
+window.onload = function() {
+    // Se existir uma mensagem de sucesso na tela...
+    <% if (successMessage && successMessage.length > 0) { %>
+        // 1. Procura o botão da aba "Meus Dados"
+        const btnDados = document.querySelector('.tab-link[onclick*="tab-dados"]');
+        
+        // 2. Clica nele automaticamente
+        if (btnDados) {
+            btnDados.click();
+        }
+        
+    <% } %>
+};
+</script>
 </body>
 </html>

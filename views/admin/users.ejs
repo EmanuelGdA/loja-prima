@@ -1,0 +1,171 @@
+<%- include('../partials/head.ejs') %>
+<style>
+    .user-card {
+        background: white; border: 1px solid #eee; border-radius: 12px;
+        padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .user-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .user-info h3 { margin: 0; font-size: 16px; color: #333; }
+    .user-info p { margin: 2px 0; font-size: 13px; color: #666; }
+    .tag-profile { 
+        font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: bold;
+    }
+    .tag-complete { background: #e6f9ee; color: #27ae60; }
+    .tag-incomplete { background: #fff5f5; color: #ff4d4d; }
+    
+    .address-box { 
+        margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;
+        font-size: 13px; color: #444; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .btn-wa { 
+        color: #25d366; text-decoration: none; font-weight: bold; font-size: 13px;
+        display: inline-flex; align-items: center; gap: 5px;
+    }
+
+    .search-container {
+    margin-bottom: 30px;
+    display: flex;
+    gap: 10px;
+}
+.search-input {
+    flex: 1;
+    padding: 12px 20px;
+    border: 1px solid #ddd;
+    border-radius: 50px;
+    font-family: 'Montserrat', sans-serif;
+    outline: none;
+}
+.search-input:focus { border-color: #000; }
+.btn-search {
+    background: black;
+    color: white;
+    border: none;
+    padding: 0 25px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 30px;
+    padding-bottom: 50px;
+}
+.page-link {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-decoration: none;
+    color: black;
+}
+.page-link.active {
+    background: black;
+    color: white;
+    border-color: black;
+}
+
+.client-count-badge {
+    display: inline-block;
+    background: #fdf2f2; /* Rosa bem clarinho */
+    color: #c4a47c;      /* Dourado da marca */
+    padding: 5px 15px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    border: 1px solid #f9d6d6;
+}
+</style>
+
+<body>
+    <%- include('../partials/header.ejs') %>
+
+    <main class="container" style="max-width: 1000px; margin: 40px auto; padding: 0 20px;">
+        <h1 style="font-family: 'Playfair Display'; margin-bottom: 30px;">Gestão de Clientes</h1>
+
+        <div class="client-count-badge">
+    <% if (searchTerm) { %>
+        Encontrados: <strong><%= totalEncontrados %></strong> de <strong><%= totalAbsoluto %></strong> clientes
+    <% } else { %>
+        Total: <strong><%= totalAbsoluto %></strong> clientes cadastrados
+    <% } %>
+</div>
+
+        <!-- BARRA DE PESQUISA -->
+    <form action="/admin/clientes" method="GET" class="search-container">
+        <input type="text" name="search" value="<%= searchTerm %>" placeholder="Buscar por nome ou e-mail..." class="search-input">
+        <button type="submit" class="btn-search">Buscar</button>
+        <% if (searchTerm) { %>
+            <a href="/admin/clientes" style="align-self: center; font-size: 12px; color: red;">Limpar</a>
+        <% } %>
+    </form>
+
+        <% if (users.length > 0) { %>
+            <% users.forEach(user => { %>
+                <div class="user-card">
+                    <div class="user-header">
+                        <div class="user-info">
+                            <h3><%= user.name %> 
+                                <span class="tag-profile <%= (user.birthday && user.cep) ? 'tag-complete' : 'tag-incomplete' %>">
+                                    <%= (user.birthday && user.cep) ? 'PERFIL COMPLETO' : 'INCOMPLETO' %>
+                                </span>
+                            </h3>
+                            <p><i class="far fa-envelope"></i> <%= user.email %></p>
+                            <p>
+                                <a href="https://api.whatsapp.com/send?phone=55<%= user.phone ? user.phone.replace(/\D/g, '') : '' %>" target="_blank" class="btn-wa">
+                                    <i class="fab fa-whatsapp"></i> <%= user.phone || 'Sem telefone' %>
+                                </a>
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="font-size: 11px; font-weight: bold; color: #c4a47c;">
+                                🎂 <%= user.birthday ? new Date(user.birthday + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado' %>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- ENDEREÇO PARA ENVIO DE MIMOS -->
+                    <% if (user.cep) { %>
+                        <div class="address-box">
+                            <div>
+                                <strong>Endereço de Entrega:</strong><br>
+                                <%= user.rua %>, <%= user.numero %><br>
+                                <%= user.bairro %> - <%= user.cidade %>/<%= user.estado %>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong>CEP:</strong> <%= user.cep %><br>
+                                <button onclick="copyAddress('<%= user.rua %>, <%= user.numero %>, <%= user.bairro %>, <%= user.cidade %>-<%= user.estado %>, CEP: <%= user.cep %>')" style="background: none; border: none; color: #007bff; cursor: pointer; font-size: 11px; text-decoration: underline;">
+                                    Copiar Endereço
+                                </button>
+                            </div>
+                        </div>
+                    <% } else { %>
+                        <p style="font-size: 12px; color: #999; margin-top: 10px; font-style: italic;">Endereço de mimos não cadastrado pelo cliente.</p>
+                    <% } %>
+                </div>
+            <% }) %>
+        <% } else { %>
+            <p>Nenhum cliente cadastrado.</p>
+        <% } %>
+
+        <!-- PAGINAÇÃO -->
+    <% if (totalPages > 1) { %>
+        <div class="pagination">
+            <% for(let i = 1; i <= totalPages; i++) { %>
+                <a href="/admin/clientes?page=<%= i %>&search=<%= searchTerm %>" 
+                   class="page-link <%= currentPage === i ? 'active' : '' %>">
+                    <%= i %>
+                </a>
+            <% } %>
+        </div>
+    <% } %>
+    </main>
+
+    <script>
+        function copyAddress(text) {
+            navigator.clipboard.writeText(text);
+            alert("Endereço copiado para colar na etiqueta de envio!");
+        }
+    </script>
+</body>

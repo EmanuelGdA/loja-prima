@@ -542,32 +542,76 @@ exports.postOrder = async (req, res) => {
 };
 
 // ==========================================
-// 4. ÁREA DO CLIENTE
+// 4. ÁREA DO CLIENTE (PEDIDOS + PERFIL)
 // ==========================================
 
 exports.getOrders = async (req, res) => {
   if (!req.session.isLoggedIn) return res.redirect("/login");
 
   try {
+    // 1. Busca os dados atualizados do usuário (para pegar a data de nascimento)
+    const userDoc = await db.collection("users").doc(req.session.user.id).get();
+    const userData = userDoc.data();
+
+    // 2. Busca os pedidos
     const snapshot = await db
       .collection("orders")
       .where("user.id", "==", req.session.user.id)
       .get();
     
     const orders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-
-    // --- ADICIONE ESTA LINHA ABAIXO PARA ORDENAR (Mais novo primeiro) ---
     orders.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.render("shop/orders", {
-      pageTitle: "Meus Pedidos",
-      path: "/pedidos",
-      orders: orders,
-    });
+  pageTitle: "Minha Conta",
+  path: "/pedidos",
+  orders: orders,
+  user: userData,
+  // Mudamos aqui para usar o que o server.js já resgatou do flash:
+  errorMessage: res.locals.errorMessage, 
+  successMessage: res.locals.successMessage
+});
   } catch (error) {
     console.log(error);
     res.redirect("/");
   }
+};
+
+// Nova função para salvar a data de nascimento
+exports.postUpdateProfile = async (req, res) => {
+    const { name, phone, birthday, cep, rua, numero, bairro, cidade, estado } = req.body;
+    const userId = req.session.user.id;
+
+    try {
+        // 1. Atualiza no Banco de Dados
+        await db.collection("users").doc(userId).update({
+            name: name,
+            phone: phone,
+            birthday: birthday,
+            cep: cep,
+            rua: rua,
+            numero: numero,
+            bairro: bairro,
+            cidade: cidade,
+            estado: estado
+        });
+
+        // 2. ATUALIZA A SESSÃO: Isso faz o nome mudar no site na hora e nos novos pedidos
+        req.session.user.name = name;
+
+        req.session.user.profileIncomplete = false;
+        
+
+        // 3. Salva a sessão e envia a mensagem
+        req.session.save(() => {
+            req.flash('success', 'Seus dados foram atualizados com sucesso! ✨');
+            res.redirect('/pedidos'); // Ele vai voltar para cá e mostrar a aba ativa
+        });
+    } catch (error) {
+        console.log(error);
+        req.flash('error', 'Erro ao salvar informações.');
+        res.redirect('/pedidos');
+    }
 };
 
 // ==========================================

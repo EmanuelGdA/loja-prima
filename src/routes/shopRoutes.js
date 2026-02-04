@@ -59,5 +59,7 @@ router.get('/institucional/:page', shopController.getInstitucional);
 // Rota de segurança
 router.get('/api/pagseguro-key', shopController.getPagSeguroKey);
 
+router.post('/perfil/atualizar', shopController.postUpdateProfile);
+
 
 module.exports = router;

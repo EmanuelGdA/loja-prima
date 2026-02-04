@@ -742,3 +742,100 @@ exports.postDeleteCategory = async (req, res) => {
         res.redirect('/admin/categorias');
     }
 };
+
+// --- FUNÇÃO DE ANIVERSARIANTES ---
+exports.getBirthdays = async (req, res) => {
+    try {
+        // 1. Pega a data de hoje
+        const hoje = new Date();
+        const mesAtual = (hoje.getMonth() + 1).toString().padStart(2, '0'); // Ex: "01", "02"
+        const diaAtual = hoje.getDate().toString().padStart(2, '0');
+
+        // 2. Busca todos os usuários que preencheram o aniversário
+        const snapshot = await db.collection('users').where('birthday', '!=', '').get();
+        
+        const todosAniversariantes = [];
+        const aniversariantesHoje = [];
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // O formato salvo é YYYY-MM-DD
+            const [ano, mes, dia] = data.birthday.split('-');
+
+            if (mes === mesAtual) {
+                const user = {
+                    id: doc.id,
+                    name: data.name,
+                    phone: data.phone,
+                    email: data.email,
+                    day: dia,
+                    isToday: (dia === diaAtual)
+                };
+
+                if (user.isToday) {
+                    aniversariantesHoje.push(user);
+                } else {
+                    todosAniversariantes.push(user);
+                }
+            }
+        });
+
+        // Ordena por dia do mês
+        todosAniversariantes.sort((a, b) => a.day - b.day);
+
+        res.render('admin/birthdays', {
+            pageTitle: 'Aniversariantes do Mês',
+            path: '/admin/aniversariantes',
+            hoje: aniversariantesHoje,
+            doMes: todosAniversariantes
+        });
+
+    } catch (error) {
+        console.log("Erro ao buscar aniversariantes:", error);
+        res.redirect('/admin/pedidos');
+    }
+};
+
+exports.getUsers = async (req, res) => {
+    try {
+        const searchTerm = req.query.search ? req.query.search.toLowerCase() : '';
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10; // Quantos clientes aparecem por vez
+
+        // 1. Busca todos os usuários (No Firebase, para filtros complexos de texto, 
+        // o ideal é puxar e filtrar ou usar serviços externos, mas para o tamanho 
+        // atual, filtrar no código funciona bem).
+        const snapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
+        let allUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        const totalAbsoluto = allUsers.length;
+
+        // 2. Filtro de Busca (Nome ou Email)
+        if (searchTerm) {
+            allUsers = allUsers.filter(u => 
+                (u.name && u.name.toLowerCase().includes(searchTerm)) || 
+                (u.email && u.email.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        // 3. Lógica de Paginação
+        const totalEncontrados = allUsers.length;
+        const totalPages = Math.ceil(totalEncontrados / limit);
+        const startIndex = (page - 1) * limit;
+        const paginatedUsers = allUsers.slice(startIndex, startIndex + limit);
+
+        res.render('admin/users', {
+            pageTitle: 'Gestão de Clientes',
+            path: '/admin/clientes',
+            users: paginatedUsers,
+            searchTerm: req.query.search || '', // Devolve o termo para o input não esvaziar
+            currentPage: page,
+            totalPages: totalPages,
+            totalAbsoluto: totalAbsoluto,
+            totalEncontrados: totalEncontrados
+        });
+    } catch (error) {
+        console.log("Erro ao buscar clientes:", error);
+        res.redirect('/admin');
+    }
+};
