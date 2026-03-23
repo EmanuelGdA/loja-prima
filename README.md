@@ -46,16 +46,6 @@ Este e-commerce foi desenvolvido sob medida para a marca **Maely Cristina**. Dif
 
 ---
 
-## 📱 Visual do Projeto
-
-<div align="center">
-  <img src="https://via.placeholder.com/300x600?text=Home+Mobile" width="30%" />
-  <img src="https://via.placeholder.com/300x600?text=Detalhes+do+Produto" width="30%" />
-  <img src="https://via.placeholder.com/300x600?text=Checkout+Limpo" width="30%" />
-</div>
-
----
-
 ## ✒️ Desenvolvedor
 
 **Emanuel Almeida**  
