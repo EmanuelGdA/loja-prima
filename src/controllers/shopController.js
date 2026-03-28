@@ -1489,3 +1489,23 @@ async function estornarEstoque(items) {
         } catch (err) { console.error("Erro ao estornar estoque:", err); }
     }
 };
+
+exports.getSitemap = async (req, res) => {
+    try {
+        // Busca todos os produtos ativos
+        const snapshot = await db.collection('products').where('isActive', '==', true).get();
+        const products = snapshot.docs.map(doc => doc.id);
+
+        // Define que o retorno é um arquivo XML
+        res.set('Content-Type', 'text/xml');
+        
+        // Renderiza o sitemap (vamos criar esse arquivo agora)
+        res.render('shop/sitemap', {
+            products: products,
+            host: 'https://www.maelycristina.com.br'
+        });
+    } catch (error) {
+        console.error("Erro sitemap:", error);
+        res.status(500).end();
+    }
+};

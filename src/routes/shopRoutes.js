@@ -61,5 +61,5 @@ router.get('/api/pagseguro-key', shopController.getPagSeguroKey);
 
 router.post('/perfil/atualizar', shopController.postUpdateProfile);
 
-
+router.get('/sitemap.xml', shopController.getSitemap);
 module.exports = router;
