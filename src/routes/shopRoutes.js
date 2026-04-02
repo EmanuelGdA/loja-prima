@@ -39,6 +39,8 @@ router.get('/colecao/promocao', shopController.getPromotions);
 // Rota de Categoria (Ex: /colecao/vestidos)
 router.get('/colecao/:categoryName', shopController.getCategory);
 
+router.get('/colecao', (req, res) => res.redirect('/'));
+
 // Rota de Busca
 router.get('/search', shopController.getSearch);
 
