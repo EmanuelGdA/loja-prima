@@ -319,6 +319,13 @@
                                             ou 4x de R$ <%= (p.price / 4).toFixed(2).replace('.', ',') %>
                                         </small>
                                     </div>
+                                    <div class="card-colors-vitrine" style="margin-top: 8px;">
+        <% if (p.colors && p.colors.length > 0) { %>
+            <% p.colors.forEach(cor => { %>
+                <div class="color-box-mini" style="background-color: <%= cor %>;"></div>
+            <% }) %>
+        <% } %>
+    </div>
                                 </div>
                             </a>
 

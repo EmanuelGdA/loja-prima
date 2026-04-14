@@ -227,6 +227,15 @@
                       %>
                     </small>
                   </div>
+
+                  <!-- EXIBIÇÃO DE TODAS AS CORES DO MODELO -->
+<div class="card-colors-vitrine">
+    <% if (p.colors && p.colors.length > 0) { %>
+        <% p.colors.forEach(cor => { %>
+            <div class="color-box-mini" style="background-color: <%= cor %>;"></div>
+        <% }) %>
+    <% } %>
+</div>
                 </div>
               </a>
 

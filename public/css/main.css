@@ -1,3 +1,17 @@
+
+
+/* Remove o destaque azul ao clicar em qualquer elemento (celular e PC) */
+* {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none; /* Impede o menu de "copiar imagem" ao segurar o dedo */
+}
+
+/* Remove a bordinha de foco que aparece em alguns navegadores de PC */
+button:focus, a:focus, input:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 /* --- Variáveis (Cores da Marca) --- */
 
 
@@ -973,4 +987,33 @@ ul { list-style: none; }
     .dot.active {
         width: 15px;
     }
+}
+
+/* Container das cores na vitrine */
+.card-colors-vitrine {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 5px;
+    justify-content: flex-start; /* Alinha à esquerda como na foto exemplo */
+    flex-wrap: wrap;
+}
+
+/* O quadradinho de cor */
+.color-box-mini {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px; /* Cantos levemente arredondados */
+    border: 1px solid #e0e0e0; /* Borda fina para destacar cores claras */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease;
+}
+
+.color-box-mini:hover {
+    transform: scale(1.1); /* Efeito discreto ao passar o mouse */
+}
+
+/* Ajuste no card para não espremer o conteúdo */
+.card-info {
+    padding-bottom: 10px;
 }
