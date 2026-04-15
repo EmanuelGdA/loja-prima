@@ -47,9 +47,9 @@ exports.getIndex = async (req, res) => {
 
     // --- 3. RENDERIZA COM OS BANNERS ---
     res.render("shop/home", {
-      pageTitle: "Home - Maely Cristina",
+      pageTitle: "Moda Feminina Elegante",
       products: paginatedProducts,
-      banners: banners, // <--- ADICIONADO AQUI
+      banners: banners, 
       path: "/",
       currentPage: page,
       totalPages: totalPages,
