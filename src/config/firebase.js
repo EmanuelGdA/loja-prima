@@ -5,7 +5,7 @@ require('dotenv').config();
 let serviceAccount;
 
 // LÓGICA HÍBRIDA:
-// Se existir a variável de ambiente (Produção/Render), usa ela.
+// Se existir a variável de ambiente (Produção/Render)
 if (process.env.FIREBASE_CREDENTIALS) {
     serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 } else {
@@ -19,10 +19,12 @@ if (process.env.FIREBASE_CREDENTIALS) {
 
 if (serviceAccount) {
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: "maely-cristina-b0ce1.firebasestorage.app"
     });
     const db = admin.firestore();
-    module.exports = { db };
+    const bucket = admin.storage().bucket();
+    module.exports = { db, bucket };
 } else {
     module.exports = null;
 }

@@ -3,8 +3,8 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const isAdmin = require('../middlewares/isAdmin');
 const multer = require('multer');
-const { storage } = require('../config/cloudinary'); 
-const upload = multer({ storage: storage }); 
+ 
+const upload = multer({ storage: multer.memoryStorage() });  
 const bannerController = require('../controllers/bannerController');
 
 

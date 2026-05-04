@@ -1,4 +1,6 @@
-const { db } = require('../config/firebase');
+
+const { db, bucket } = require('../config/firebase'); // Importe o bucket aqui
+const path = require('path');
 const emailService = require('../services/emailService'); 
 
 // ==========================================
@@ -26,10 +28,12 @@ exports.postAddProduct = async (req, res) => {
     try {
         const body = req.body;
         
-        // 1. Multifotos (Cloudinary)
+        // 1. Multifotos (FIREBASE STORAGE V2)
         let images = [];
         if (req.files && req.files.length > 0) {
-            images = req.files.map(f => f.path);
+            // Faz o upload de todas as fotos em paralelo
+            const uploadPromises = req.files.map(file => uploadToFirebase(file));
+            images = await Promise.all(uploadPromises);
         } else {
             return res.status(422).send("Pelo menos uma foto é obrigatória.");
         }
@@ -266,12 +270,12 @@ exports.getProducts = async (req, res) => {
     }
 };
 
-// 6. EXCLUIR PRODUTO (ATUALIZADO COM LIMPEZA DE MENU)
+// 6. EXCLUIR PRODUTO (VERSÃO FINAL COM LIMPEZA DE STORAGE E CATEGORIAS)
 exports.postDeleteProduct = async (req, res) => {
     const prodId = req.body.productId;
     
     try {
-        // 1. Primeiro, buscamos o produto para saber qual era a categoria dele
+        // 1. Primeiro, buscamos o produto para pegar a lista de fotos e a categoria
         const doc = await db.collection('products').doc(prodId).get();
         
         if (!doc.exists) {
@@ -280,19 +284,44 @@ exports.postDeleteProduct = async (req, res) => {
 
         const prodData = doc.data();
 
-        // 2. Deleta o produto
+        // --- BLOCO DE LIMPEZA DE IMAGENS NO STORAGE ---
+        // Pegamos a lista de fotos (pode estar no array 'images' ou no campo 'imageUrl')
+        const fotosParaApagar = prodData.images || (prodData.imageUrl ? [prodData.imageUrl] : []);
+
+        for (const url of fotosParaApagar) {
+            try {
+                // Só tenta apagar se o link for do Firebase Storage
+                if (url && url.includes('storage.googleapis.com')) {
+                    // Extrai o caminho do arquivo (ex: products/1715000-foto.jpg)
+                    const parts = url.split(`${bucket.name}/`);
+                    if (parts.length > 1) {
+                        const fileName = parts[1];
+                        // Comando oficial para deletar o arquivo físico no Google
+                        await bucket.file(fileName).delete();
+                        console.log("✅ Arquivo removido do Storage:", fileName);
+                    }
+                }
+            } catch (err) {
+                // Se a foto não existir mais no Storage, ele apenas loga e continua 
+                // para não travar a exclusão do produto no banco.
+                console.log("⚠️ Arquivo físico não encontrado ou erro no Storage, pulando...");
+            }
+        }
+        // ----------------------------------------------
+
+        // 2. Deleta o registro do produto no Firestore
         await db.collection('products').doc(prodId).delete();
 
-        // 3. Roda a limpeza do menu (Verifica se a categoria ficou vazia)
+        // 3. Roda a sua limpeza do menu (Verifica se a categoria ficou vazia)
         if (prodData.category) {
             await cleanUpCategories(prodData.category, prodData.subcategory);
         }
 
-        console.log('Produto Excluído e Menu verificado.');
+        console.log('✨ Produto e fotos excluídos com sucesso!');
         res.redirect('/admin/produtos');
 
     } catch (error) {
-        console.log(error);
+        console.error("❌ Erro ao excluir produto:", error);
         res.redirect('/admin/produtos');
     }
 };
@@ -326,17 +355,23 @@ exports.postEditProduct = async (req, res) => {
     const body = req.body;
 
     try {
-        // 1. LÓGICA DE IMAGENS
         let keptImages = body.keptImages || [];
         if (!Array.isArray(keptImages)) keptImages = [keptImages];
 
         let newImages = [];
         if (req.files && req.files.length > 0) {
-            newImages = req.files.map(f => f.path);
+            // Faz o upload das NOVAS fotos para o Firebase
+            const uploadPromises = req.files.map(file => uploadToFirebase(file));
+            newImages = await Promise.all(uploadPromises);
         }
 
+        // Junta as fotos que você quis manter com as novas que subiram
         let finalImages = [...keptImages, ...newImages];
-        if (finalImages.length === 0 && body.oldImageUrl) finalImages = [body.oldImageUrl];
+
+        // Se o produto ficou sem foto nenhuma, tenta manter a antiga por segurança
+        if (finalImages.length === 0 && body.oldImages) {
+            finalImages = body.oldImages.split(',');
+        }
 
         // 2. LÓGICA DE MEDIDAS DINÂMICAS
         let measureList = [];
@@ -839,3 +874,26 @@ exports.getUsers = async (req, res) => {
         res.redirect('/admin');
     }
 };
+
+// Função para subir imagem para o Firebase e retornar o link público
+async function uploadToFirebase(file) {
+    // Gera um nome único para o arquivo
+    const fileName = `products/${Date.now()}-${path.basename(file.originalname)}`;
+    const fileUpload = bucket.file(fileName);
+
+    // Cria o stream de upload
+    const stream = fileUpload.createWriteStream({
+        metadata: { contentType: file.mimetype }
+    });
+
+    return new Promise((resolve, reject) => {
+        stream.on('error', (error) => reject(error));
+        stream.on('finish', async () => {
+            // Torna o arquivo público e pega a URL
+            await fileUpload.makePublic();
+            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+            resolve(publicUrl);
+        });
+        stream.end(file.buffer);
+    });
+}
