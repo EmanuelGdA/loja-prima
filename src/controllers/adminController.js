@@ -1,7 +1,8 @@
 
 const { db, bucket } = require('../config/firebase'); // Importe o bucket aqui
 const path = require('path');
-const emailService = require('../services/emailService'); 
+const emailService = require('../services/emailService');
+const sharp = require('sharp'); 
 
 // ==========================================
 // 1. FUNÇÕES DE ADICIONAR (JÁ EXISTIAM)
@@ -876,24 +877,40 @@ exports.getUsers = async (req, res) => {
 };
 
 // Função para subir imagem para o Firebase e retornar o link público
-async function uploadToFirebase(file) {
-    // Gera um nome único para o arquivo
-    const fileName = `products/${Date.now()}-${path.basename(file.originalname)}`;
-    const fileUpload = bucket.file(fileName);
+async function uploadToFirebase(file, folder = 'products') {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // --- A MÁGICA DA REDUÇÃO ACONTECE AQUI ---
+            let pipeline = sharp(file.buffer);
+            
+            // 1. Se for banner, largura max 1920px. Se for produto, 1000px.
+            const width = (folder === 'banners') ? 1920 : 1000;
+            
+            const bufferOtimizado = await pipeline
+                .resize({ width: width, withoutEnlargement: true }) // Redimensiona
+                .webp({ quality: 80 }) // Transforma em WebP (mais leve que JPG) e tira o peso
+                .toBuffer();
 
-    // Cria o stream de upload
-    const stream = fileUpload.createWriteStream({
-        metadata: { contentType: file.mimetype }
-    });
+            // Gera o nome do arquivo trocando a extensão original para .webp
+            const originalName = path.parse(file.originalname).name;
+            const fileName = `${folder}/${Date.now()}-${originalName}.webp`;
+            
+            const fileUpload = bucket.file(fileName);
+            const stream = fileUpload.createWriteStream({
+                metadata: { contentType: 'image/webp' }
+            });
 
-    return new Promise((resolve, reject) => {
-        stream.on('error', (error) => reject(error));
-        stream.on('finish', async () => {
-            // Torna o arquivo público e pega a URL
-            await fileUpload.makePublic();
-            const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-            resolve(publicUrl);
-        });
-        stream.end(file.buffer);
+            stream.on('error', (error) => reject(error));
+            stream.on('finish', async () => {
+                await fileUpload.makePublic();
+                resolve(`https://storage.googleapis.com/${bucket.name}/${fileName}`);
+            });
+
+            // Envia o buffer OTIMIZADO em vez do original
+            stream.end(bufferOtimizado);
+
+        } catch (err) {
+            reject(err);
+        }
     });
 }
