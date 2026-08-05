@@ -20,7 +20,7 @@ if (process.env.FIREBASE_CREDENTIALS) {
 if (serviceAccount) {
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: "maely-cristina-b0ce1.firebasestorage.app"
+        storageBucket: "maely-cristina-oficial.firebasestorage.app"
     });
     const db = admin.firestore();
     const bucket = admin.storage().bucket();
