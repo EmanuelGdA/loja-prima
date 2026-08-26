@@ -103,6 +103,7 @@ app.use(async (req, res, next) => {
         cartCount = req.session.cart.totalQty;
     }
     res.locals.cartCount = cartCount;
+    res.locals.fbPixelId = process.env.FB_PIXEL_ID || null;
 
     next();
 });
